@@ -4,14 +4,12 @@ Quero automatizar o controle de ponto que preciso fazer no trabalho. São três 
 Nunca programei aplicativos móveis. Então quero que você me sugira uma abordagem para implementar isso. Vamos primeiro analisar os procedimentos na página?
 
 Os três procedimentos são:
-1.
 
 ## Abrir o ponto
 
-1. Faz: a
-1.Após o login;
-2. A, abre uma página onde devo clicar noem um botão "Registrar Entrada";
-3. Sou direcionado para a página de RH. 
+1. Faz o login;
+2. Abre uma página onde devo clicar no botão "Registrar Entrada";
+4. Sou direcionado para a página de RH. 
 
 Está aberto o ponto. Deve ser executado sempre que chego ao campus, e só pode ser executado se estou no campus. 
 
@@ -22,7 +20,7 @@ Está aberto o ponto. Deve ser executado sempre que chego ao campus, e só pode 
 1. Faz o login;
 2. Com o ponto aberto, vai direto para a página de RH;
 3. Nela, devo clicar no botão "Ponto Eletrônico";
-4. Ca para uma nova página. Nela, eu clico no botão "Registrar Saída";
+4. Cai em uma nova página. Nela, eu clico no botão "Registrar Saída";
 5. Caio na página de abrir o ponto. 
 
 Está fechado o ponto. Deve ser executado sempre que o ponto for aberto, e também só pode ser executado se eu estiver no campus. Como estratégia de automação, esse procedimento pode ser sempre executado em dias e horários específicos. Mas esses dias e horários mudam todo semestre. Não são todos os dias da semana e nem sempre no mesmo horário. E pode ocorrer mais de uma vez por dia. Não é problema se for executada sem que o ponto esteja aberto ou sem que eu esteja no campus, seguindo o agendamento. Nesses casos, o procedimento seria desnecessário, mas ele apenas retornaria erro, sem consequência.
@@ -31,6 +29,6 @@ Está fechado o ponto. Deve ser executado sempre que o ponto for aberto, e tamb�
 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbODgxOTQzNzM4LDU2MjU1NDA1OSwxNzcyOT
-MwMzk1XX0=
+eyJoaXN0b3J5IjpbLTEyNzE5Mjc1MjMsNTYyNTU0MDU5LDE3Nz
+I5MzAzOTVdfQ==
 -->
