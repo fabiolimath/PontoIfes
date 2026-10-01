@@ -15,14 +15,14 @@ Os três procedimentos são:
 
 Está aberto o ponto. Deve ser executado sempre que chego ao campus, e só pode ser executado se estou no campus. 
 
-Estratégia de automação, pode ser executado após o telefone se conectar à rede do campus.
+**Estratégia de automação**: executar após o telefone se conectar à rede do campus.
 
 ## Fechar o ponto: após
 
-1. Faz o login, c;
-2. Com o ponto aberto, v direto para a página de RH;
-3. Nela, devo clicar em  botão, Ponto Eletrônico";
-4. Abre uma nova página. Nela, eu clico no botão "Registrar Saída";
+1. Faz o login;
+2. Com o ponto aberto, vai direto para a página de RH;
+3. Nela, devo clicar no botão "Ponto Eletrônico";
+4. Ca para uma nova página. Nela, eu clico no botão "Registrar Saída";
 5. Caio na página de abrir o ponto. 
 
 Está fechado o ponto. Deve ser executado sempre que o ponto for aberto, e também só pode ser executado se eu estiver no campus. Como estratégia de automação, esse procedimento pode ser sempre executado em dias e horários específicos. Mas esses dias e horários mudam todo semestre. Não são todos os dias da semana e nem sempre no mesmo horário. E pode ocorrer mais de uma vez por dia. Não é problema se for executada sem que o ponto esteja aberto ou sem que eu esteja no campus, seguindo o agendamento. Nesses casos, o procedimento seria desnecessário, mas ele apenas retornaria erro, sem consequência.
@@ -31,6 +31,6 @@ Está fechado o ponto. Deve ser executado sempre que o ponto for aberto, e tamb�
 
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE0NzEwMTQxODUsNTYyNTU0MDU5LDE3Nz
-I5MzAzOTVdfQ==
+eyJoaXN0b3J5IjpbODgxOTQzNzM4LDU2MjU1NDA1OSwxNzcyOT
+MwMzk1XX0=
 -->
