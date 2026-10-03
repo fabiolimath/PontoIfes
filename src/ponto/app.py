@@ -8,7 +8,7 @@ from datetime import datetime
 import toga
 from toga.style.pack import COLUMN, ROW, Pack
 
-from ponto import credenciais, executor
+from ponto import credenciais, executor, plataforma
 
 
 class Ponto(toga.App):
@@ -26,6 +26,12 @@ class Ponto(toga.App):
         else:
             self.mostrar_principal()
         self.main_window.show()
+
+        plataforma.criar_atalhos(self)
+        # Aberto por um atalho ou pelo Tasker com o extra acao=...: executa já.
+        acao = plataforma.acao_do_intent(self)
+        if acao:
+            self.loop.create_task(self.rodar(acao))
 
     # -----------------------------------
     # TELA PRINCIPAL
@@ -142,6 +148,11 @@ class Ponto(toga.App):
             entrada = classe(value=(atuais or {}).get(campo, ""), style=Pack(margin_bottom=8))
             self.campos[campo] = entrada
             filhos += [toga.Label(rotulo), entrada]
+            if campo == "TELEGRAM_CHAT_ID":
+                filhos.append(toga.Label(
+                    "Para receber notificações no Telegram mande /getid para @IDBot no Telegram.",
+                    style=Pack(margin_bottom=8),
+                ))
         if not credenciais.token_telegram():
             filhos.append(toga.Label(
                 "Este APK foi gerado sem o token do bot: as notificações do Telegram estão desativadas.",
@@ -200,7 +211,7 @@ class Ponto(toga.App):
         return "Nenhuma execução registrada ainda."
 
     async def copiar_log(self, widget, **kwargs):
-        if copiar_para_area_de_transferencia(self, self._ler_log()):
+        if plataforma.copiar(self, self._ler_log()):
             widget.text = "Copiado"
         else:
             await self.main_window.dialog(toga.InfoDialog(
@@ -214,18 +225,6 @@ class Ponto(toga.App):
         if confirmar:
             self.log_path.unlink(missing_ok=True)
             self.texto_log.value = self._ler_log()
-
-
-def copiar_para_area_de_transferencia(app, texto):
-    """Copia o texto no Android; devolve False em outras plataformas."""
-    try:
-        from android.content import ClipData, Context
-    except ImportError:
-        return False
-    atividade = app._impl.native
-    gerenciador = atividade.getSystemService(Context.CLIPBOARD_SERVICE)
-    gerenciador.setPrimaryClip(ClipData.newPlainText("Log do Ponto", texto))
-    return True
 
 
 def main():

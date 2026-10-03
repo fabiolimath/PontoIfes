@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import uuid
 
@@ -98,3 +99,27 @@ def test_copiar_log_fora_do_android_avisa(app):
     app.loop.run_until_complete(app.copiar_log(botao))
 
     assert app.main_window._impl.dialog_responses["InfoDialog"] == []
+
+
+def test_aberto_por_intent_executa_a_acao(tmp_path, monkeypatch):
+    monkeypatch.setenv("TOGA_BACKEND", "toga_dummy")
+    monkeypatch.setattr(toga.paths.Paths, "data", property(lambda self: tmp_path))
+    from ponto import credenciais, executor, plataforma
+    from ponto.app import Ponto
+
+    pacote = f"scripts_{uuid.uuid4().hex}"
+    (tmp_path / pacote).mkdir()
+    (tmp_path / pacote / "__init__.py").write_text("")
+    (tmp_path / pacote / "fechar_ponto.py").write_text("print('fechou')\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    original = executor.executar
+    monkeypatch.setattr(executor, "executar", lambda *a, **k: original(*a, pacote=pacote, **k))
+    credenciais.salvar(tmp_path / "credenciais.json", {"SIGRH_USER": "a", "SIGRH_PASS": "b"})
+    monkeypatch.setattr(plataforma, "acao_do_intent", lambda app: "fechar_ponto")
+
+    app = Ponto(formal_name="Ponto", app_id="io.github.fabiolimath.ponto")
+    app.loop.run_until_complete(asyncio.sleep(0.5))
+
+    assert app.saida.value == "fechou\n"
+    assert app.status.text == "Fechar ponto: concluído."

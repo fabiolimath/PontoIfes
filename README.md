@@ -16,6 +16,24 @@ Os scripts ficam em `src/ponto/scripts/`. Eles continuam lendo as credenciais de
 `SIGRH_USER`, `SIGRH_PASS`, `TELEGRAM_TOKEN` e `TELEGRAM_CHAT_ID`; o app define essas
 variáveis antes de rodá-los com `runpy`, então eles também seguem funcionando no Termux.
 
+## Atalhos e automação
+
+- Segurando o ícone do app aparecem os atalhos **Abrir ponto**, **Fechar ponto** e
+  **Registrar PIT** (criados na primeira vez que o app abre). Arraste um deles para fixar
+  na tela inicial. Tocar no atalho abre o app e executa a ação na hora.
+- Qualquer automação que abra o app com o extra `acao` dispara a ação. No Tasker, use
+  *Enviar Intent*:
+  - Ação: `android.intent.action.VIEW`
+  - Extra: `acao:abrir_ponto` (ou `fechar_ponto`, `registrar_pit`)
+  - Pacote: `io.github.fabiolimath.ponto`
+  - Classe: `org.beeware.android.MainActivity`
+  - Alvo: Atividade
+
+  O Tasker precisa da permissão "Sobrepor a outros apps" para abrir atividades em
+  segundo plano. Para testar pelo PC:
+  `adb shell am start -n io.github.fabiolimath.ponto/org.beeware.android.MainActivity --es acao abrir_ponto`
+- Reabrir o app pela tela de recentes não repete a ação.
+
 ## Uso no PC
 
 ```sh
