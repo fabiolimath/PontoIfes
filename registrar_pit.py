@@ -6,15 +6,10 @@ import requests
 from datetime import date, datetime
 from bs4 import BeautifulSoup
 
-# USUARIO = os.getenv("SIGRH_USER")
-# SENHA = os.getenv("SIGRH_PASS")
-# TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-# TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
-USUARIO = "1534604"
-SENHA = "M4phd3licAa"
-TELEGRAM_TOKEN = "8701759364:AAEzHxLPmwb9f1bxGSzLTZXKAsyL5FoaWGE"
-TELEGRAM_CHAT_ID = "465953682"
+USUARIO = os.getenv("SIGRH_USER")
+SENHA = os.getenv("SIGRH_PASS")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 BASE = "https://sigrh.ifes.edu.br"
 LOGIN_URL = BASE + "/sigrh/login.jsf"
