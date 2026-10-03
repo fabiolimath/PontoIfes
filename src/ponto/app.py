@@ -112,7 +112,9 @@ class Ponto(toga.App):
 
         try:
             codigo, _ = await loop.run_in_executor(
-                None, lambda: executor.executar(acao, cred, self.log_path, ao_escrever, args=args)
+                None, lambda: executor.executar(
+                    acao, credenciais.ambiente(cred), self.log_path, ao_escrever, args=args
+                )
             )
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
@@ -136,10 +138,15 @@ class Ponto(toga.App):
                 style=Pack(margin_bottom=8),
             ))
         for campo, rotulo in credenciais.CAMPOS.items():
-            classe = toga.PasswordInput if campo in ("SIGRH_PASS", "TELEGRAM_TOKEN") else toga.TextInput
+            classe = toga.PasswordInput if campo == "SIGRH_PASS" else toga.TextInput
             entrada = classe(value=(atuais or {}).get(campo, ""), style=Pack(margin_bottom=8))
             self.campos[campo] = entrada
             filhos += [toga.Label(rotulo), entrada]
+        if not credenciais.token_telegram():
+            filhos.append(toga.Label(
+                "Este APK foi gerado sem o token do bot: as notificações do Telegram estão desativadas.",
+                style=Pack(margin_bottom=8),
+            ))
 
         botoes = [toga.Button("Salvar", on_press=self.salvar_credenciais, style=Pack(flex=1))]
         if atuais is not None:

@@ -1,0 +1,3 @@
+# Copie para segredo_telegram.py (ignorado pelo Git) e coloque o token do bot.
+# O arquivo é empacotado no APK; o Chat ID de cada pessoa é informado no app.
+TELEGRAM_TOKEN = ""

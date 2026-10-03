@@ -7,8 +7,7 @@ from pathlib import Path
 CAMPOS = {
     "SIGRH_USER": "Usuário do SIGRH",
     "SIGRH_PASS": "Senha do SIGRH",
-    "TELEGRAM_TOKEN": "Token do bot do Telegram",
-    "TELEGRAM_CHAT_ID": "Chat ID do Telegram",
+    "TELEGRAM_CHAT_ID": "Chat ID do Telegram (opcional)",
 }
 
 OBRIGATORIOS = ("SIGRH_USER", "SIGRH_PASS")
@@ -21,6 +20,20 @@ def carregar(path):
         return None
     dados = json.loads(path.read_text(encoding="utf-8"))
     return {campo: dados.get(campo, "") for campo in CAMPOS}
+
+
+def token_telegram():
+    """Token do bot embutido no app (ponto/segredo_telegram.py, fora do Git)."""
+    try:
+        from ponto.segredo_telegram import TELEGRAM_TOKEN
+    except ImportError:
+        return ""
+    return TELEGRAM_TOKEN.strip()
+
+
+def ambiente(credenciais):
+    """Variáveis de ambiente que os scripts leem."""
+    return {**credenciais, "TELEGRAM_TOKEN": token_telegram()}
 
 
 def faltando(credenciais):

@@ -16,7 +16,7 @@ def app(tmp_path, monkeypatch):
 
 
 def test_primeira_execucao_pede_credenciais(app):
-    assert set(app.campos) == {"SIGRH_USER", "SIGRH_PASS", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID"}
+    assert set(app.campos) == {"SIGRH_USER", "SIGRH_PASS", "TELEGRAM_CHAT_ID"}
     assert app.main_window.content is not app.tela_principal
 
 

@@ -3,9 +3,9 @@
 App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
 **Abrir ponto**, **Fechar ponto** e **Registrar PIT**.
 
-- Na primeira execução o app pede as credenciais (SIGRH e, opcionalmente, Telegram)
-  e as guarda na área privada do app (`credenciais.json`, permissão 600). O botão
-  **Credenciais** permite editá-las depois.
+- Na primeira execução o app pede as credenciais (SIGRH e, opcionalmente, o Chat ID do
+  Telegram) e as guarda na área privada do app (`credenciais.json`, permissão 600). O
+  botão **Credenciais** permite editá-las depois.
 - Cada botão roda o script correspondente numa thread, mostrando a saída ao vivo.
 - O campo "Registrar o PIT de outro dia" (dd/mm/aaaa) é opcional: se preenchido, o
   botão Registrar PIT usa essa data em vez da data de hoje.
@@ -25,6 +25,19 @@ pip install briefcase
 briefcase dev            # roda no desktop (GTK) para testar a interface
 briefcase dev --test     # roda os testes
 ```
+
+## Token do bot do Telegram
+
+O token do bot vai embutido no APK, mas nunca no Git. Antes de compilar:
+
+```sh
+cp src/ponto/segredo_telegram.py.exemplo src/ponto/segredo_telegram.py
+# edite e coloque o token
+```
+
+Sem esse arquivo o app funciona normalmente, só sem notificações. Quem tiver o APK
+consegue extrair o token, então não o distribua fora de quem pode usar o bot. Se o
+token vazar, revogue no @BotFather (`/revoke`), atualize o arquivo e gere o APK de novo.
 
 ## Android
 
