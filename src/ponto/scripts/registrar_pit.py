@@ -262,3 +262,4 @@ for tentativa in range(1, MAX_TENTATIVAS + 1):
             mensagem = "📋❌ SIGRH: todas as tentativas de registro do PIT falharam"
             print(mensagem)
             enviar_telegram(mensagem)
+            sys.exit(1)

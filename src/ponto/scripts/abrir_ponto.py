@@ -1,23 +1,21 @@
 import os
+import sys
 import time
 import requests
 from bs4 import BeautifulSoup
-
-BASE = "https://sigrh.ifes.edu.br"
-LOGIN_URL = BASE + "/sigrh/login.jsf"
-PONTO_URL = BASE + "/sigrh/frequencia/ponto_eletronico/cadastro_ponto_eletronico.jsf"
-MENU_URL = BASE + "/sigrh/servidor/portal/servidor.jsf"
 
 USUARIO = os.getenv("SIGRH_USER")
 SENHA = os.getenv("SIGRH_PASS")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# -----------------------------------
-# CONFIGURAÇÃO DE RETRY
-# -----------------------------------
+BASE = "https://sigrh.ifes.edu.br"
+CLASSICO_URL = BASE + "/sigrh?modo=classico"
+LOGIN_URL = BASE + "/sigrh/login.jsf"
+PONTO_URL = BASE + "/sigrh/frequencia/ponto_eletronico/cadastro_ponto_eletronico.jsf"
+
 MAX_TENTATIVAS = 3
-ESPERA_ENTRE_TENTATIVAS = 10  # segundos
+ESPERA_ENTRE_TENTATIVAS = 10
 
 
 # -----------------------------------
@@ -42,32 +40,28 @@ def enviar_telegram(mensagem):
         print("Erro Telegram:", e)
 
 
-
 def get_viewstate(html):
     soup = BeautifulSoup(html, "html.parser")
     campo = soup.find("input", {"name": "javax.faces.ViewState"})
-
     if not campo:
         raise Exception("ViewState não encontrado")
-
     return campo["value"]
 
 
-def registrar_saida():
+def registrar_entrada():
 
     session = requests.Session()
-
     session.headers.update({
-        "User-Agent": "Mozilla/5.0",
-        "Content-Type": "application/x-www-form-urlencoded"
-    })
+    "User-Agent": "Mozilla/5.0",
+    "Content-Type": "application/x-www-form-urlencoded",
+})
 
     # -----------------------------------
     # LOGIN
     # -----------------------------------
-    resp = session.get(LOGIN_URL, timeout=30)
-
+    resp = session.get(CLASSICO_URL, timeout=30)
     viewstate = get_viewstate(resp.text)
+
 
     data = {
         "formLogin": "formLogin",
@@ -81,46 +75,43 @@ def registrar_saida():
         "javax.faces.ViewState": viewstate
     }
 
-    resp = session.post(LOGIN_URL, data=data, timeout=30)
+    resp = session.post(LOGIN_URL, data=data, timeout=30, headers={
+        "Referer": LOGIN_URL,
+        "Origin": BASE,
+    })
 
-    if "login.jsf" in resp.url:
-        raise Exception("Falha no login")
+    # Não checar resp.url — ela pode ser login.jsf mesmo com sucesso
+    # Checar se o ViewState existe (página do ponto tem ViewState diferente)
+    # e se há indicação de login inválido no conteúdo
+    soup = BeautifulSoup(resp.text, "html.parser")
+    erro = soup.find(string=lambda t: t and ("senha" in t.lower() or "inválid" in t.lower() or "incorret" in t.lower()))
+    if erro:
+        raise Exception(f"Credenciais rejeitadas: {erro.strip()}")
 
-    # -----------------------------------
-    # MENU PONTO ELETRÔNICO
-    # -----------------------------------
-    viewstate = get_viewstate(resp.text)
-
-    data = {
-        "painelAcessoDadosServidor": "painelAcessoDadosServidor",
-        "painelAcessoDadosServidor:linkPontoEletronicoAntigo":
-            "painelAcessoDadosServidor:linkPontoEletronicoAntigo",
-        "javax.faces.ViewState": viewstate
-    }
-
-    session.post(MENU_URL, data=data, timeout=30)
-
-    # -----------------------------------
-    # ABRIR PÁGINA DO PONTO
-    # -----------------------------------
-    resp = session.get(PONTO_URL, timeout=30)
-
+    # Tenta extrair ViewState — se não tiver, login falhou de outro jeito
     viewstate = get_viewstate(resp.text)
 
     # -----------------------------------
-    # REGISTRAR SAÍDA
+    # REGISTRAR ENTRADA
     # -----------------------------------
     data = {
         "idFormDadosEntradaSaida": "idFormDadosEntradaSaida",
         "idFormDadosEntradaSaida:observacoes": "",
-        "idFormDadosEntradaSaida:idBtnRegistrarSaida": "Registrar Saída",
+        "idFormDadosEntradaSaida:idBtnRegistrarEntrada": "Registrar Entrada",
         "javax.faces.ViewState": viewstate
     }
 
-    resp = session.post(PONTO_URL, data=data, timeout=30)
+    resp = session.post(PONTO_URL, data=data, timeout=30, headers={
+        "Referer": PONTO_URL,
+        "Origin": BASE,
+    })
 
     if resp.status_code != 200:
         raise Exception(f"Erro HTTP {resp.status_code}")
+
+    # Verifica se há mensagem de sucesso ou erro na resposta
+    if "login.jsf" in resp.url:
+        raise Exception("Sessão perdida antes do registro")
 
     return True
 
@@ -128,11 +119,11 @@ def registrar_saida():
 # -----------------------------------
 # LOOP DE RETRY
 # -----------------------------------
-for tentativa in range(1, MAX_TENTATIVAS + 1):
 
+for tentativa in range(1, MAX_TENTATIVAS + 1):
     try:
-        registrar_saida()
-        mensagem = "✅🔐📌 SIGRH: saída registrada com sucesso"
+        registrar_entrada()
+        mensagem = "✅🔓🕑 SIGRH: entrada registrada com sucesso"
         print(mensagem)
         enviar_telegram(mensagem)
 
@@ -146,7 +137,7 @@ for tentativa in range(1, MAX_TENTATIVAS + 1):
             print(f"⏳ Tentando novamente em {ESPERA_ENTRE_TENTATIVAS}s...")
             time.sleep(ESPERA_ENTRE_TENTATIVAS)
         else:
-            mensagem = "🔐❌ SIGRH: todas as tentativas de saída falharam"
+            mensagem = "🔓❌ SIGRH: todas as tentativas de entrada falharam"
             print(mensagem)
             enviar_telegram(mensagem)
-
+            sys.exit(1)
