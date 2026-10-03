@@ -54,10 +54,11 @@ def _codigo_de_saida(exc):
     return 1
 
 
-def executar(acao, credenciais, log_path, ao_escrever=None, scripts_dir=SCRIPTS_DIR):
+def executar(acao, credenciais, log_path, ao_escrever=None, args=(), scripts_dir=SCRIPTS_DIR):
     """Roda o script da ação e devolve (código de saída, saída capturada).
 
     `credenciais` vira variáveis de ambiente durante a execução.
+    `args` são os argumentos de linha de comando passados ao script.
     `ao_escrever(texto)` é chamado (na thread do script) a cada escrita.
     """
     if acao not in ACOES:
@@ -70,7 +71,7 @@ def executar(acao, credenciais, log_path, ao_escrever=None, scripts_dir=SCRIPTS_
         env_antigo = dict(os.environ)
         argv_antigo = sys.argv
         os.environ.update({k: v for k, v in credenciais.items() if v})
-        sys.argv = [str(script)]
+        sys.argv = [str(script), *args]
         try:
             with contextlib.redirect_stdout(saida), contextlib.redirect_stderr(saida):
                 try:
@@ -86,7 +87,7 @@ def executar(acao, credenciais, log_path, ao_escrever=None, scripts_dir=SCRIPTS_
             os.environ.clear()
             os.environ.update(env_antigo)
 
-    registrar_log(log_path, acao, inicio, saida.valor(), codigo)
+    registrar_log(log_path, " ".join([acao, *args]), inicio, saida.valor(), codigo)
     return codigo, saida.valor()
 
 

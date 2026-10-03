@@ -3,6 +3,7 @@ Ponto: abre e fecha o ponto e registra o PIT no SIGRH.
 """
 
 import asyncio
+from datetime import datetime
 
 import toga
 from toga.style.pack import COLUMN, ROW, Pack
@@ -39,6 +40,8 @@ class Ponto(toga.App):
             )
             self.botoes.append(botao)
 
+        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", style=Pack(margin_bottom=4))
+
         self.status = toga.Label("Pronto.", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
 
@@ -52,7 +55,14 @@ class Ponto(toga.App):
             style=Pack(direction=ROW, margin_top=8),
         )
         self.tela_principal = toga.Box(
-            children=[*self.botoes, self.status, self.saida, rodape],
+            children=[
+                *self.botoes,
+                toga.Label("Registrar o PIT de outro dia", style=Pack(margin_top=4)),
+                self.data_pit,
+                self.status,
+                self.saida,
+                rodape,
+            ],
             style=Pack(direction=COLUMN, margin=12),
         )
 
@@ -76,11 +86,24 @@ class Ponto(toga.App):
             self.mostrar_credenciais()
             return
 
+        args = ()
+        data = self.data_pit.value.strip()
+        if acao == "registrar_pit" and data:
+            try:
+                datetime.strptime(data, "%d/%m/%Y")
+            except ValueError:
+                await self.main_window.dialog(toga.ErrorDialog(
+                    "Data inválida", f"{data!r} não é uma data no formato dd/mm/aaaa."
+                ))
+                return
+            args = (data,)
+
         self.rodando = True
         for botao in self.botoes:
             botao.enabled = False
         self.saida.value = ""
-        self.status.text = f"Executando: {executor.ACOES[acao]}…"
+        rotulo = executor.ACOES[acao] + (f" ({args[0]})" if args else "")
+        self.status.text = f"Executando: {rotulo}…"
 
         loop = asyncio.get_running_loop()
 
@@ -89,10 +112,12 @@ class Ponto(toga.App):
 
         try:
             codigo, _ = await loop.run_in_executor(
-                None, executor.executar, acao, cred, self.log_path, ao_escrever
+                None, lambda: executor.executar(acao, cred, self.log_path, ao_escrever, args=args)
             )
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
-            self.status.text = f"{executor.ACOES[acao]}: {resultado}."
+            self.status.text = f"{rotulo}: {resultado}."
+            if args and codigo == 0:
+                self.data_pit.value = ""
         finally:
             self.rodando = False
             for botao in self.botoes:

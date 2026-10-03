@@ -7,6 +7,8 @@ App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
   e as guarda na área privada do app (`credenciais.json`, permissão 600). O botão
   **Credenciais** permite editá-las depois.
 - Cada botão roda o script correspondente numa thread, mostrando a saída ao vivo.
+- O campo "Registrar o PIT de outro dia" (dd/mm/aaaa) é opcional: se preenchido, o
+  botão Registrar PIT usa essa data em vez da data de hoje.
 - Cada execução é gravada em `ponto.log` (data/hora, saída e código de saída; últimas
   1000 linhas), visível no botão **Log**.
 
