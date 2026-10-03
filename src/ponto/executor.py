@@ -10,7 +10,9 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-SCRIPTS_DIR = Path(__file__).parent / "scripts"
+# Os scripts são executados como módulos, não como arquivos: no Android
+# (Chaquopy) o código fica dentro do APK e não há um .py no disco.
+SCRIPTS_PACOTE = "ponto.scripts"
 
 ACOES = {
     "abrir_ponto": "Abrir ponto",
@@ -54,7 +56,7 @@ def _codigo_de_saida(exc):
     return 1
 
 
-def executar(acao, credenciais, log_path, ao_escrever=None, args=(), scripts_dir=SCRIPTS_DIR):
+def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRIPTS_PACOTE):
     """Roda o script da ação e devolve (código de saída, saída capturada).
 
     `credenciais` vira variáveis de ambiente durante a execução.
@@ -63,7 +65,7 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), scripts_dir
     """
     if acao not in ACOES:
         raise ValueError(f"Ação desconhecida: {acao!r}")
-    script = Path(scripts_dir) / f"{acao}.py"
+    modulo = f"{pacote}.{acao}"
     inicio = datetime.now()
     saida = _Saida(ao_escrever)
 
@@ -71,11 +73,11 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), scripts_dir
         env_antigo = dict(os.environ)
         argv_antigo = sys.argv
         os.environ.update({k: v for k, v in credenciais.items() if v})
-        sys.argv = [str(script), *args]
+        sys.argv = [f"{acao}.py", *args]
         try:
             with contextlib.redirect_stdout(saida), contextlib.redirect_stderr(saida):
                 try:
-                    runpy.run_path(str(script), run_name="__main__")
+                    runpy.run_module(modulo, run_name="__main__")
                     codigo = 0
                 except SystemExit as exc:
                     codigo = _codigo_de_saida(exc)

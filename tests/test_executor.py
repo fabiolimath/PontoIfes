@@ -1,18 +1,33 @@
+import importlib
 import os
 import sys
+import uuid
+
+import pytest
 
 from ponto import executor
 
 
-def _script(tmp_path, nome, corpo):
-    (tmp_path / f"{nome}.py").write_text(corpo, encoding="utf-8")
+@pytest.fixture
+def pacote(tmp_path, monkeypatch):
+    """Pacote temporário de scripts, no lugar de ponto.scripts."""
+    nome = f"scripts_{uuid.uuid4().hex}"
+    (tmp_path / nome).mkdir()
+    (tmp_path / nome / "__init__.py").write_text("")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    return nome
 
 
-def test_sucesso_passa_credenciais_e_grava_log(tmp_path):
-    _script(tmp_path, "abrir_ponto", "import os\nprint('usuario', os.environ['SIGRH_USER'])\n")
+def _script(tmp_path, pacote, nome, corpo):
+    (tmp_path / pacote / f"{nome}.py").write_text(corpo, encoding="utf-8")
+    importlib.invalidate_caches()
+
+
+def test_sucesso_passa_credenciais_e_grava_log(tmp_path, pacote):
+    _script(tmp_path, pacote, "abrir_ponto", "import os\nprint('usuario', os.environ['SIGRH_USER'])\n")
     log = tmp_path / "log" / "ponto.log"
     codigo, saida = executor.executar(
-        "abrir_ponto", {"SIGRH_USER": "fulano", "SIGRH_PASS": "x"}, log, scripts_dir=tmp_path
+        "abrir_ponto", {"SIGRH_USER": "fulano", "SIGRH_PASS": "x"}, log, pacote=pacote
     )
     assert codigo == 0
     assert saida == "usuario fulano\n"
@@ -21,42 +36,42 @@ def test_sucesso_passa_credenciais_e_grava_log(tmp_path):
     assert texto.endswith("usuario fulano\nsaída: 0\n")
 
 
-def test_ambiente_e_argv_restaurados(tmp_path):
-    _script(tmp_path, "abrir_ponto", "import sys\nprint(sys.argv)\n")
+def test_ambiente_e_argv_restaurados(tmp_path, pacote):
+    _script(tmp_path, pacote, "abrir_ponto", "import sys\nprint(sys.argv)\n")
     os.environ.pop("SIGRH_USER", None)
     argv = sys.argv
-    _, saida = executor.executar("abrir_ponto", {"SIGRH_USER": "fulano"}, tmp_path / "l", scripts_dir=tmp_path)
+    _, saida = executor.executar("abrir_ponto", {"SIGRH_USER": "fulano"}, tmp_path / "l", pacote=pacote)
     assert "SIGRH_USER" not in os.environ
     assert sys.argv is argv
-    assert "abrir_ponto.py" in saida
+    assert "['abrir_ponto.py']" in saida
 
 
-def test_sys_exit_vira_codigo(tmp_path):
-    _script(tmp_path, "fechar_ponto", "import sys\nprint('falhou')\nsys.exit(1)\n")
-    codigo, _ = executor.executar("fechar_ponto", {}, tmp_path / "l", scripts_dir=tmp_path)
+def test_sys_exit_vira_codigo(tmp_path, pacote):
+    _script(tmp_path, pacote, "fechar_ponto", "import sys\nprint('falhou')\nsys.exit(1)\n")
+    codigo, _ = executor.executar("fechar_ponto", {}, tmp_path / "l", pacote=pacote)
     assert codigo == 1
     assert (tmp_path / "l").read_text(encoding="utf-8").endswith("falhou\nsaída: 1\n")
 
 
-def test_excecao_vira_codigo_1_com_traceback(tmp_path):
-    _script(tmp_path, "registrar_pit", "raise RuntimeError('quebrou')\n")
-    codigo, saida = executor.executar("registrar_pit", {}, tmp_path / "l", scripts_dir=tmp_path)
+def test_excecao_vira_codigo_1_com_traceback(tmp_path, pacote):
+    _script(tmp_path, pacote, "registrar_pit", "raise RuntimeError('quebrou')\n")
+    codigo, saida = executor.executar("registrar_pit", {}, tmp_path / "l", pacote=pacote)
     assert codigo == 1
     assert "RuntimeError: quebrou" in saida
 
 
-def test_callback_recebe_saida_ao_vivo(tmp_path):
-    _script(tmp_path, "abrir_ponto", "print('a')\nprint('b')\n")
+def test_callback_recebe_saida_ao_vivo(tmp_path, pacote):
+    _script(tmp_path, pacote, "abrir_ponto", "print('a')\nprint('b')\n")
     pedacos = []
-    executor.executar("abrir_ponto", {}, tmp_path / "l", ao_escrever=pedacos.append, scripts_dir=tmp_path)
+    executor.executar("abrir_ponto", {}, tmp_path / "l", ao_escrever=pedacos.append, pacote=pacote)
     assert "".join(pedacos) == "a\nb\n"
 
 
-def test_log_mantem_ultimas_linhas(tmp_path, monkeypatch):
+def test_log_mantem_ultimas_linhas(tmp_path, pacote, monkeypatch):
     monkeypatch.setattr(executor, "LOG_MAX_LINHAS", 6)
-    _script(tmp_path, "abrir_ponto", "print('x')\n")
+    _script(tmp_path, pacote, "abrir_ponto", "print('x')\n")
     for _ in range(5):
-        executor.executar("abrir_ponto", {}, tmp_path / "l", scripts_dir=tmp_path)
+        executor.executar("abrir_ponto", {}, tmp_path / "l", pacote=pacote)
     linhas = (tmp_path / "l").read_text(encoding="utf-8").splitlines()
     assert len(linhas) == 6
     assert linhas[-1] == "saída: 0"
@@ -64,4 +79,18 @@ def test_log_mantem_ultimas_linhas(tmp_path, monkeypatch):
 
 def test_scripts_empacotados_existem():
     for acao in executor.ACOES:
-        assert (executor.SCRIPTS_DIR / f"{acao}.py").is_file()
+        assert importlib.util.find_spec(f"{executor.SCRIPTS_PACOTE}.{acao}") is not None
+
+
+def test_roda_script_sem_arquivo_fonte(tmp_path, pacote):
+    """Como no Android: só o bytecode existe, não há .py no disco."""
+    import compileall
+
+    _script(tmp_path, pacote, "abrir_ponto", "import sys\nprint('ok', sys.argv[1:])\n")
+    compileall.compile_dir(tmp_path / pacote, legacy=True, quiet=1)
+    (tmp_path / pacote / "abrir_ponto.py").unlink()
+    importlib.invalidate_caches()
+
+    codigo, saida = executor.executar("abrir_ponto", {}, tmp_path / "l", args=("x",), pacote=pacote)
+    assert codigo == 0
+    assert saida == "ok ['x']\n"

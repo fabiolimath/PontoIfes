@@ -1,3 +1,6 @@
+import importlib
+import uuid
+
 import pytest
 
 toga = pytest.importorskip("toga")
@@ -28,16 +31,23 @@ def test_tela_de_log(app):
     assert app.texto_log.value == "Nenhuma execução registrada ainda."
 
 
-def test_rodar_mostra_saida_e_status(app, tmp_path, monkeypatch):
+def _preparar_script(app, tmp_path, monkeypatch, acao, corpo):
     from ponto import credenciais, executor
 
-    scripts = tmp_path / "scripts"
-    scripts.mkdir()
-    (scripts / "abrir_ponto.py").write_text("import sys\nprint('tentando')\nsys.exit(1)\n")
+    pacote = f"scripts_{uuid.uuid4().hex}"
+    (tmp_path / pacote).mkdir()
+    (tmp_path / pacote / "__init__.py").write_text("")
+    (tmp_path / pacote / f"{acao}.py").write_text(corpo)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
     original = executor.executar
-    monkeypatch.setattr(executor, "executar", lambda *a, **k: original(*a, scripts_dir=scripts, **k))
+    monkeypatch.setattr(executor, "executar", lambda *a, **k: original(*a, pacote=pacote, **k))
     credenciais.salvar(app.cred_path, {"SIGRH_USER": "a", "SIGRH_PASS": "b"})
     app.mostrar_principal()
+
+
+def test_rodar_mostra_saida_e_status(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "import sys\nprint('tentando')\nsys.exit(1)\n")
 
     app.loop.run_until_complete(app.rodar("abrir_ponto"))
 
@@ -47,20 +57,8 @@ def test_rodar_mostra_saida_e_status(app, tmp_path, monkeypatch):
     assert "saída: 1" in app.log_path.read_text(encoding="utf-8")
 
 
-def _preparar_script(app, tmp_path, monkeypatch, corpo):
-    from ponto import credenciais, executor
-
-    scripts = tmp_path / "scripts"
-    scripts.mkdir(exist_ok=True)
-    (scripts / "registrar_pit.py").write_text(corpo)
-    original = executor.executar
-    monkeypatch.setattr(executor, "executar", lambda *a, **k: original(*a, scripts_dir=scripts, **k))
-    credenciais.salvar(app.cred_path, {"SIGRH_USER": "a", "SIGRH_PASS": "b"})
-    app.mostrar_principal()
-
-
 def test_pit_com_data_passa_argumento(app, tmp_path, monkeypatch):
-    _preparar_script(app, tmp_path, monkeypatch, "import sys\nprint(sys.argv[1:])\n")
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "import sys\nprint(sys.argv[1:])\n")
     app.data_pit.value = " 02/10/2026 "
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
@@ -72,7 +70,7 @@ def test_pit_com_data_passa_argumento(app, tmp_path, monkeypatch):
 
 
 def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
-    _preparar_script(app, tmp_path, monkeypatch, "import sys\nprint(sys.argv[1:])\n")
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "import sys\nprint(sys.argv[1:])\n")
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
@@ -80,7 +78,7 @@ def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
 
 
 def test_pit_com_data_invalida_nao_roda(app, tmp_path, monkeypatch):
-    _preparar_script(app, tmp_path, monkeypatch, "print('rodou')\n")
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
     app.data_pit.value = "31/02/2026"
     app.main_window._impl.dialog_responses["ErrorDialog"] = [None]
 
@@ -89,3 +87,14 @@ def test_pit_com_data_invalida_nao_roda(app, tmp_path, monkeypatch):
     assert app.saida.value == ""
     assert not app.log_path.exists()
     assert app.main_window._impl.dialog_responses["ErrorDialog"] == []
+
+
+def test_copiar_log_fora_do_android_avisa(app):
+    app.mostrar_log()
+    app.main_window._impl.dialog_responses["InfoDialog"] = [None]
+    botao = app.main_window.content.children[1].children[1]
+    assert botao.text == "Copiar"
+
+    app.loop.run_until_complete(app.copiar_log(botao))
+
+    assert app.main_window._impl.dialog_responses["InfoDialog"] == []

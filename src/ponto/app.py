@@ -174,6 +174,8 @@ class Ponto(toga.App):
             children=[
                 toga.Button("Voltar", on_press=lambda w, **kw: self.mostrar_principal(),
                             style=Pack(flex=1, margin_right=4)),
+                toga.Button("Copiar", on_press=self.copiar_log,
+                            style=Pack(flex=1, margin=(0, 4))),
                 toga.Button("Limpar", on_press=self.limpar_log,
                             style=Pack(flex=1, margin_left=4)),
             ],
@@ -190,6 +192,14 @@ class Ponto(toga.App):
             return self.log_path.read_text(encoding="utf-8")
         return "Nenhuma execução registrada ainda."
 
+    async def copiar_log(self, widget, **kwargs):
+        if copiar_para_area_de_transferencia(self, self._ler_log()):
+            widget.text = "Copiado"
+        else:
+            await self.main_window.dialog(toga.InfoDialog(
+                "Copiar log", "Copiar só está disponível no Android. Selecione o texto e copie."
+            ))
+
     async def limpar_log(self, widget, **kwargs):
         confirmar = await self.main_window.dialog(toga.ConfirmDialog(
             "Limpar log", "Apagar todo o histórico de execuções?"
@@ -197,6 +207,18 @@ class Ponto(toga.App):
         if confirmar:
             self.log_path.unlink(missing_ok=True)
             self.texto_log.value = self._ler_log()
+
+
+def copiar_para_area_de_transferencia(app, texto):
+    """Copia o texto no Android; devolve False em outras plataformas."""
+    try:
+        from android.content import ClipData, Context
+    except ImportError:
+        return False
+    atividade = app._impl.native
+    gerenciador = atividade.getSystemService(Context.CLIPBOARD_SERVICE)
+    gerenciador.setPrimaryClip(ClipData.newPlainText("Log do Ponto", texto))
+    return True
 
 
 def main():
