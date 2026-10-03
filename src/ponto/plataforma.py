@@ -32,6 +32,7 @@ def copiar(app, texto):
 def acao_do_intent(app):
     """Ação pedida pelo intent que abriu o app (atalho, Tasker...), ou None.
 
+    A ação vem do extra "acao" ou, se ele faltar, do dado (URI) do intent.
     Abrir o app pela tela de recentes reentrega o intent original; nesse
     caso a ação é ignorada para não executar de novo.
     """
@@ -47,5 +48,8 @@ def acao_do_intent(app):
         return None
     acao = intent.getStringExtra(EXTRA_ACAO)
     intent.removeExtra(EXTRA_ACAO)
+    if not acao and intent.getDataString():
+        # Campo "Dado" do "Executar app" do Tasker: "abrir_ponto" ou "ponto://abrir_ponto".
+        acao = intent.getDataString().removeprefix("ponto:").strip("/ ")
     return acao if acao in executor.ACOES else None
 

@@ -149,7 +149,7 @@ class Ponto(toga.App):
             filhos += [toga.Label(rotulo), entrada]
             if campo == "TELEGRAM_CHAT_ID":
                 filhos.append(toga.Label(
-                    "Para receber notificações no Telegram,\nmande /getid para @IDBot no Telegram.",
+                    "Para receber notificações no Telegram\nmande /getid para @IDBot no Telegram,\npara descobrir seu Chat ID.",
                     style=Pack(margin_bottom=8),
                 ))
         if not credenciais.token_telegram():

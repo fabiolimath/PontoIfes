@@ -22,8 +22,10 @@ variáveis antes de rodá-los com `runpy`, então eles também seguem funcionand
   **Registrar PIT**. Arraste um deles para fixar na tela inicial. Tocar no atalho abre o
   app e executa a ação na hora. Os atalhos são estáticos (`android/res/xml/shortcuts.xml`),
   por isso também aparecem para o Tasker e para as Rotinas da Samsung.
-- Qualquer automação que abra o app com o extra `acao` dispara a ação. No Tasker, use
-  *Enviar Intent*:
+- No Tasker, o mais simples é a ação *Executar app* com o app Ponto IFES e, no campo
+  **Dado**, o nome da ação: `abrir_ponto`, `fechar_ponto` ou `registrar_pit`.
+- Qualquer automação que abra o app com o extra `acao` (ou com o dado `ponto://<ação>`)
+  também dispara a ação. Alternativa no Tasker, *Sistema > Enviar Intent*:
   - Ação: `android.intent.action.VIEW`
   - Extra: `acao:abrir_ponto` (ou `fechar_ponto`, `registrar_pit`)
   - Pacote: `io.github.fabiolimath.ponto`

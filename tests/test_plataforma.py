@@ -12,14 +12,18 @@ class FakeIntent:
     ACTION_VIEW = "android.intent.action.VIEW"
     FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY = 0x00100000
 
-    def __init__(self, action=None, extras=None, flags=0):
+    def __init__(self, action=None, extras=None, flags=0, data=None):
         self.action = action
+        self.data = data
         self.extras = dict(extras or {})
         self.flags = flags
         self.classe = None
 
     def getFlags(self):
         return self.flags
+
+    def getDataString(self):
+        return self.data
 
     def getStringExtra(self, nome):
         return self.extras.get(nome)
@@ -126,3 +130,13 @@ def test_aberto_pelos_recentes_nao_repete(android):
 def test_sem_extra(android):
     assert plataforma.acao_do_intent(android(FakeAtividade(FakeIntent()))) is None
 
+
+@pytest.mark.parametrize("dado", ["registrar_pit", "ponto://registrar_pit", " registrar_pit/ "])
+def test_acao_pelo_dado_do_intent(android, dado):
+    intent = FakeIntent(data=dado)
+    assert plataforma.acao_do_intent(android(FakeAtividade(intent))) == "registrar_pit"
+
+
+def test_dado_desconhecido_e_ignorado(android):
+    intent = FakeIntent(data="https://exemplo.com")
+    assert plataforma.acao_do_intent(android(FakeAtividade(intent))) is None
