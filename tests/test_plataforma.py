@@ -85,7 +85,8 @@ def android(monkeypatch):
         m.__dict__.update(attrs)
         monkeypatch.setitem(sys.modules, nome, m)
 
-    modulo("android")
+    # Como no Chaquopy: "import android" falha, só "from android.x import Classe" funciona.
+    monkeypatch.setitem(sys.modules, "android", None)
     modulo("android.content", Intent=FakeIntent,
            Context=types.SimpleNamespace(SHORTCUT_SERVICE="shortcut"))
     modulo("android.content.pm", ShortcutInfo=types.SimpleNamespace(Builder=FakeBuilder))

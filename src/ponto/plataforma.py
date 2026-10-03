@@ -8,8 +8,10 @@ EXTRA_ACAO = "acao"
 
 def _atividade(app):
     """MainActivity do app, ou None fora do Android."""
+    # O Chaquopy só importa classes Java com "from pacote import Classe";
+    # "import android" sozinho falha mesmo no Android.
     try:
-        import android  # noqa: F401  (pacote do Chaquopy)
+        from android.content import Context  # noqa: F401
     except ImportError:
         return None
     return app._impl.native

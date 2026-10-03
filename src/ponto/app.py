@@ -3,6 +3,7 @@ Ponto: abre e fecha o ponto e registra o PIT no SIGRH.
 """
 
 import asyncio
+import traceback
 from datetime import datetime
 
 import toga
@@ -27,7 +28,12 @@ class Ponto(toga.App):
             self.mostrar_principal()
         self.main_window.show()
 
-        plataforma.criar_atalhos(self)
+        try:
+            plataforma.criar_atalhos(self)
+        except Exception:
+            # Sem atalhos o app continua útil; o erro fica no log para diagnóstico.
+            executor.registrar_log(self.log_path, "criar atalhos", datetime.now(),
+                                   traceback.format_exc(), 1)
         # Aberto por um atalho ou pelo Tasker com o extra acao=...: executa já.
         acao = plataforma.acao_do_intent(self)
         if acao:
