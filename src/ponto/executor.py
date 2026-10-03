@@ -47,6 +47,33 @@ class _Saida(io.TextIOBase):
         return "".join(self.partes)
 
 
+class _Desvio(io.TextIOBase):
+    """Captura só o que a thread do script escreve.
+
+    O resto (por exemplo, avisos de layout que o Toga imprime na thread da
+    interface enquanto o script roda) segue para o destino original.
+    """
+
+    def __init__(self, saida, original):
+        self.saida = saida
+        self.original = original
+        self.thread = threading.get_ident()
+
+    def writable(self):
+        return True
+
+    def write(self, texto):
+        if threading.get_ident() == self.thread:
+            return self.saida.write(texto)
+        if self.original is not None:
+            return self.original.write(texto)
+        return len(texto)
+
+    def flush(self):
+        if self.original is not None:
+            self.original.flush()
+
+
 def _codigo_de_saida(exc):
     if exc.code is None:
         return 0
@@ -75,7 +102,8 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRI
         os.environ.update({k: v for k, v in credenciais.items() if v})
         sys.argv = [f"{acao}.py", *args]
         try:
-            with contextlib.redirect_stdout(saida), contextlib.redirect_stderr(saida):
+            with contextlib.redirect_stdout(_Desvio(saida, sys.stdout)), \
+                    contextlib.redirect_stderr(_Desvio(saida, sys.stderr)):
                 try:
                     runpy.run_module(modulo, run_name="__main__")
                     codigo = 0

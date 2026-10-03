@@ -94,3 +94,17 @@ def test_roda_script_sem_arquivo_fonte(tmp_path, pacote):
     codigo, saida = executor.executar("abrir_ponto", {}, tmp_path / "l", args=("x",), pacote=pacote)
     assert codigo == 0
     assert saida == "ok ['x']\n"
+
+
+def test_escritas_de_outras_threads_ficam_fora_do_log(tmp_path, pacote, capsys):
+    """Ex.: avisos de layout que o Toga imprime na thread da interface."""
+    _script(tmp_path, pacote, "abrir_ponto", (
+        "import sys, threading\n"
+        "t = threading.Thread(target=lambda: print('aviso do Toga', file=sys.stderr))\n"
+        "t.start(); t.join()\n"
+        "print('do script')\n"
+    ))
+    _, saida = executor.executar("abrir_ponto", {}, tmp_path / "l", pacote=pacote)
+    assert saida == "do script\n"
+    assert "aviso do Toga" not in (tmp_path / "l").read_text(encoding="utf-8")
+    assert "aviso do Toga" in capsys.readouterr().err
