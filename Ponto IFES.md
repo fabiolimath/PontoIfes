@@ -2,7 +2,7 @@
 
 Quero automatizar o controle de ponto que preciso fazer no trabalho. São três tarefas executadas numa página web. Parte delas só pode ser feita enquanto estou no campus. Não tenho uma máquina no campus para hospedar o serviço. Por isso, é preciso que seja executado no celular, Android. 
 
-Nunca programei aplicativos móveis. Então quero que você me sugira uma abordagem para implementar isso. Vamos primeiro analisar os procedimentos na página?
+Nunca programei aplicativos móveis. 
 
 Os três procedimentos são:
 
@@ -26,7 +26,7 @@ Está aberto o ponto. Deve ser executado sempre que chego ao campus, e só pode 
 
 Está fechado o ponto. Deve ser executado sempre que o ponto for aberto, e também só consegue ser executado com sucesso se eu estiver no campus. Se eu saio antes do horário vou fazer manualmente, tornando a ação desnecessária.
 
-**Estratégia de automação:** esse procedimento pode ser sempre executado em dias e horários específicos. Mas esses dias e horários mudam todo semestre. Não são todos os dias da semana e nem sempre no mesmo horário. E pode ocorrer mais de uma vez por dia. Não é problema se for executada, seguindo o agendamento, sem que o ponto esteja aberto ou sem que eu esteja no campus. Nesses casos, o procedimento seria desnecessário, mas ele apenas retornaria erro, sem consequência. Simplifica a automação.
+**Estratégia de automação:** Executa quando me conecto ao bluetooth do carro ou da moto. 
 
 ## Registro de PIT
  
