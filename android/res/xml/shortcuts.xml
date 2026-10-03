@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Atalhos do ícone (segurar o ícone). Por serem estáticos, aparecem também
+     para o Tasker e para as Rotinas. Cada um abre o app com o extra "acao". -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="abrir_ponto"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/atalho_abrir_ponto">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.fabiolimath.ponto"
+            android:targetClass="org.beeware.android.MainActivity">
+            <extra android:name="acao" android:value="abrir_ponto" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="fechar_ponto"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/atalho_fechar_ponto">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.fabiolimath.ponto"
+            android:targetClass="org.beeware.android.MainActivity">
+            <extra android:name="acao" android:value="fechar_ponto" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="registrar_pit"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/atalho_registrar_pit">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.fabiolimath.ponto"
+            android:targetClass="org.beeware.android.MainActivity">
+            <extra android:name="acao" android:value="registrar_pit" />
+        </intent>
+    </shortcut>
+</shortcuts>

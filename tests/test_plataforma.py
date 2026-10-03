@@ -103,7 +103,6 @@ def android(monkeypatch):
 def test_fora_do_android_nao_faz_nada():
     app = types.SimpleNamespace(_impl=None)
     assert plataforma.acao_do_intent(app) is None
-    assert plataforma.criar_atalhos(app) is None
     assert plataforma.copiar(app, "x") is False
 
 
@@ -127,14 +126,3 @@ def test_aberto_pelos_recentes_nao_repete(android):
 def test_sem_extra(android):
     assert plataforma.acao_do_intent(android(FakeAtividade(FakeIntent()))) is None
 
-
-def test_criar_atalhos(android):
-    atividade = FakeAtividade()
-    plataforma.criar_atalhos(android(atividade))
-    assert [a["rotulo"] for a in atividade.atalhos] == ["Abrir ponto", "Fechar ponto", "Registrar PIT"]
-    primeiro = atividade.atalhos[0]
-    assert primeiro["id"] == "abrir_ponto"
-    assert primeiro["icone"] == "icone:42"
-    assert primeiro["intent"].action == FakeIntent.ACTION_VIEW
-    assert primeiro["intent"].extras == {"acao": "abrir_ponto"}
-    assert primeiro["intent"].classe == "org.beeware.android.MainActivity"

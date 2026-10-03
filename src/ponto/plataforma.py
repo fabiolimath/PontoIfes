@@ -49,29 +49,3 @@ def acao_do_intent(app):
     intent.removeExtra(EXTRA_ACAO)
     return acao if acao in executor.ACOES else None
 
-
-def criar_atalhos(app):
-    """Atalhos do ícone (segurar o ícone do app), um por ação; podem ser fixados."""
-    atividade = _atividade(app)
-    if atividade is None:
-        return
-    from android.content import Context, Intent
-    from android.content.pm import ShortcutInfo
-    from android.graphics.drawable import Icon
-    from java.util import ArrayList
-
-    icone = Icon.createWithResource(atividade, atividade.getApplicationInfo().icon)
-    atalhos = ArrayList()
-    for acao, rotulo in executor.ACOES.items():
-        intent = Intent(Intent.ACTION_VIEW)
-        intent.setClassName(atividade, atividade.getClass().getName())
-        intent.putExtra(EXTRA_ACAO, acao)
-        atalhos.add(
-            ShortcutInfo.Builder(atividade, acao)
-            .setShortLabel(rotulo)
-            .setIcon(icone)
-            .setIntent(intent)
-            .build()
-        )
-    gerenciador = atividade.getSystemService(Context.SHORTCUT_SERVICE)
-    gerenciador.setDynamicShortcuts(atalhos)

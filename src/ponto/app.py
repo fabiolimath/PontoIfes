@@ -3,7 +3,6 @@ Ponto: abre e fecha o ponto e registra o PIT no SIGRH.
 """
 
 import asyncio
-import traceback
 from datetime import datetime
 
 import toga
@@ -28,12 +27,6 @@ class Ponto(toga.App):
             self.mostrar_principal()
         self.main_window.show()
 
-        try:
-            plataforma.criar_atalhos(self)
-        except Exception:
-            # Sem atalhos o app continua útil; o erro fica no log para diagnóstico.
-            executor.registrar_log(self.log_path, "criar atalhos", datetime.now(),
-                                   traceback.format_exc(), 1)
         # Aberto por um atalho ou pelo Tasker com o extra acao=...: executa já.
         acao = plataforma.acao_do_intent(self)
         if acao:
@@ -146,7 +139,7 @@ class Ponto(toga.App):
         filhos = []
         if atuais is None:
             filhos.append(toga.Label(
-                "Informe as credenciais. Elas ficam guardadas só neste aparelho.",
+                "Informe as credenciais.\nElas ficam guardadas só neste aparelho.",
                 style=Pack(margin_bottom=8),
             ))
         for campo, rotulo in credenciais.CAMPOS.items():
@@ -156,12 +149,12 @@ class Ponto(toga.App):
             filhos += [toga.Label(rotulo), entrada]
             if campo == "TELEGRAM_CHAT_ID":
                 filhos.append(toga.Label(
-                    "Para receber notificações no Telegram mande /getid para @IDBot no Telegram.",
+                    "Para receber notificações no Telegram,\nmande /getid para @IDBot no Telegram.",
                     style=Pack(margin_bottom=8),
                 ))
         if not credenciais.token_telegram():
             filhos.append(toga.Label(
-                "Este APK foi gerado sem o token do bot: as notificações do Telegram estão desativadas.",
+                "Este APK foi gerado sem o token do bot:\nas notificações do Telegram estão desativadas.",
                 style=Pack(margin_bottom=8),
             ))
 

@@ -9,11 +9,13 @@ author = "Fabio Lima"
 author_email = "fabiolimath@users.noreply.github.com"
 
 [tool.briefcase.app.ponto]
-formal_name = "Ponto"
+formal_name = "Ponto IFES"
 description = "Abre e fecha o ponto e registra o PIT no SIGRH do IFES."
 long_description = """Empacota os scripts abrir_ponto.py, fechar_ponto.py e
 registrar_pit.py num app Android, com credenciais e log de execuções.
 """
+icon = "icons/ponto"
+splash_background_color = "#FFFFFF"
 sources = [
     "src/ponto",
 ]
@@ -56,3 +58,18 @@ base_theme = "Theme.MaterialComponents.Light.DarkActionBar"
 build_gradle_dependencies = [
     "com.google.android.material:material:1.13.0",
 ]
+
+# Atalhos estáticos (android/res/xml/shortcuts.xml): aparecem ao segurar o
+# ícone, no Tasker e nas Rotinas. Os recursos em android/res entram no APK.
+android_manifest_activity_extra_content = """
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+"""
+build_gradle_extra_content = """
+android {
+    sourceSets {
+        main {
+            res.srcDir(new File(rootProject.projectDir, "../../../../android/res"))
+        }
+    }
+}
+"""

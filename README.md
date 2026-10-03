@@ -1,4 +1,4 @@
-# Ponto
+# Ponto IFES
 
 App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
 **Abrir ponto**, **Fechar ponto** e **Registrar PIT**.
@@ -19,8 +19,9 @@ variáveis antes de rodá-los com `runpy`, então eles também seguem funcionand
 ## Atalhos e automação
 
 - Segurando o ícone do app aparecem os atalhos **Abrir ponto**, **Fechar ponto** e
-  **Registrar PIT** (criados na primeira vez que o app abre). Arraste um deles para fixar
-  na tela inicial. Tocar no atalho abre o app e executa a ação na hora.
+  **Registrar PIT**. Arraste um deles para fixar na tela inicial. Tocar no atalho abre o
+  app e executa a ação na hora. Os atalhos são estáticos (`android/res/xml/shortcuts.xml`),
+  por isso também aparecem para o Tasker e para as Rotinas da Samsung.
 - Qualquer automação que abra o app com o extra `acao` dispara a ação. No Tasker, use
   *Enviar Intent*:
   - Ação: `android.intent.action.VIEW`
@@ -70,4 +71,6 @@ briefcase run android    # instala e abre no aparelho via adb
 Na primeira vez o Briefcase baixa sozinho o JDK e o Android SDK. Para gerar um APK e
 instalar por sideload: `briefcase package android -p debug-apk` (o arquivo fica em `dist/`).
 
-Depois de mudar o código, use `briefcase run android -u` para atualizar o app.
+Depois de mudar só o código Python, `-u` basta (`briefcase package android -u -p debug-apk`).
+Se mudar o `pyproject.toml`, o ícone ou algo em `android/`, recrie o projeto Android antes
+com `briefcase create android` (confirme a sobrescrita).
