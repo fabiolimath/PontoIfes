@@ -54,6 +54,7 @@
   @media (prefers-color-scheme: dark) { .baixar { color: #0d1a10; } }
   .nota { color: var(--suave); font-size: .9rem; margin-top: 10px; }
   .nota a { color: inherit; }
+  section a { color: var(--verde-escuro); }
   .acoes {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 12px; margin: 8px 0 8px;
@@ -116,16 +117,18 @@
     <h3>Notificações no Telegram (opcional)</h3>
     <p>O app pode avisar no Telegram se cada registro deu certo. Para isso:</p>
     <ol>
-      <li>No Telegram, mande <code>/getid</code> para <strong>@IDBot</strong>. Ele responde com o seu Chat ID, um número.</li>
+      <li>Abra o <a href="https://t.me/MeuPontoIFESBot">Meu Ponto IFES Bot</a> no Telegram e toque em <strong>Iniciar</strong>. O bot só consegue mandar mensagens para quem já iniciou uma conversa com ele.</li>
+      <li>Abra o <a href="https://t.me/IDBot?start=getid">@IDBot</a> e toque em <strong>Iniciar</strong> (ou mande <code>/getid</code>). Ele responde com o seu Chat ID, um número.</li>
       <li>Cole esse número no campo <strong>Chat ID do Telegram</strong> do app.</li>
     </ol>
+    <p>No app, os links abaixo do campo Chat ID levam direto a esses dois bots.</p>
     <p>Deixe o campo em branco se não quiser notificações.</p>
   </section>
 
   <section>
     <h2>No dia a dia</h2>
     <ul>
-      <li>Toque em <strong>Abrir ponto</strong>, <strong>Fechar ponto</strong> ou <strong>Registrar PIT</strong>. O andamento aparece na tela.</li>
+      <li>Toque em <strong>Abrir ponto</strong>, <strong>Fechar ponto</strong> ou <strong>Registrar PIT</strong>. O andamento aparece na tela. Abrir e fechar o ponto só funcionam com o celular conectado à rede da escola.</li>
       <li>Para registrar o PIT de um dia que passou, preencha a data em <strong>Registrar o PIT de outro dia</strong> (dd/mm/aaaa) antes de tocar em Registrar PIT. Em branco, vale a data de hoje.</li>
       <li>O botão <strong>Log</strong> mostra o histórico de execuções, com data e hora. Use <strong>Copiar</strong> para mandar o log a alguém se algo der errado.</li>
     </ul>
