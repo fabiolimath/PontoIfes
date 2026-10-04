@@ -33,7 +33,8 @@ briefcase package android -u -p apk
 versao=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
 entrada="dist/Ponto IFES-$versao.apk"
 alinhado="dist/ponto-ifes-$versao.alinhado.apk"
-saida="dist/ponto-ifes-$versao.apk"
+# Nome fixo, para o link .../releases/latest/download/ponto-ifes.apk do site.
+saida="dist/ponto-ifes.apk"
 
 build_tools=$(ls -d "$sdk"/build-tools/*/ | sort -V | tail -1)
 "$build_tools/zipalign" -p -f 4 "$entrada" "$alinhado"
