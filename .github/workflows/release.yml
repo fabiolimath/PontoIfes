@@ -1,0 +1,65 @@
+# Gera o APK assinado e publica o release ao enviar uma tag vX.Y.Z.
+# Segredos do repositório usados:
+#   ANDROID_KEYSTORE_BASE64    chave de assinatura (ponto-release.jks) em base64
+#   ANDROID_KEYSTORE_PASSWORD  senha da chave
+#   TELEGRAM_TOKEN             token do bot, embutido no APK
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      # O runner já traz um Android SDK e um JDK; esvaziar estas variáveis faz o
+      # Briefcase baixar os dele, como no PC.
+      ANDROID_HOME: ""
+      ANDROID_SDK_ROOT: ""
+      JAVA_HOME: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Conferir a versão
+        run: |
+          versao=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
+          if [ "v$versao" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::A tag $GITHUB_REF_NAME não bate com version = \"$versao\" no pyproject.toml"
+            exit 1
+          fi
+
+      - name: Preparar segredos
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ponto-release.jks"
+          printf 'TELEGRAM_TOKEN = "%s"\n' "$TELEGRAM_TOKEN" > src/ponto/segredo_telegram.py
+
+      - name: Instalar o Briefcase
+        run: pip install briefcase==0.4.5
+
+      - name: Criar o projeto Android
+        # "yes" aceita as licenças do Android SDK.
+        run: yes | briefcase create android --no-input
+
+      - name: Gerar e assinar o APK
+        env:
+          PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
+          PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: android/release.sh
+
+      - name: Publicar o release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/ponto-ifes.apk \
+            --title "Ponto IFES ${GITHUB_REF_NAME#v}" --generate-notes
