@@ -78,3 +78,28 @@ instalar por sideload: `briefcase package android -p debug-apk` (o arquivo fica 
 Depois de mudar só o código Python, `-u` basta (`briefcase package android -u -p debug-apk`).
 Se mudar o `pyproject.toml`, o ícone ou algo em `android/`, recrie o projeto Android antes
 com `briefcase create android` (confirme a sobrescrita).
+
+## APK para distribuir (release assinado)
+
+O APK debug serve para uso próprio. Para distribuir, gere o release assinado com a
+chave do app:
+
+```sh
+briefcase create android   # só depois de mudar a versão ou o pyproject.toml
+android/release.sh
+```
+
+Na primeira vez o script cria a chave em `~/.config/ponto/ponto-release.jks` e pede uma
+senha. **Guarde uma cópia da chave e a senha.** O Android só aceita uma atualização
+assinada com a mesma chave. Sem ela, quem já tem o app instalado precisa desinstalar
+e digitar as credenciais de novo. O APK assinado sai em `dist/ponto-ifes-<versão>.apk`.
+
+Quem tem instalado um APK debug precisa desinstalá-lo antes de instalar o release,
+porque as chaves são diferentes.
+
+A cada nova versão, aumente `version` no `pyproject.toml` (assim o Android e os colegas
+sabem que é uma atualização) e publique o release no GitHub:
+
+```sh
+gh release create v1.0.0 dist/ponto-ifes-1.0.0.apk --title "Ponto IFES 1.0.0" --notes "Primeira versão"
+```
