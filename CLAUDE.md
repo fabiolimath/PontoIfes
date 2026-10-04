@@ -1,52 +1,84 @@
-# Projeto: App Android "Ponto" (empacotar scripts Python)
+# Projeto: App Android "Ponto IFES"
 
-## Objetivo
-
-Criar **um único app Android** que empacote três scripts Python existentes e permita executá-los sem Termux:
+App Android (BeeWare: Briefcase + Toga, com Chaquopy) que empacota três scripts Python e os executa
+sem Termux:
 
 - **Abrir ponto** → `abrir_ponto.py`
 - **Fechar ponto** → `fechar_ponto.py`
-- **Registrar PIT** → `registrar_pit.py`
+- **Registrar PIT** → `registrar_pit.py` (hoje ou outra data, dd/mm/aaaa)
 
-Requisitos:
+O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado (versão atual em
+`pyproject.toml`).
 
-1. Tela principal com três botões, um por função.
-2. **Credenciais pedidas na 1ª execução**, armazenadas na área privada do app, com opção de editar depois.
-3. **Visualizar o log** das execuções (saída de cada script + data/hora + código de saída).
-4. **Atalhos de launcher** (app shortcuts: segurar o ícone → "Abrir ponto", "Fechar ponto", "PIT"), fixáveis na tela inicial.
-5. **Executar automaticamente ao abrir via atalho/intent** (ex.: extra `acao=abrir_ponto`), para que Rotinas da Samsung ou o Tasker possam disparar a ação só abrindo o app, sem Termux.
+## O que o app faz
 
-## Stack escolhida
+1. Tela principal com três botões, um por função, e campo de data para o PIT.
+2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH e Chat ID do Telegram, opcional),
+   guardadas na área privada do app e editáveis no botão **Credenciais**.
+3. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
+4. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
+5. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
+   `registrar_pit`), ou o mesmo valor no dado (URI) do intent. Usado por Rotinas da Samsung e Tasker.
+   - Tasker: ação **Executar app**, campo **Dado** = `abrir_ponto`, com **Sempre Iniciar Nova Cópia**
+     marcado (sem isso, com o app aberto, ele só vem para a frente e não executa).
+   - Para rodar com a tela desligada: bateria do app em **Sem restrições**.
 
-- **BeeWare: Briefcase + Toga** (Python → APK; widgets nativos; usa Chaquopy).
-- Dependências dos scripts: `requests`, `beautifulsoup4` (Python puro, sem problemas no Android).
-- Build no PC do usuário: Kubuntu 26.04 (Briefcase baixa JDK/Android SDK sozinho).
-- Instalação no celular por APK (sideload) ou `briefcase run android` via adb.
-- Alternativas descartadas: Flet (empacotamento menos maduro), Kivy/Buildozer (mais trabalhoso, visual não nativo).
+## Estrutura
 
-## Situação atual (como funciona hoje, via Termux)
+- `src/ponto/app.py` — interface Toga (botões, credenciais, log, dica do Telegram com links).
+- `src/ponto/executor.py` — roda os scripts como módulos (`runpy`, pacote `ponto.scripts`), definindo
+  `os.environ` com as credenciais e capturando stdout/stderr para o log; um script por vez.
+- `src/ponto/credenciais.py` — leitura/gravação das credenciais (JSON na área privada).
+- `src/ponto/plataforma.py` — código específico do Android (intent, área de transferência, links
+  clicáveis com `Html.fromHtml`); no PC devolve valores neutros.
+- `src/ponto/scripts/` — os três scripts (leem `SIGRH_USER`, `SIGRH_PASS`, `TELEGRAM_TOKEN`,
+  `TELEGRAM_CHAT_ID` do ambiente).
+- `android/res/` — atalhos de launcher (`xml/shortcuts.xml`, `values/atalhos.xml`).
+- `android/release.sh` — empacota, alinha e assina o APK release → `dist/ponto-ifes.apk`.
+- `.github/workflows/release.yml` — build e publicação automáticos.
+- `docs/` — site de instalação para usuários leigos (GitHub Pages, branch master, pasta /docs).
+- `tests/` — pytest: `PYTHONPATH=src python -m pytest -q tests`.
 
-- Celular Samsung com Termux + Termux:Widget + Termux:Tasker + Tasker.
-- Scripts sincronizados pelo Mega em `~/storage/shared/Mega/mobile/ponto/scripts/`.
-- Os scripts leem as credenciais de **variáveis de ambiente**:
-  - `SIGRH_USER`, `SIGRH_PASS` — login no sistema SIGRH (página web onde o ponto é registrado)
-  - `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` — notificação do resultado via bot do Telegram
-- As credenciais ficam em `~/.config/ponto/credenciais.env` (chmod 600), carregadas pelos wrappers.
-- `setup.sh` (na pasta do Mega) recria o ambiente: instala python/requests/bs4/openssh e gera wrappers em
-  `~/.termux/tasker/` (com `sleep 5` para esperar a rede) e `~/.termux/widget/dynamic_shortcuts/`.
-- Cada wrapper: `termux-wake-lock` → carrega credenciais → `cd` na pasta dos scripts → `python <script>.py`
-  → grava log em `Mega/mobile/ponto/logs/<script>.log` (últimas 300 linhas) → `termux-wake-unlock`.
-- Gatilhos: um script roda ao conectar um aparelho Bluetooth, outro em horário fixo (ambos funcionavam
-  pelas Rotinas da Samsung), e um ao conectar numa rede Wi-Fi (falhava nas Rotinas; migrado para Tasker,
-  em teste).
+## Telegram
 
-## Notas de implementação
+- Bot **@MeuPontoIFESBot**. O token vai embutido no APK via `src/ponto/segredo_telegram.py`
+  (fora do Git; modelo em `segredo_telegram.py.exemplo`). O autor aceitou o token no pacote.
+- Cada usuário informa só o próprio Chat ID (obtido com @IDBot).
+- Manter a notificação via Telegram como está, por enquanto: o autor planeja remover essa integração
+  numa versão futura (aí apagar também o segredo `TELEGRAM_TOKEN` do GitHub).
 
-- Adaptação mínima dos scripts: o app define `os.environ[...]` com as credenciais e executa o script
-  (ex.: `runpy.run_path`), capturando stdout/stderr para o log. Revisar os `.py` antes, para ver como
-  leem as credenciais e o que imprimem.
-- Manter a notificação via Telegram como está.
+## Release
+
+- Feito no GitHub Actions: botão **Run workflow** (aba Actions → Release) ou push de tag `vX.Y.Z`.
+  O workflow lê a versão do `pyproject.toml`, falha se a tag já existir, gera o APK assinado e cria
+  o release com o arquivo `ponto-ifes.apk`.
+- Por isso, **todo PR que muda o app deve aumentar `version` no `pyproject.toml`** (é também o
+  versionCode do Android). Tags v1.0.0 a v1.0.5 já existem.
+- Segredos do repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `TELEGRAM_TOKEN`.
+- Chave de assinatura: `~/.config/ponto/ponto-release.jks` (alias `ponto`) no PC do autor, com
+  cópia de segurança. Nunca entra no repositório (`*.jks` no `.gitignore`); sem a mesma chave, quem
+  já instalou não consegue atualizar.
+- O nome fixo do arquivo mantém válido o link do site:
+  `https://github.com/fabiolimath/PontoIfes/releases/latest/download/ponto-ifes.apk`.
+- O SDK Android não baixa no ambiente de nuvem do Claude; não tentar compilar o APK lá.
+
+## Fluxo de trabalho
+
+- Só o Claude edita o código, por PRs (rascunho); o autor faz o merge no site e clica em Run workflow.
+- A cópia local do autor (fora da pasta do Mega) serve só para testar builds debug no celular via adb
+  (`briefcase run android`).
+
+## Pendências
+
+- Testar os gatilhos automáticos (Bluetooth, horário, Wi-Fi) num dia útil.
+- O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
+  é legado e foi substituído pelo app.
+
+## Regras
+
 - Nunca commitar credenciais; o repositório não deve conter valores reais.
+- O site (`docs/`) é para quem só instala o APK: sem uso no PC, sem token do Telegram, sem build e,
+  no Tasker, só a opção Executar app (não Enviar Intent).
 
 ## Sobre o usuário
 
