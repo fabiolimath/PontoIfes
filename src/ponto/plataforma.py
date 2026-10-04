@@ -1,0 +1,55 @@
+"""Integrações com o Android (via Chaquopy). Fora do Android, não fazem nada."""
+
+from ponto import executor
+
+# Extra do intent com a ação a executar ao abrir o app, ex.: acao=abrir_ponto.
+EXTRA_ACAO = "acao"
+
+
+def _atividade(app):
+    """MainActivity do app, ou None fora do Android."""
+    # O Chaquopy só importa classes Java com "from pacote import Classe";
+    # "import android" sozinho falha mesmo no Android.
+    try:
+        from android.content import Context  # noqa: F401
+    except ImportError:
+        return None
+    return app._impl.native
+
+
+def copiar(app, texto):
+    """Copia o texto para a área de transferência; devolve False fora do Android."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.content import ClipData, Context
+
+    gerenciador = atividade.getSystemService(Context.CLIPBOARD_SERVICE)
+    gerenciador.setPrimaryClip(ClipData.newPlainText("Log do Ponto", texto))
+    return True
+
+
+def acao_do_intent(app):
+    """Ação pedida pelo intent que abriu o app (atalho, Tasker...), ou None.
+
+    A ação vem do extra "acao" ou, se ele faltar, do dado (URI) do intent.
+    Abrir o app pela tela de recentes reentrega o intent original; nesse
+    caso a ação é ignorada para não executar de novo.
+    """
+    atividade = _atividade(app)
+    if atividade is None:
+        return None
+    from android.content import Intent
+
+    intent = atividade.getIntent()
+    if intent is None:
+        return None
+    if intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY:
+        return None
+    acao = intent.getStringExtra(EXTRA_ACAO)
+    intent.removeExtra(EXTRA_ACAO)
+    if not acao and intent.getDataString():
+        # Campo "Dado" do "Executar app" do Tasker: "abrir_ponto" ou "ponto://abrir_ponto".
+        acao = intent.getDataString().removeprefix("ponto:").strip("/ ")
+    return acao if acao in executor.ACOES else None
+

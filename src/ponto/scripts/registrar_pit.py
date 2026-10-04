@@ -24,6 +24,9 @@ ESPERA_ENTRE_TENTATIVAS = 10
 
 
 def enviar_telegram(mensagem):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
         requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensagem}, timeout=30)
@@ -262,3 +265,4 @@ for tentativa in range(1, MAX_TENTATIVAS + 1):
             mensagem = "📋❌ SIGRH: todas as tentativas de registro do PIT falharam"
             print(mensagem)
             enviar_telegram(mensagem)
+            sys.exit(1)

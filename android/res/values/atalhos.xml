@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="atalho_abrir_ponto">Abrir ponto</string>
+    <string name="atalho_fechar_ponto">Fechar ponto</string>
+    <string name="atalho_registrar_pit">Registrar PIT</string>
+</resources>
