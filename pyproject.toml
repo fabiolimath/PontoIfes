@@ -1,7 +1,7 @@
 [tool.briefcase]
 project_name = "Ponto"
 bundle = "io.github.fabiolimath"
-version = "1.0.2"
+version = "1.0.3"
 url = "https://github.com/fabiolimath/PontoIfes"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]

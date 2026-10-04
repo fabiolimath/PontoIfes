@@ -17,14 +17,12 @@ ID_BOT = "https://t.me/IDBot?start=getid"
 DICA_TELEGRAM = (
     "Para receber notificações no Telegram,\n"
     "inicie um chat com @MeuPontoIFESBot.\n"
-    "Depois, mande /getid para @IDBot\n"
-    "para descobrir seu Chat ID."
+    "Depois, mande /getid para @IDBot para descobrir seu Chat ID."
 )
 DICA_TELEGRAM_HTML = (
     "Para receber notificações no Telegram,<br>"
     f'inicie um chat com <a href="{BOT_TELEGRAM}">Meu Ponto IFES Bot</a>.<br>'
-    f'Depois, entre <a href="{ID_BOT}">aqui</a><br>'
-    "para descobrir seu Chat ID."
+    f'Depois, entre <a href="{ID_BOT}">aqui</a> para descobrir seu Chat ID.'
 )
 
 
