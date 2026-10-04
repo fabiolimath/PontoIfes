@@ -66,3 +66,7 @@ logs/
 
 # Token do bot do Telegram, embutido no APK mas nunca no Git
 src/ponto/segredo_telegram.py
+
+# Chave de assinatura do APK release
+*.jks
+*.keystore
