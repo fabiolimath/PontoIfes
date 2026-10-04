@@ -106,3 +106,20 @@ def cursor_no_fim(entrada):
     nativo = entrada._impl.native
     nativo.setSelection(nativo.getText().length())
     return True
+
+
+def confirmacao(titulo, mensagem, sim="OK", nao="Cancelar"):
+    """toga.ConfirmDialog com os botões em português.
+
+    O Toga no Android escreve "OK"/"Cancel" fixos; aqui o diálogo nativo é
+    trocado por um com os rótulos pedidos. Fora do Android, fica o padrão.
+    """
+    import toga
+
+    dialogo = toga.ConfirmDialog(titulo, mensagem)
+    try:
+        from toga_android.dialogs import TextDialog
+    except ImportError:
+        return dialogo
+    dialogo._impl = TextDialog(titulo, mensagem, positive_text=sim, negative_text=nao)
+    return dialogo

@@ -138,12 +138,15 @@ class Ponto(toga.App):
         # PIT do dia (sem data ou com a data de hoje) só depois de fechar o ponto.
         hoje = not args or datetime.strptime(args[0], "%d/%m/%Y").date() == date.today()
         if acao == "registrar_pit" and hoje and not configuracoes.fechou_no_dia(self.fechamento_path):
-            await self.main_window.dialog(toga.InfoDialog(
+            mesmo_assim = await self.main_window.dialog(plataforma.confirmacao(
                 "Ponto não fechado",
-                "Feche o ponto de hoje antes de registrar o PIT do dia.\n"
-                "Para registrar o PIT de outro dia, informe a data.",
+                "O app não registrou o fechamento do ponto hoje.\n"
+                "Feche o ponto antes de registrar o PIT do dia, ou informe a data "
+                "para registrar o PIT de outro dia.",
+                sim="Registrar mesmo assim",
             ))
-            return
+            if not mesmo_assim:
+                return
 
         self.rodando = True
         for botao in self.botoes:
@@ -260,10 +263,10 @@ class Ponto(toga.App):
                 ))
             return
         if atualizacao.mais_nova(publicada, self.version):
-            baixar = await self.main_window.dialog(toga.ConfirmDialog(
+            baixar = await self.main_window.dialog(plataforma.confirmacao(
                 "Nova versão disponível",
-                f"A versão {publicada} está disponível (instalada: {self.version}).\n"
-                "Baixar agora?",
+                f"A versão {publicada} está disponível (instalada: {self.version}).",
+                sim="Baixar", nao="Agora não",
             ))
             if baixar:
                 plataforma.abrir_url(self, atualizacao.URL_DOWNLOAD)
@@ -310,8 +313,8 @@ class Ponto(toga.App):
             ))
 
     async def limpar_log(self, widget, **kwargs):
-        confirmar = await self.main_window.dialog(toga.ConfirmDialog(
-            "Limpar log", "Apagar todo o histórico de execuções?"
+        confirmar = await self.main_window.dialog(plataforma.confirmacao(
+            "Limpar log", "Apagar todo o histórico de execuções?", sim="Apagar"
         ))
         if confirmar:
             self.log_path.unlink(missing_ok=True)

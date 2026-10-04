@@ -168,3 +168,18 @@ def test_links(android):
     assert plataforma.links(rotulo, '<a href="https://t.me/x">x</a>') is True
     assert texto.texto == ("html", '<a href="https://t.me/x">x</a>', 0)
     assert texto.metodo == "movimento-links"
+
+
+def test_confirmacao_em_portugues_no_android(monkeypatch):
+    pytest.importorskip("toga")
+    monkeypatch.setenv("TOGA_BACKEND", "toga_dummy")
+
+    class FakeTextDialog:
+        def __init__(self, titulo, mensagem, positive_text, negative_text):
+            self.rotulos = (positive_text, negative_text)
+
+    monkeypatch.setitem(sys.modules, "toga_android", types.ModuleType("toga_android"))
+    monkeypatch.setitem(sys.modules, "toga_android.dialogs",
+                        types.SimpleNamespace(TextDialog=FakeTextDialog))
+    dialogo = plataforma.confirmacao("T", "M", sim="Registrar mesmo assim")
+    assert dialogo._impl.rotulos == ("Registrar mesmo assim", "Cancelar")

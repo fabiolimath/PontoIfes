@@ -129,16 +129,25 @@ def test_aberto_por_intent_executa_a_acao(tmp_path, monkeypatch):
     assert app.status.text == "Fechar ponto: concluído."
 
 
-def test_pit_do_dia_sem_fechar_o_ponto_avisa(app, tmp_path, monkeypatch):
+def test_pit_do_dia_sem_fechar_o_ponto_pergunta(app, tmp_path, monkeypatch):
     _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
-    app.main_window._impl.dialog_responses["InfoDialog"] = [None, None]
+    app.main_window._impl.dialog_responses["ConfirmDialog"] = [False, False]
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
     app.data_pit.value = date.today().strftime("%d/%m/%Y")
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
     assert app.saida.value == ""
-    assert app.main_window._impl.dialog_responses["InfoDialog"] == []
+    assert app.main_window._impl.dialog_responses["ConfirmDialog"] == []
+
+
+def test_pit_do_dia_registrar_mesmo_assim(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
+    app.main_window._impl.dialog_responses["ConfirmDialog"] = [True]
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert app.saida.value == "rodou\n"
 
 
 def test_pit_de_outro_dia_nao_exige_fechamento(app, tmp_path, monkeypatch):
