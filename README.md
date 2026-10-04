@@ -106,15 +106,18 @@ gh release create v1.0.0 dist/ponto-ifes.apk --title "Ponto IFES 1.0.0" --notes 
 
 ### Release automático (GitHub Actions)
 
-Com os segredos configurados, basta aumentar `version` no `pyproject.toml`, fazer commit
-e enviar a tag correspondente. O workflow `.github/workflows/release.yml` compila,
-assina e publica o release, sem precisar do Briefcase no PC:
+Com os segredos configurados, o workflow `.github/workflows/release.yml` compila, assina
+e publica o release, sem precisar do Briefcase no PC. Depois de aumentar `version` no
+`pyproject.toml` na branch `master`:
 
-```sh
-git tag v1.0.4 && git push origin v1.0.4
-```
+- pelo navegador: aba **Actions** > **Release** > **Run workflow**. O workflow cria a tag
+  `vX.Y.Z` com a versão do `pyproject.toml`; ou
+- pelo terminal: `git tag v1.0.5 && git push origin v1.0.5`.
 
-Se a tag não bater com o `version`, o workflow para com erro. Segredos do repositório
+Se a versão já tiver sido publicada, ou se a tag não bater com o `version`, o workflow
+para com erro antes de compilar.
+
+Segredos do repositório
 (*Settings > Secrets and variables > Actions*), configuráveis uma vez com o `gh`:
 
 ```sh
