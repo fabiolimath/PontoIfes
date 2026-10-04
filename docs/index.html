@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ponto IFES</title>
+<meta name="description" content="App Android para abrir e fechar o ponto e registrar o PIT no SIGRH com um toque.">
+<link rel="icon" href="icone.png">
+<style>
+  :root {
+    --verde: #2f9e41;
+    --verde-escuro: #237a32;
+    --vermelho: #c8191e;
+    --fundo: #f6f8f6;
+    --cartao: #ffffff;
+    --texto: #1d2420;
+    --suave: #5b6660;
+    --borda: #dfe5e0;
+    --destaque: #eaf5ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --verde: #4cc160;
+      --verde-escuro: #6fd281;
+      --fundo: #121614;
+      --cartao: #1b211d;
+      --texto: #e6ebe7;
+      --suave: #a1aca5;
+      --borda: #2c352f;
+      --destaque: #1f2d22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--texto);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 0 16px 48px; }
+  header { text-align: center; padding: 48px 0 32px; }
+  header img {
+    width: 96px; height: 96px; border-radius: 22px;
+    background: #fff; box-shadow: 0 2px 10px rgb(0 0 0 / .12);
+  }
+  h1 { font-size: 2.2rem; margin: 16px 0 4px; letter-spacing: -.02em; }
+  .lema { color: var(--suave); font-size: 1.1rem; margin: 0 auto 24px; max-width: 30em; }
+  .baixar {
+    display: inline-block; padding: 14px 28px; border-radius: 999px;
+    background: var(--verde); color: #fff; font-weight: 600; font-size: 1.1rem;
+    text-decoration: none;
+  }
+  .baixar:hover { background: var(--verde-escuro); }
+  @media (prefers-color-scheme: dark) { .baixar { color: #0d1a10; } }
+  .nota { color: var(--suave); font-size: .9rem; margin-top: 10px; }
+  .nota a { color: inherit; }
+  .acoes {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px; margin: 8px 0 8px;
+  }
+  .acao {
+    background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px;
+    padding: 16px;
+  }
+  .acao strong { display: block; font-size: 1.05rem; margin-bottom: 2px; }
+  .acao span { color: var(--suave); font-size: .95rem; }
+  section {
+    background: var(--cartao); border: 1px solid var(--borda); border-radius: 16px;
+    padding: 8px 22px 14px; margin-top: 20px;
+  }
+  h2 { font-size: 1.3rem; margin: 16px 0 8px; }
+  h3 { font-size: 1.05rem; margin: 18px 0 4px; }
+  ol, ul { padding-left: 1.3em; margin: 8px 0; }
+  li { margin: 6px 0; }
+  code {
+    background: var(--destaque); border-radius: 6px; padding: 1px 6px;
+    font: .92em ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  .dica {
+    background: var(--destaque); border-left: 4px solid var(--verde);
+    border-radius: 8px; padding: 10px 14px; margin: 12px 0;
+  }
+  footer { text-align: center; color: var(--suave); font-size: .9rem; margin-top: 32px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icone.png" alt="Ícone do Ponto IFES">
+    <h1>Ponto IFES</h1>
+    <p class="lema">Abra e feche o ponto e registre o PIT no SIGRH com um toque, direto do celular.</p>
+    <a class="baixar" href="https://github.com/fabiolimath/PontoIfes/releases/latest/download/ponto-ifes.apk">Baixar o app (APK)</a>
+    <p class="nota">Para Android. <a href="https://github.com/fabiolimath/PontoIfes/releases">Ver todas as versões</a></p>
+  </header>
+
+  <div class="acoes">
+    <div class="acao"><strong>Abrir ponto</strong><span>Registra a entrada no SIGRH.</span></div>
+    <div class="acao"><strong>Fechar ponto</strong><span>Registra a saída no SIGRH.</span></div>
+    <div class="acao"><strong>Registrar PIT</strong><span>Registra o PIT de hoje ou de outro dia.</span></div>
+  </div>
+
+  <section>
+    <h2>Instalar</h2>
+    <ol>
+      <li>No celular, toque em <strong>Baixar o app</strong> acima.</li>
+      <li>Abra o arquivo baixado. Se o Android pedir, permita que o navegador (ou o gerenciador de arquivos) instale apps.</li>
+      <li>Se aparecer um aviso do Play Protect dizendo que o app é desconhecido, toque em <strong>Mais detalhes</strong> e depois em <strong>Instalar mesmo assim</strong>. O aviso aparece porque o app não vem da Play Store.</li>
+    </ol>
+    <p>Para atualizar, baixe e instale a versão nova por cima. Suas credenciais continuam salvas.</p>
+  </section>
+
+  <section>
+    <h2>Primeiro uso</h2>
+    <p>Na primeira vez, o app pede seu <strong>usuário e senha do SIGRH</strong>. Eles ficam guardados só no seu celular e podem ser alterados depois no botão <strong>Credenciais</strong>.</p>
+    <h3>Notificações no Telegram (opcional)</h3>
+    <p>O app pode avisar no Telegram se cada registro deu certo. Para isso:</p>
+    <ol>
+      <li>No Telegram, mande <code>/getid</code> para <strong>@IDBot</strong>. Ele responde com o seu Chat ID, um número.</li>
+      <li>Cole esse número no campo <strong>Chat ID do Telegram</strong> do app.</li>
+    </ol>
+    <p>Deixe o campo em branco se não quiser notificações.</p>
+  </section>
+
+  <section>
+    <h2>No dia a dia</h2>
+    <ul>
+      <li>Toque em <strong>Abrir ponto</strong>, <strong>Fechar ponto</strong> ou <strong>Registrar PIT</strong>. O andamento aparece na tela.</li>
+      <li>Para registrar o PIT de um dia que passou, preencha a data em <strong>Registrar o PIT de outro dia</strong> (dd/mm/aaaa) antes de tocar em Registrar PIT. Em branco, vale a data de hoje.</li>
+      <li>O botão <strong>Log</strong> mostra o histórico de execuções, com data e hora. Use <strong>Copiar</strong> para mandar o log a alguém se algo der errado.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Atalhos na tela inicial</h2>
+    <p>Segure o ícone do Ponto IFES para ver os atalhos <strong>Abrir ponto</strong>, <strong>Fechar ponto</strong> e <strong>Registrar PIT</strong>. Tocar num deles já executa a ação. Para deixar um atalho fixo na tela inicial, arraste-o para lá.</p>
+  </section>
+
+  <section>
+    <h2>Automático</h2>
+    <p>Dá para o celular registrar o ponto sozinho, por exemplo ao conectar no Bluetooth do carro, ao chegar no Wi-Fi do campus ou num horário fixo.</p>
+    <h3>Rotinas da Samsung (Modos e Rotinas)</h3>
+    <p>Crie uma rotina com a condição que quiser (Bluetooth, Wi-Fi, horário). Na parte do que fazer, adicione a ação de abrir um app e escolha um dos atalhos do Ponto IFES: Abrir ponto, Fechar ponto ou Registrar PIT.</p>
+    <h3>Tasker</h3>
+    <ol>
+      <li>Na tarefa, adicione a ação <strong>App &gt; Executar app</strong> e escolha o Ponto IFES.</li>
+      <li>No campo <strong>Dado</strong>, escreva <code>abrir_ponto</code>, <code>fechar_ponto</code> ou <code>registrar_pit</code>.</li>
+      <li>Marque <strong>Sempre Iniciar Nova Cópia</strong>. Sem isso, se o app já estiver aberto, ele só aparece na tela e não registra nada.</li>
+    </ol>
+    <div class="dica">Para a automação funcionar com a tela desligada, vá em <strong>Configurações &gt; Apps &gt; Ponto IFES &gt; Bateria</strong> e escolha <strong>Sem restrições</strong>.</div>
+  </section>
+
+  <footer>
+    O Ponto IFES não é um app oficial do IFES. <a href="https://github.com/fabiolimath/PontoIfes">Código-fonte no GitHub</a>
+  </footer>
+</main>
+</body>
+</html>

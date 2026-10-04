@@ -92,7 +92,7 @@ android/release.sh
 Na primeira vez o script cria a chave em `~/.config/ponto/ponto-release.jks` e pede uma
 senha. **Guarde uma cópia da chave e a senha.** O Android só aceita uma atualização
 assinada com a mesma chave. Sem ela, quem já tem o app instalado precisa desinstalar
-e digitar as credenciais de novo. O APK assinado sai em `dist/ponto-ifes-<versão>.apk`.
+e digitar as credenciais de novo. O APK assinado sai em `dist/ponto-ifes.apk`.
 
 Quem tem instalado um APK debug precisa desinstalá-lo antes de instalar o release,
 porque as chaves são diferentes.
@@ -101,5 +101,5 @@ A cada nova versão, aumente `version` no `pyproject.toml` (assim o Android e os
 sabem que é uma atualização) e publique o release no GitHub:
 
 ```sh
-gh release create v1.0.0 dist/ponto-ifes-1.0.0.apk --title "Ponto IFES 1.0.0" --notes "Primeira versão"
+gh release create v1.0.0 dist/ponto-ifes.apk --title "Ponto IFES 1.0.0" --notes "Primeira versão"
 ```
