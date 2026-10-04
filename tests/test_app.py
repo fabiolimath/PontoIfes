@@ -1,8 +1,11 @@
 import asyncio
 import importlib
 import uuid
+from datetime import date
 
 import pytest
+
+from ponto import configuracoes
 
 toga = pytest.importorskip("toga")
 
@@ -72,6 +75,7 @@ def test_pit_com_data_passa_argumento(app, tmp_path, monkeypatch):
 
 def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
     _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "import sys\nprint(sys.argv[1:])\n")
+    configuracoes.registrar_fechamento(app.fechamento_path)
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
@@ -123,3 +127,86 @@ def test_aberto_por_intent_executa_a_acao(tmp_path, monkeypatch):
 
     assert app.saida.value == "fechou\n"
     assert app.status.text == "Fechar ponto: concluído."
+
+
+def test_pit_do_dia_sem_fechar_o_ponto_avisa(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
+    app.main_window._impl.dialog_responses["InfoDialog"] = [None, None]
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+    app.data_pit.value = date.today().strftime("%d/%m/%Y")
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert app.saida.value == ""
+    assert app.main_window._impl.dialog_responses["InfoDialog"] == []
+
+
+def test_pit_de_outro_dia_nao_exige_fechamento(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
+    app.data_pit.value = "02/10/2020"
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert app.saida.value == "rodou\n"
+
+
+def test_fechar_ponto_libera_o_pit_do_dia(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto", "print('fechou')\n")
+
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+
+    assert configuracoes.fechou_no_dia(app.fechamento_path)
+
+
+def test_mascara_no_campo_de_data(app):
+    app.mostrar_principal()
+    for texto in ["0", "04", "04/1", "04/10", "04/10/2026"]:
+        app.data_pit.value = texto
+    assert app.data_pit.value == "04/10/2026"
+    app.data_pit.value = "04/"
+    app.data_pit.value = "04"  # apagou a barra: não volta
+    assert app.data_pit.value == "04"
+
+
+def test_tela_de_configuracoes(app):
+    titulo = app.main_window.content.content.children[0]
+    assert titulo.text == "Configurações"
+    assert app.verificar_atualizacoes.value is True
+    app.campos["SIGRH_USER"].value = "a"
+    app.campos["SIGRH_PASS"].value = "b"
+    app.verificar_atualizacoes.value = False
+
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+
+    assert app.main_window.content is app.tela_principal
+    assert configuracoes.carregar(app.config_path) == {"verificar_atualizacoes": False}
+    assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
+
+
+def test_atualizacao_oferece_baixar(app, monkeypatch):
+    from ponto import atualizacao, plataforma
+
+    abertos = []
+    monkeypatch.setattr(type(app), "version", property(lambda self: "1.0.6"))
+    monkeypatch.setattr(atualizacao, "ultima_versao", lambda: "1.0.10")
+    monkeypatch.setattr(plataforma, "abrir_url", lambda app, url: abertos.append(url))
+    app.main_window._impl.dialog_responses["ConfirmDialog"] = [True, False]
+
+    # A checagem agendada ao abrir o app roda junto, na 1ª volta do loop.
+    app.loop.run_until_complete(app.verificar_atualizacao(avisar_sem_novidade=False))
+
+    assert abertos == [atualizacao.URL_DOWNLOAD]
+    assert app.main_window._impl.dialog_responses["ConfirmDialog"] == []
+
+
+def test_atualizacao_em_dia_so_avisa_se_pedido(app, monkeypatch):
+    from ponto import atualizacao
+
+    monkeypatch.setattr(type(app), "version", property(lambda self: "1.0.6"))
+    monkeypatch.setattr(atualizacao, "ultima_versao", lambda: "1.0.6")
+
+    app.loop.run_until_complete(app.verificar_atualizacao(avisar_sem_novidade=False))
+    app.main_window._impl.dialog_responses["InfoDialog"] = [None]
+    app.loop.run_until_complete(app.verificar_atualizacao(avisar_sem_novidade=True))
+
+    assert app.main_window._impl.dialog_responses["InfoDialog"] == []

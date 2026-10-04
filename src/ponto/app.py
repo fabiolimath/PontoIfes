@@ -3,12 +3,12 @@ Ponto: abre e fecha o ponto e registra o PIT no SIGRH.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import date, datetime
 
 import toga
 from toga.style.pack import COLUMN, ROW, Pack
 
-from ponto import credenciais, executor, plataforma
+from ponto import atualizacao, configuracoes, credenciais, executor, mascara, plataforma
 
 BOT_TELEGRAM = "https://t.me/MeuPontoIFESBot"
 ID_BOT = "https://t.me/IDBot?start=getid"
@@ -32,12 +32,14 @@ class Ponto(toga.App):
         dados.mkdir(parents=True, exist_ok=True)
         self.cred_path = dados / "credenciais.json"
         self.log_path = dados / "ponto.log"
+        self.config_path = dados / "configuracoes.json"
+        self.fechamento_path = dados / "ultimo_fechamento.txt"
         self.rodando = False
 
         self.main_window = toga.MainWindow(title=self.formal_name)
         self._montar_principal()
         if credenciais.carregar(self.cred_path) is None:
-            self.mostrar_credenciais()
+            self.mostrar_configuracoes()
         else:
             self.mostrar_principal()
         self.main_window.show()
@@ -46,6 +48,8 @@ class Ponto(toga.App):
         acao = plataforma.acao_do_intent(self)
         if acao:
             self.loop.create_task(self.rodar(acao))
+        elif configuracoes.carregar(self.config_path)["verificar_atualizacoes"]:
+            self.loop.create_task(self.verificar_atualizacao(avisar_sem_novidade=False))
 
     # -----------------------------------
     # TELA PRINCIPAL
@@ -60,14 +64,17 @@ class Ponto(toga.App):
             )
             self.botoes.append(botao)
 
-        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", style=Pack(margin_bottom=4))
+        self._data_anterior = ""
+        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", on_change=self._mascara_data,
+                                       style=Pack(margin_bottom=4))
+        plataforma.campo_de_data(self.data_pit)
 
-        self.status = toga.Label("Pronto.", style=Pack(margin=(8, 0)))
+        self.status = toga.Label("", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
 
         rodape = toga.Box(
             children=[
-                toga.Button("Credenciais", on_press=lambda w, **kw: self.mostrar_credenciais(),
+                toga.Button("Configurações", on_press=lambda w, **kw: self.mostrar_configuracoes(),
                             style=Pack(flex=1, margin_right=4)),
                 toga.Button("Log", on_press=lambda w, **kw: self.mostrar_log(),
                             style=Pack(flex=1, margin_left=4)),
@@ -89,6 +96,16 @@ class Ponto(toga.App):
     def mostrar_principal(self):
         self.main_window.content = self.tela_principal
 
+    def _mascara_data(self, widget, **kwargs):
+        novo = widget.value
+        apagando = len(novo) < len(self._data_anterior)
+        formatado = mascara.formatar_data(novo, apagando)
+        self._data_anterior = formatado
+        if formatado != novo:
+            # Dispara on_change de novo, mas formatar o já formatado não muda nada.
+            widget.value = formatado
+            plataforma.cursor_no_fim(widget)
+
     def _ao_tocar(self, acao):
         async def handler(widget, **kwargs):
             await self.rodar(acao)
@@ -103,7 +120,7 @@ class Ponto(toga.App):
             return
         cred = credenciais.carregar(self.cred_path)
         if credenciais.faltando(cred):
-            self.mostrar_credenciais()
+            self.mostrar_configuracoes()
             return
 
         args = ()
@@ -117,6 +134,16 @@ class Ponto(toga.App):
                 ))
                 return
             args = (data,)
+
+        # PIT do dia (sem data ou com a data de hoje) só depois de fechar o ponto.
+        hoje = not args or datetime.strptime(args[0], "%d/%m/%Y").date() == date.today()
+        if acao == "registrar_pit" and hoje and not configuracoes.fechou_no_dia(self.fechamento_path):
+            await self.main_window.dialog(toga.InfoDialog(
+                "Ponto não fechado",
+                "Feche o ponto de hoje antes de registrar o PIT do dia.\n"
+                "Para registrar o PIT de outro dia, informe a data.",
+            ))
+            return
 
         self.rodando = True
         for botao in self.botoes:
@@ -138,6 +165,8 @@ class Ponto(toga.App):
             )
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
+            if acao == "fechar_ponto" and codigo == 0:
+                configuracoes.registrar_fechamento(self.fechamento_path)
             if args and codigo == 0:
                 self.data_pit.value = ""
         finally:
@@ -146,12 +175,13 @@ class Ponto(toga.App):
                 botao.enabled = True
 
     # -----------------------------------
-    # CREDENCIAIS
+    # CONFIGURAÇÕES
     # -----------------------------------
-    def mostrar_credenciais(self):
+    def mostrar_configuracoes(self):
         atuais = credenciais.carregar(self.cred_path)
         self.campos = {}
-        filhos = []
+        filhos = [toga.Label("Configurações",
+                             style=Pack(font_size=20, font_weight="bold", margin_bottom=12))]
         if atuais is None:
             filhos.append(toga.Label(
                 "Informe as credenciais.\nElas ficam guardadas só neste aparelho.",
@@ -172,7 +202,18 @@ class Ponto(toga.App):
                 style=Pack(margin_bottom=8),
             ))
 
-        botoes = [toga.Button("Salvar", on_press=self.salvar_credenciais, style=Pack(flex=1))]
+        self.verificar_atualizacoes = toga.Switch(
+            "Verificar atualizações ao abrir o app",
+            value=configuracoes.carregar(self.config_path)["verificar_atualizacoes"],
+            style=Pack(margin=(8, 0)),
+        )
+        filhos += [
+            self.verificar_atualizacoes,
+            toga.Button(f"Verificar agora (versão instalada: {self.version or '?'})",
+                        on_press=self._verificar_agora, style=Pack(margin_bottom=8)),
+        ]
+
+        botoes = [toga.Button("Salvar", on_press=self.salvar_configuracoes, style=Pack(flex=1))]
         if atuais is not None:
             botoes.insert(0, toga.Button("Cancelar", on_press=lambda w, **kw: self.mostrar_principal(),
                                          style=Pack(flex=1, margin_right=8)))
@@ -183,7 +224,7 @@ class Ponto(toga.App):
             content=toga.Box(children=filhos, style=Pack(direction=COLUMN, margin=12)),
         )
 
-    async def salvar_credenciais(self, widget, **kwargs):
+    async def salvar_configuracoes(self, widget, **kwargs):
         novas = {campo: entrada.value for campo, entrada in self.campos.items()}
         falta = credenciais.faltando(novas)
         if falta:
@@ -192,7 +233,44 @@ class Ponto(toga.App):
             ))
             return
         credenciais.salvar(self.cred_path, novas)
+        configuracoes.salvar(self.config_path,
+                             {"verificar_atualizacoes": self.verificar_atualizacoes.value})
         self.mostrar_principal()
+
+    async def _verificar_agora(self, widget, **kwargs):
+        await self.verificar_atualizacao(avisar_sem_novidade=True)
+
+    # -----------------------------------
+    # ATUALIZAÇÕES
+    # -----------------------------------
+    async def verificar_atualizacao(self, avisar_sem_novidade):
+        """Consulta o último release no GitHub e oferece baixar se for mais novo.
+
+        Na checagem automática (ao abrir o app), falhas e "sem novidade" ficam em silêncio.
+        """
+        if not self.version:
+            return
+        loop = asyncio.get_running_loop()
+        try:
+            publicada = await loop.run_in_executor(None, atualizacao.ultima_versao)
+        except Exception as exc:
+            if avisar_sem_novidade:
+                await self.main_window.dialog(toga.ErrorDialog(
+                    "Atualizações", f"Não foi possível verificar: {exc}"
+                ))
+            return
+        if atualizacao.mais_nova(publicada, self.version):
+            baixar = await self.main_window.dialog(toga.ConfirmDialog(
+                "Nova versão disponível",
+                f"A versão {publicada} está disponível (instalada: {self.version}).\n"
+                "Baixar agora?",
+            ))
+            if baixar:
+                plataforma.abrir_url(self, atualizacao.URL_DOWNLOAD)
+        elif avisar_sem_novidade:
+            await self.main_window.dialog(toga.InfoDialog(
+                "Atualizações", f"Você já tem a versão mais recente ({self.version})."
+            ))
 
     # -----------------------------------
     # LOG
