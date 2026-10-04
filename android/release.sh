@@ -6,6 +6,8 @@
 # app não consegue atualizá-lo.
 #
 # Uso: android/release.sh   (o APK assinado fica em dist/)
+# No GitHub Actions (.github/workflows/release.yml) a chave e a senha vêm dos
+# segredos do repositório, por PONTO_KEYSTORE e PONTO_KEYSTORE_PASS.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -38,7 +40,11 @@ saida="dist/ponto-ifes.apk"
 
 build_tools=$(ls -d "$sdk"/build-tools/*/ | sort -V | tail -1)
 "$build_tools/zipalign" -p -f 4 "$entrada" "$alinhado"
-"$build_tools/apksigner" sign --ks "$chave" --ks-key-alias ponto --out "$saida" "$alinhado"
+# Sem PONTO_KEYSTORE_PASS o apksigner pede a senha no terminal.
+senha=()
+[[ -n ${PONTO_KEYSTORE_PASS:-} ]] && senha=(--ks-pass env:PONTO_KEYSTORE_PASS)
+"$build_tools/apksigner" sign --ks "$chave" --ks-key-alias ponto "${senha[@]}" \
+    --out "$saida" "$alinhado"
 "$build_tools/apksigner" verify "$saida"
 rm -f "$alinhado" "$saida.idsig" "$entrada"
 

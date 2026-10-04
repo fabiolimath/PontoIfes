@@ -103,3 +103,22 @@ sabem que é uma atualização) e publique o release no GitHub:
 ```sh
 gh release create v1.0.0 dist/ponto-ifes.apk --title "Ponto IFES 1.0.0" --notes "Primeira versão"
 ```
+
+### Release automático (GitHub Actions)
+
+Com os segredos configurados, basta aumentar `version` no `pyproject.toml`, fazer commit
+e enviar a tag correspondente. O workflow `.github/workflows/release.yml` compila,
+assina e publica o release, sem precisar do Briefcase no PC:
+
+```sh
+git tag v1.0.4 && git push origin v1.0.4
+```
+
+Se a tag não bater com o `version`, o workflow para com erro. Segredos do repositório
+(*Settings > Secrets and variables > Actions*), configuráveis uma vez com o `gh`:
+
+```sh
+base64 -w0 ~/.config/ponto/ponto-release.jks | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD   # pede a senha da chave
+gh secret set TELEGRAM_TOKEN              # pede o token do bot
+```
