@@ -1,4 +1,6 @@
-# Gera o APK assinado e publica o release ao enviar uma tag vX.Y.Z.
+# Gera o APK assinado e publica o release vX.Y.Z, com X.Y.Z vindo do version do
+# pyproject.toml. Dispara pelo botão "Run workflow" na aba Actions (cria a tag)
+# ou ao enviar a tag vX.Y.Z pelo git.
 # Segredos do repositório usados:
 #   ANDROID_KEYSTORE_BASE64    chave de assinatura (ponto-release.jks) em base64
 #   ANDROID_KEYSTORE_PASSWORD  senha da chave
@@ -6,6 +8,7 @@
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     tags: ["v*"]
 
@@ -31,10 +34,17 @@ jobs:
       - name: Conferir a versão
         run: |
           versao=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
-          if [ "v$versao" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::A tag $GITHUB_REF_NAME não bate com version = \"$versao\" no pyproject.toml"
+          tag="v$versao"
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if [ "$tag" != "$GITHUB_REF_NAME" ]; then
+              echo "::error::A tag $GITHUB_REF_NAME não bate com version = \"$versao\" no pyproject.toml"
+              exit 1
+            fi
+          elif git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "::error::A versão $versao já foi publicada. Aumente o version no pyproject.toml."
             exit 1
           fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
 
       - name: Preparar segredos
         env:
@@ -60,6 +70,7 @@ jobs:
       - name: Publicar o release
         env:
           GH_TOKEN: ${{ github.token }}
+        # Pelo botão, a tag ainda não existe e é criada aqui, no commit compilado.
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/ponto-ifes.apk \
-            --title "Ponto IFES ${GITHUB_REF_NAME#v}" --generate-notes
+          gh release create "$TAG" dist/ponto-ifes.apk --target "$GITHUB_SHA" \
+            --title "Ponto IFES ${TAG#v}" --generate-notes
