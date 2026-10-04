@@ -23,7 +23,9 @@ variáveis antes de rodá-los com `runpy`, então eles também seguem funcionand
   app e executa a ação na hora. Os atalhos são estáticos (`android/res/xml/shortcuts.xml`),
   por isso também aparecem para o Tasker e para as Rotinas da Samsung.
 - No Tasker, o mais simples é a ação *Executar app* com o app Ponto IFES e, no campo
-  **Dado**, o nome da ação: `abrir_ponto`, `fechar_ponto` ou `registrar_pit`.
+  **Dado**, o nome da ação: `abrir_ponto`, `fechar_ponto` ou `registrar_pit`. Marque
+  **Sempre Iniciar Nova Cópia**: sem isso, se o app já estiver aberto em segundo plano,
+  o Android só o traz para frente e a ação não roda.
 - Qualquer automação que abra o app com o extra `acao` (ou com o dado `ponto://<ação>`)
   também dispara a ação. Alternativa no Tasker, *Sistema > Enviar Intent*:
   - Ação: `android.intent.action.VIEW`
