@@ -69,3 +69,57 @@ def acao_do_intent(app):
         acao = intent.getDataString().removeprefix("ponto:").strip("/ ")
     return acao if acao in executor.ACOES else None
 
+
+
+def abrir_url(app, url):
+    """Abre o endereço no navegador (no Android, por um intent ACTION_VIEW)."""
+    atividade = _atividade(app)
+    if atividade is None:
+        import webbrowser
+
+        webbrowser.open(url)
+        return
+    from android.content import Intent
+    from android.net import Uri
+
+    atividade.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+
+
+def campo_de_data(entrada):
+    """Teclado numérico de datas (com "/") no campo de texto; só no Android."""
+    try:
+        from android.text import InputType
+    except ImportError:
+        return False
+    entrada._impl.native.setInputType(
+        InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_DATE
+    )
+    return True
+
+
+def cursor_no_fim(entrada):
+    """Põe o cursor no fim do texto; no Android, trocar o texto o leva ao início."""
+    try:
+        from android.text import InputType  # noqa: F401
+    except ImportError:
+        return False
+    nativo = entrada._impl.native
+    nativo.setSelection(nativo.getText().length())
+    return True
+
+
+def confirmacao(titulo, mensagem, sim="OK", nao="Cancelar"):
+    """toga.ConfirmDialog com os botões em português.
+
+    O Toga no Android escreve "OK"/"Cancel" fixos; aqui o diálogo nativo é
+    trocado por um com os rótulos pedidos. Fora do Android, fica o padrão.
+    """
+    import toga
+
+    dialogo = toga.ConfirmDialog(titulo, mensagem)
+    try:
+        from toga_android.dialogs import TextDialog
+    except ImportError:
+        return dialogo
+    dialogo._impl = TextDialog(titulo, mensagem, positive_text=sim, negative_text=nao)
+    return dialogo
