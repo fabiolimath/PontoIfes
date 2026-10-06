@@ -19,7 +19,7 @@ PIT_AUTOMATICO = {
 EXPLICACAO_PIT_AUTOMATICO = {
     0: "Registre o PIT pelo botão do app\nou pelo da notificação de ponto fechado.",
     1: "Para quem fecha o ponto uma vez por dia:\no PIT é registrado logo após o fechamento.",
-    2: "Para quem fecha o ponto no almoço:\no PIT é registrado só após o 2º fechamento do dia.",
+    2: "Para quem fecha o ponto no almoço:\no PIT é registrado após fechar pela 2ª vez.",
 }
 
 
