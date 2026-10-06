@@ -5,7 +5,8 @@ sem Termux:
 
 - **Abrir ponto** → `abrir_ponto.py`
 - **Fechar ponto** → `fechar_ponto.py`
-- **Registrar PIT** → `registrar_pit.py` (hoje ou outra data, dd/mm/aaaa)
+- **Registrar PIT** → `registrar_pit.py [dd/mm/aaaa] [--obs TEXTO]` (sem data, hoje; só de segunda a sexta;
+  o texto da Observação vem das Configurações, padrão "Registro de PIT")
 
 O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado (versão atual em
 `pyproject.toml`).
@@ -53,7 +54,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
   O workflow lê a versão do `pyproject.toml`, falha se a tag já existir, gera o APK assinado e cria
   o release com o arquivo `ponto-ifes.apk`.
 - Por isso, **todo PR que muda o app deve aumentar `version` no `pyproject.toml`** (é também o
-  versionCode do Android). Tags v1.0.0 a v1.0.5 já existem.
+  versionCode do Android). Tags v1.0.0 a v1.0.6 já existem.
 - Segredos do repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `TELEGRAM_TOKEN`.
 - Chave de assinatura: `~/.config/ponto/ponto-release.jks` (alias `ponto`) no PC do autor, com
   cópia de segurança. Nunca entra no repositório (`*.jks` no `.gitignore`); sem a mesma chave, quem
