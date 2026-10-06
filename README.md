@@ -3,19 +3,20 @@
 App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
 **Abrir ponto**, **Fechar ponto** e **Registrar PIT**.
 
-- Na primeira execução o app pede as credenciais (SIGRH e, opcionalmente, o Chat ID do
-  Telegram) e as guarda na área privada do app (`credenciais.json`, permissão 600). O
+- Na primeira execução o app pede as credenciais do SIGRH e as guarda na área privada do app (`credenciais.json`, permissão 600). O
   botão **Configurações** permite editá-las depois.
 - Cada botão roda o script correspondente numa thread, mostrando a saída ao vivo.
 - O campo "Registrar o PIT de outro dia" (dd/mm/aaaa) é opcional: se preenchido, o
   botão Registrar PIT usa essa data em vez da data de hoje.
 - O PIT só é registrado de segunda a sexta. O campo Observação do formulário recebe o texto
   padrão "Conforme PIT docente.", que pode ser trocado em **Configurações > Observação do PIT**.
+- Ao terminar cada execução, o app mostra uma notificação do sistema com o resultado
+  (pode ser desligada em **Configurações**; no Android 13+ o app pede a permissão).
 - Cada execução é gravada em `ponto.log` (data/hora, saída e código de saída; últimas
   1000 linhas), visível no botão **Log**.
 
 Os scripts ficam em `src/ponto/scripts/`. Eles continuam lendo as credenciais de
-`SIGRH_USER`, `SIGRH_PASS`, `TELEGRAM_TOKEN` e `TELEGRAM_CHAT_ID`; o app define essas
+`SIGRH_USER` e `SIGRH_PASS`; o app define essas
 variáveis antes de rodá-los com `runpy`, então eles também seguem funcionando no Termux.
 
 ## Atalhos e automação
@@ -50,19 +51,6 @@ pip install briefcase
 briefcase dev            # roda no desktop (GTK) para testar a interface
 briefcase dev --test     # roda os testes
 ```
-
-## Token do bot do Telegram
-
-O token do bot vai embutido no APK, mas nunca no Git. Antes de compilar:
-
-```sh
-cp src/ponto/segredo_telegram.py.exemplo src/ponto/segredo_telegram.py
-# edite e coloque o token
-```
-
-Sem esse arquivo o app funciona normalmente, só sem notificações. Quem tiver o APK
-consegue extrair o token, então não o distribua fora de quem pode usar o bot. Se o
-token vazar, revogue no @BotFather (`/revoke`), atualize o arquivo e gere o APK de novo.
 
 ## Android
 
@@ -125,5 +113,4 @@ Segredos do repositório
 ```sh
 base64 -w0 ~/.config/ponto/ponto-release.jks | gh secret set ANDROID_KEYSTORE_BASE64
 gh secret set ANDROID_KEYSTORE_PASSWORD   # pede a senha da chave
-gh secret set TELEGRAM_TOKEN              # pede o token do bot
 ```

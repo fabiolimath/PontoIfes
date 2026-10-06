@@ -108,3 +108,8 @@ def test_escritas_de_outras_threads_ficam_fora_do_log(tmp_path, pacote, capsys):
     assert saida == "do script\n"
     assert "aviso do Toga" not in (tmp_path / "l").read_text(encoding="utf-8")
     assert "aviso do Toga" in capsys.readouterr().err
+
+
+def test_mensagem_final():
+    assert executor.mensagem_final("Tentativa 1\n✅ entrada registrada\n\n") == "✅ entrada registrada"
+    assert executor.mensagem_final("") == ""

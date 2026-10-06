@@ -2,8 +2,7 @@
 
 Uso: abrir_ponto.py
 
-Lê SIGRH_USER e SIGRH_PASS do ambiente (e TELEGRAM_TOKEN e TELEGRAM_CHAT_ID,
-opcionais, para a notificação).
+Lê SIGRH_USER e SIGRH_PASS do ambiente.
 
 Depois do login, o SIGRH mostra a tela do ponto eletrônico com o botão
 "Registrar Entrada". O script envia esse formulário e só considera a entrada
@@ -201,24 +200,8 @@ def abrir(usuario, senha):
 
 
 # -----------------------------------
-# NOTIFICAÇÃO E EXECUÇÃO
+# EXECUÇÃO
 # -----------------------------------
-def enviar_telegram(mensagem):
-    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat:
-        return
-    try:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      data={"chat_id": chat, "text": mensagem}, timeout=TIMEOUT)
-    except Exception as exc:
-        print("Erro ao enviar ao Telegram:", exc)
-
-
-def avisar(mensagem):
-    print(mensagem)
-    enviar_telegram(mensagem)
-
-
 def main(argv=None):
     usuario, senha = os.getenv("SIGRH_USER"), os.getenv("SIGRH_PASS")
     if not usuario or not senha:
@@ -229,7 +212,7 @@ def main(argv=None):
         try:
             pagina = abrir(usuario, senha)
         except JaAberto as exc:
-            avisar(re.sub(r"\s+", " ", f"🔓ℹ️ SIGRH: o ponto já estava aberto {exc}").strip())
+            print(re.sub(r"\s+", " ", f"🔓ℹ️ SIGRH: o ponto já estava aberto {exc}").strip())
             return 0
         except (Recusado, EnvioIncerto) as exc:
             erro = exc
@@ -241,10 +224,10 @@ def main(argv=None):
                 print(f"Tentando de novo em {ESPERA}s...")
                 time.sleep(ESPERA)
         else:
-            avisar(re.sub(r"\s+", " ", f"✅🔓🕑 SIGRH: entrada registrada {descrever(pagina)}").strip())
+            print(re.sub(r"\s+", " ", f"✅🔓🕑 SIGRH: entrada registrada {descrever(pagina)}").strip())
             return 0
 
-    avisar(f"🔓❌ SIGRH: entrada não registrada: {erro}")
+    print(f"🔓❌ SIGRH: entrada não registrada: {erro}")
     return 1
 
 

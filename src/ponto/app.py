@@ -10,22 +10,6 @@ from toga.style.pack import COLUMN, ROW, Pack
 
 from ponto import atualizacao, configuracoes, credenciais, executor, mascara, plataforma
 
-BOT_TELEGRAM = "https://t.me/MeuPontoIFESBot"
-ID_BOT = "https://t.me/IDBot?start=getid"
-
-# Texto simples (desktop) e com links clicáveis (Android) abaixo do campo Chat ID.
-DICA_TELEGRAM = (
-    "Para receber notificações no Telegram,\n"
-    "inicie um chat com @MeuPontoIFESBot.\n"
-    "Depois, mande /getid para @IDBot para descobrir seu Chat ID."
-)
-DICA_TELEGRAM_HTML = (
-    "Para receber notificações no Telegram,<br>"
-    f'inicie um chat com <a href="{BOT_TELEGRAM}">Meu Ponto IFES Bot</a>.<br>'
-    f'Depois, entre <a href="{ID_BOT}">aqui</a> para descobrir seu Chat ID.'
-)
-
-
 class Ponto(toga.App):
     def startup(self):
         dados = self.paths.data
@@ -48,7 +32,12 @@ class Ponto(toga.App):
         acao = plataforma.acao_do_intent(self)
         if acao:
             self.loop.create_task(self.rodar(acao))
-        elif configuracoes.carregar(self.config_path)["verificar_atualizacoes"]:
+            return
+        preferencias = configuracoes.carregar(self.config_path)
+        # Na 1ª execução, a permissão é pedida ao salvar as configurações.
+        if preferencias["notificacoes"] and credenciais.carregar(self.cred_path) is not None:
+            self._pedir_permissao_notificacoes()
+        if preferencias["verificar_atualizacoes"]:
             self.loop.create_task(self.verificar_atualizacao(avisar_sem_novidade=False))
 
     # -----------------------------------
@@ -68,6 +57,7 @@ class Ponto(toga.App):
         self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", on_change=self._mascara_data,
                                        style=Pack(margin_bottom=4))
         plataforma.campo_de_data(self.data_pit)
+        plataforma.preenchimento(self.data_pit)
 
         self.status = toga.Label("", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
@@ -163,13 +153,14 @@ class Ponto(toga.App):
             loop.call_soon_threadsafe(self._anexar, texto)
 
         try:
-            codigo, _ = await loop.run_in_executor(
+            codigo, saida = await loop.run_in_executor(
                 None, lambda: executor.executar(
                     acao, credenciais.ambiente(cred), self.log_path, ao_escrever, args=args
                 )
             )
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
+            self._notificar(acao, self.status.text, saida)
             if acao == "fechar_ponto" and codigo == 0:
                 configuracoes.registrar_fechamento(self.fechamento_path)
             if acao == "registrar_pit" and data and codigo == 0:
@@ -178,6 +169,23 @@ class Ponto(toga.App):
             self.rodando = False
             for botao in self.botoes:
                 botao.enabled = True
+
+    def _notificar(self, acao, titulo, saida):
+        """Notificação do sistema com o resultado (se ativada nas configurações)."""
+        if not configuracoes.carregar(self.config_path)["notificacoes"]:
+            return
+        try:
+            ident = list(executor.ACOES).index(acao) + 1  # uma por ação
+            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo, ident)
+        except Exception as exc:
+            print("Erro ao mostrar a notificação:", exc)
+
+    def _pedir_permissao_notificacoes(self):
+        """No Android 13+, pergunta uma vez se o app pode notificar."""
+        try:
+            plataforma.pedir_permissao_notificacoes(self)
+        except Exception as exc:
+            print("Erro ao pedir permissão de notificação:", exc)
 
     # -----------------------------------
     # CONFIGURAÇÕES
@@ -196,22 +204,24 @@ class Ponto(toga.App):
             classe = toga.PasswordInput if campo == "SIGRH_PASS" else toga.TextInput
             entrada = classe(value=(atuais or {}).get(campo, ""), style=Pack(margin_bottom=8))
             self.campos[campo] = entrada
+            if campo == "SIGRH_USER":
+                plataforma.campo_numerico(entrada)
+            plataforma.preenchimento(entrada, "username" if campo == "SIGRH_USER" else "password")
             filhos += [toga.Label(rotulo), entrada]
-            if campo == "TELEGRAM_CHAT_ID":
-                dica = toga.Label(DICA_TELEGRAM, style=Pack(margin_bottom=8))
-                plataforma.links(dica, DICA_TELEGRAM_HTML)
-                filhos.append(dica)
-        if not credenciais.token_telegram():
-            filhos.append(toga.Label(
-                "Este APK foi gerado sem o token do bot:\nas notificações do Telegram estão desativadas.",
-                style=Pack(margin_bottom=8),
-            ))
 
         self.observacao_pit = toga.TextInput(
             value=configuracoes.carregar(self.config_path)["observacao_pit"],
             style=Pack(margin_bottom=8),
         )
+        plataforma.preenchimento(self.observacao_pit)
         filhos += [toga.Label("Observação do PIT"), self.observacao_pit]
+
+        self.notificacoes = toga.Switch(
+            "Notificar o resultado de cada execução",
+            value=configuracoes.carregar(self.config_path)["notificacoes"],
+            style=Pack(margin=(8, 0)),
+        )
+        filhos.append(self.notificacoes)
 
         self.verificar_atualizacoes = toga.Switch(
             "Verificar atualizações ao abrir o app",
@@ -245,9 +255,12 @@ class Ponto(toga.App):
             return
         credenciais.salvar(self.cred_path, novas)
         configuracoes.salvar(self.config_path, {
+            "notificacoes": self.notificacoes.value,
             "verificar_atualizacoes": self.verificar_atualizacoes.value,
             "observacao_pit": self.observacao_pit.value.strip() or configuracoes.PADRAO["observacao_pit"],
         })
+        if self.notificacoes.value:
+            self._pedir_permissao_notificacoes()
         self.mostrar_principal()
 
     async def _verificar_agora(self, widget, **kwargs):

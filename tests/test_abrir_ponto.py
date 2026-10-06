@@ -67,7 +67,6 @@ class SigrhFalso:
 def sigrh(monkeypatch):
     monkeypatch.setenv("SIGRH_USER", "usuario")
     monkeypatch.setenv("SIGRH_PASS", "senha")
-    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
     monkeypatch.setattr(ap.time, "sleep", lambda s: None)
 
     def instalar(**paginas):

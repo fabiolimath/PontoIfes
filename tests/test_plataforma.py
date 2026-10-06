@@ -63,20 +63,37 @@ class FakeArrayList(list):
         self.append(item)
 
 
-class FakeHtml:
-    FROM_HTML_MODE_LEGACY = 0
+class FakeNotificacao:
+    class Builder:
+        def __init__(self, contexto, canal=None):
+            self.info = {"canal": canal}
 
-    @staticmethod
-    def fromHtml(html, modo):
-        return ("html", html, modo)
+        def __getattr__(self, nome):
+            if not nome.startswith("set"):
+                raise AttributeError(nome)
+
+            def setter(valor):
+                self.info[nome[3:]] = valor
+                return self
+            return setter
+
+        def build(self):
+            return self.info
+
+    class BigTextStyle:
+        def bigText(self, texto):
+            return ("big", texto)
 
 
-class FakeTextView:
-    def setText(self, texto):
-        self.texto = texto
+class FakeGerenciador:
+    def __init__(self):
+        self.canais, self.notificacoes = [], {}
 
-    def setMovementMethod(self, metodo):
-        self.metodo = metodo
+    def createNotificationChannel(self, canal):
+        self.canais.append(canal)
+
+    def notify(self, ident, notificacao):
+        self.notificacoes[ident] = notificacao
 
 
 class FakeAtividade:
@@ -94,8 +111,25 @@ class FakeAtividade:
         return types.SimpleNamespace(getName=lambda: "org.beeware.android.MainActivity")
 
     def getSystemService(self, nome):
+        if nome == "notification":
+            return self.gerenciador
         assert nome == "shortcut"
         return types.SimpleNamespace(setDynamicShortcuts=lambda lista: setattr(self, "atalhos", lista))
+
+    gerenciador = None
+    permissao = -1
+
+    def getPackageName(self):
+        return "io.github.fabiolimath.ponto"
+
+    def getResources(self):
+        return types.SimpleNamespace(getIdentifier=lambda nome, tipo, pacote: 7)
+
+    def getPackageManager(self):
+        return types.SimpleNamespace(getLaunchIntentForPackage=lambda pacote: f"abrir:{pacote}")
+
+    def checkSelfPermission(self, permissao):
+        return self.permissao
 
 
 @pytest.fixture
@@ -108,14 +142,23 @@ def android(monkeypatch):
     # Como no Chaquopy: "import android" falha, só "from android.x import Classe" funciona.
     monkeypatch.setitem(sys.modules, "android", None)
     modulo("android.content", Intent=FakeIntent,
-           Context=types.SimpleNamespace(SHORTCUT_SERVICE="shortcut"))
-    modulo("android.content.pm", ShortcutInfo=types.SimpleNamespace(Builder=FakeBuilder))
+           Context=types.SimpleNamespace(SHORTCUT_SERVICE="shortcut",
+                                         NOTIFICATION_SERVICE="notification"))
+    modulo("android.content.pm", ShortcutInfo=types.SimpleNamespace(Builder=FakeBuilder),
+           PackageManager=types.SimpleNamespace(PERMISSION_GRANTED=0))
+    modulo("android.view", View=types.SimpleNamespace(IMPORTANT_FOR_AUTOFILL_YES=1,
+                                                      IMPORTANT_FOR_AUTOFILL_NO=2))
+    modulo("android.os", Build=types.SimpleNamespace(VERSION=types.SimpleNamespace(SDK_INT=34)))
+    modulo("android.app", Notification=FakeNotificacao,
+           NotificationChannel=lambda ident, nome, importancia: (ident, nome),
+           NotificationManager=types.SimpleNamespace(IMPORTANCE_DEFAULT=3),
+           PendingIntent=types.SimpleNamespace(
+               FLAG_IMMUTABLE=0x04000000,
+               getActivity=lambda ctx, codigo, intent, flags: ("pendente", intent)))
     modulo("android.graphics.drawable",
            Icon=types.SimpleNamespace(createWithResource=lambda ctx, res: f"icone:{res}"))
     modulo("java.util", ArrayList=FakeArrayList)
-    modulo("android.text", Html=FakeHtml)
-    modulo("android.text.method",
-           LinkMovementMethod=types.SimpleNamespace(getInstance=lambda: "movimento-links"))
+    modulo("android.text", InputType=types.SimpleNamespace(TYPE_CLASS_NUMBER=2))
 
     def app_com(atividade):
         return types.SimpleNamespace(_impl=types.SimpleNamespace(native=atividade))
@@ -127,7 +170,6 @@ def test_fora_do_android_nao_faz_nada():
     app = types.SimpleNamespace(_impl=None)
     assert plataforma.acao_do_intent(app) is None
     assert plataforma.copiar(app, "x") is False
-    assert plataforma.links(app, "<a href='x'>x</a>") is False
 
 
 def test_acao_do_intent(android):
@@ -162,14 +204,6 @@ def test_dado_desconhecido_e_ignorado(android):
     assert plataforma.acao_do_intent(android(FakeAtividade(intent))) is None
 
 
-def test_links(android):
-    texto = FakeTextView()
-    rotulo = types.SimpleNamespace(_impl=types.SimpleNamespace(native=texto))
-    assert plataforma.links(rotulo, '<a href="https://t.me/x">x</a>') is True
-    assert texto.texto == ("html", '<a href="https://t.me/x">x</a>', 0)
-    assert texto.metodo == "movimento-links"
-
-
 def test_confirmacao_em_portugues_no_android(monkeypatch):
     pytest.importorskip("toga")
     monkeypatch.setenv("TOGA_BACKEND", "toga_dummy")
@@ -183,3 +217,61 @@ def test_confirmacao_em_portugues_no_android(monkeypatch):
                         types.SimpleNamespace(TextDialog=FakeTextDialog))
     dialogo = plataforma.confirmacao("T", "M", sim="Registrar mesmo assim")
     assert dialogo._impl.rotulos == ("Registrar mesmo assim", "Cancelar")
+
+
+def test_fora_do_android_sem_notificacao():
+    app = types.SimpleNamespace(_impl=None)
+    assert plataforma.notificar(app, "t", "x") is False
+    assert plataforma.pedir_permissao_notificacoes(app) is False
+
+
+def test_notificar(android):
+    atividade = FakeAtividade()
+    atividade.gerenciador = FakeGerenciador()
+    assert plataforma.notificar(android(atividade), "Abrir ponto: concluído.", "✅ entrada", 1)
+    assert atividade.gerenciador.canais == [("resultados", "Resultado das execuções")]
+    info = atividade.gerenciador.notificacoes[1]
+    assert info["canal"] == "resultados"
+    assert info["SmallIcon"] == 7
+    assert (info["ContentTitle"], info["ContentText"]) == ("Abrir ponto: concluído.", "✅ entrada")
+    assert info["ContentIntent"] == ("pendente", "abrir:io.github.fabiolimath.ponto")
+    assert info["AutoCancel"] is True
+
+
+def test_pede_permissao_so_se_faltar(android):
+    pedidos = []
+    atividade = FakeAtividade()
+    app = android(atividade)
+    app._impl.request_permissions = lambda permissoes, ao_terminar: pedidos.append(permissoes)
+
+    assert plataforma.pedir_permissao_notificacoes(app)
+    atividade.permissao = 0  # concedida
+    assert plataforma.pedir_permissao_notificacoes(app)
+
+    assert pedidos == [["android.permission.POST_NOTIFICATIONS"]]
+
+
+def test_campo_numerico(android):
+    tipos = []
+    entrada = types.SimpleNamespace(_impl=types.SimpleNamespace(
+        native=types.SimpleNamespace(setInputType=tipos.append)))
+    assert plataforma.campo_numerico(entrada)
+    assert tipos == [2]
+
+
+def test_preenchimento_automatico(android):
+    class Campo:
+        dicas, importancia = None, None
+
+        def setAutofillHints(self, *dicas):
+            self.dicas = dicas
+
+        def setImportantForAutofill(self, valor):
+            self.importancia = valor
+
+    usuario, observacao = Campo(), Campo()
+    assert plataforma.preenchimento(types.SimpleNamespace(_impl=types.SimpleNamespace(native=usuario)),
+                                    "username")
+    assert plataforma.preenchimento(types.SimpleNamespace(_impl=types.SimpleNamespace(native=observacao)))
+    assert (usuario.dicas, usuario.importancia) == (("username",), 1)
+    assert (observacao.dicas, observacao.importancia) == (None, 2)

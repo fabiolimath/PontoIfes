@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 
 PADRAO = {
+    "notificacoes": True,
     "verificar_atualizacoes": True,
     "observacao_pit": "Conforme PIT docente.",
 }

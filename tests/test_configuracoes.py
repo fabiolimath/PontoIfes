@@ -5,10 +5,10 @@ from ponto import atualizacao, configuracoes, mascara
 
 def test_preferencias_padrao_e_salvas(tmp_path):
     path = tmp_path / "c.json"
-    assert configuracoes.carregar(path) == {"verificar_atualizacoes": True,
+    assert configuracoes.carregar(path) == {"notificacoes": True, "verificar_atualizacoes": True,
                                             "observacao_pit": "Conforme PIT docente."}
     configuracoes.salvar(path, {"verificar_atualizacoes": False})
-    assert configuracoes.carregar(path) == {"verificar_atualizacoes": False,
+    assert configuracoes.carregar(path) == {"notificacoes": True, "verificar_atualizacoes": False,
                                             "observacao_pit": "Conforme PIT docente."}
 
 
