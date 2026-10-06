@@ -50,3 +50,11 @@ def test_mascara():
     for texto, esperado in casos.items():
         assert mascara.formatar_data(texto) == esperado
     assert mascara.formatar_data("04/", apagando=True) == "04/"
+
+
+def test_mascara_de_hora():
+    casos = {"0": "0", "01": "01:", "01:4": "01:4", "0140": "01:40", "01:40": "01:40",
+             "8:": "08:", "8:00": "8:00", "01:405": "01:40", "1h": "1"}
+    for texto, esperado in casos.items():
+        assert mascara.formatar_hora(texto) == esperado, texto
+    assert mascara.formatar_hora("01", apagando=True) == "01"

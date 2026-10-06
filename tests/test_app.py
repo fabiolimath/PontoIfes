@@ -243,6 +243,10 @@ def test_configuracoes_do_lembrete(app, monkeypatch):
     app.campos["SIGRH_PASS"].value = "b"
     assert app.lembrete_fechar.value is True
     assert app.lembrete_tempo.value == "01:40"
+    app.lembrete_tempo.value = ""
+    for texto in ["0", "02", "02:3", "02:30"]:
+        app.lembrete_tempo.value = texto
+    assert app.lembrete_tempo.value == "02:30"
 
     app.lembrete_tempo.value = "1h40"
     app.loop.run_until_complete(app.salvar_configuracoes(None))

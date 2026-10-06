@@ -61,8 +61,8 @@ class Ponto(toga.App):
             )
             self.botoes.append(botao)
 
-        self._data_anterior = ""
-        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", on_change=self._mascara_data,
+        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa",
+                                       on_change=self._mascara(mascara.formatar_data),
                                        style=Pack(margin_bottom=4))
         plataforma.campo_de_data(self.data_pit)
         plataforma.preenchimento(self.data_pit)
@@ -94,15 +94,21 @@ class Ponto(toga.App):
     def mostrar_principal(self):
         self.main_window.content = self.tela_principal
 
-    def _mascara_data(self, widget, **kwargs):
-        novo = widget.value
-        apagando = len(novo) < len(self._data_anterior)
-        formatado = mascara.formatar_data(novo, apagando)
-        self._data_anterior = formatado
-        if formatado != novo:
-            # Dispara on_change de novo, mas formatar o já formatado não muda nada.
-            widget.value = formatado
-            plataforma.cursor_no_fim(widget)
+    @staticmethod
+    def _mascara(formatar):
+        """on_change que aplica a máscara `formatar` (data ou hora) enquanto se digita."""
+        anterior = [""]
+
+        def aplicar(widget, **kwargs):
+            novo = widget.value
+            apagando = len(novo) < len(anterior[0])
+            formatado = formatar(novo, apagando)
+            anterior[0] = formatado
+            if formatado != novo:
+                # Dispara on_change de novo, mas formatar o já formatado não muda nada.
+                widget.value = formatado
+                plataforma.cursor_no_fim(widget)
+        return aplicar
 
     def _ao_tocar(self, acao):
         async def handler(widget, **kwargs):
@@ -292,14 +298,21 @@ class Ponto(toga.App):
             style=Pack(margin=(8, 0)),
         )
         self.lembrete_tempo = toga.TextInput(
-            value=preferencias["lembrete_tempo"], placeholder="hh:mm", style=Pack(margin_bottom=8),
+            value=preferencias["lembrete_tempo"], placeholder="hh:mm",
+            on_change=self._mascara(mascara.formatar_hora), style=Pack(width=88),
         )
         plataforma.campo_de_hora(self.lembrete_tempo)
         plataforma.preenchimento(self.lembrete_tempo)
         filhos += [
             self.lembrete_fechar,
-            toga.Label("Avisar quanto tempo depois de abrir (hh:mm)"),
-            self.lembrete_tempo,
+            toga.Box(
+                children=[
+                    toga.Label("Avisar quanto tempo depois de abrir",
+                               style=Pack(flex=1, margin_right=8)),
+                    self.lembrete_tempo,
+                ],
+                style=Pack(direction=ROW, align_items="center", margin_bottom=8),
+            ),
         ]
 
         self.verificar_atualizacoes = toga.Switch(

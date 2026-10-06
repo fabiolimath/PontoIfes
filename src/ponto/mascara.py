@@ -1,8 +1,9 @@
-"""Máscara dd/mm/aaaa para o campo de data do PIT."""
+"""Máscaras dd/mm/aaaa (data do PIT) e hh:mm (tempo do lembrete)."""
 
 import re
 
 _COMPLETA = re.compile(r"\d{1,2}/\d{1,2}/\d{4}")
+_HORA_COMPLETA = re.compile(r"\d{1,2}:\d{2}")
 
 
 def formatar_data(texto, apagando=False):
@@ -24,3 +25,18 @@ def formatar_data(texto, apagando=False):
     if len(digitos) >= 4:
         resultado += "/" + partes[2]
     return resultado
+
+
+def formatar_hora(texto, apagando=False):
+    """Põe os ":" depois dos dois dígitos da hora enquanto o usuário digita.
+
+    Como em formatar_data: ao apagar, ou com a hora já completa (ex.: 8:00), fica como está.
+    """
+    if apagando or _HORA_COMPLETA.fullmatch(texto.strip()):
+        return texto
+    # "8:" vira "08:".
+    horas, sep, resto = texto.partition(":")
+    if sep and len(horas) == 1:
+        texto = "0" + texto
+    digitos = re.sub(r"\D", "", texto)[:4]
+    return digitos[:2] + (":" + digitos[2:] if len(digitos) >= 2 else "")
