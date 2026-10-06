@@ -305,7 +305,7 @@ class Ponto(toga.App):
     # SOBRE
     # -----------------------------------
     def about(self):
-        """Tela "Sobre" em português, com o botão para abrir o repositório."""
+        """Tela "Sobre" em português, com o botão para abrir o site do app."""
         self.loop.create_task(self._sobre())
 
     async def _sobre(self):
@@ -314,13 +314,13 @@ class Ponto(toga.App):
             partes.append(f"Autor: {self.author}")
         if self.description:
             partes.append(f"\n{self.description}")
-        partes.append(f"\nRepositório: {atualizacao.URL_REPOSITORIO}")
+        partes.append(f"\nSite: {atualizacao.URL_SITE}")
         abrir = await self.main_window.dialog(plataforma.confirmacao(
             f"Sobre o {self.formal_name}", "\n".join(partes),
-            sim="Abrir repositório", nao="Fechar",
+            sim="Abrir o site", nao="Fechar",
         ))
         if abrir:
-            plataforma.abrir_url(self, atualizacao.URL_REPOSITORIO)
+            plataforma.abrir_url(self, atualizacao.URL_SITE)
 
     # -----------------------------------
     # LOG
