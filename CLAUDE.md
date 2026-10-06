@@ -51,11 +51,11 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 ## Release
 
-- Feito no GitHub Actions: botão **Run workflow** (aba Actions → Release) ou push de tag `vX.Y.Z`.
-  O workflow lê a versão do `pyproject.toml`, falha se a tag já existir, gera o APK assinado e cria
-  o release com o arquivo `ponto-ifes.apk`.
+- Automático no merge: cada push no master roda `release.yml`; se o `version` do `pyproject.toml`
+  ainda não tem tag, gera o APK assinado e cria o release `vX.Y.Z` com `ponto-ifes.apk`; se já
+  tem, termina sem publicar. O botão **Run workflow** e o push de tag `vX.Y.Z` continuam valendo.
 - Por isso, **todo PR que muda o app deve aumentar `version` no `pyproject.toml`** (é também o
-  versionCode do Android). Tags v1.0.0 a v1.0.6 já existem.
+  versionCode do Android); o `pr.yml` falha se `src/`, `android/` ou o `pyproject.toml` mudarem sem isso. Tags v1.0.0 a v1.0.6 já existem.
 - Segredos do repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`.
 - Chave de assinatura: `~/.config/ponto/ponto-release.jks` (alias `ponto`) no PC do autor, com
   cópia de segurança. Nunca entra no repositório (`*.jks` no `.gitignore`); sem a mesma chave, quem
@@ -66,7 +66,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 ## Fluxo de trabalho
 
-- Só o Claude edita o código, por PRs (rascunho); o autor faz o merge no site e clica em Run workflow.
+- Só o Claude edita o código, por PRs (rascunho); o autor faz o merge no site, e o release sai sozinho.
 - Para testar um PR, o autor instala no celular o APK de teste (mesma chave, instala por cima):
   `https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk`. O pré-release
   `teste` é sempre o do último PR que rodou e não conta como "latest".

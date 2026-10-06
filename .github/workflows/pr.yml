@@ -37,6 +37,25 @@ jobs:
       - name: Rodar os testes
         run: PYTHONPATH=src python -m pytest -q tests
 
+      # O release sai sozinho no merge só se o version aumentar (release.yml).
+      - name: Conferir se o version aumentou
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch -q --depth=1 origin "$BASE"
+          versao() { sed -n 's/^version = "\(.*\)"/\1/p' | head -1; }
+          antes=$(git show "$BASE:pyproject.toml" | versao)
+          depois=$(versao < pyproject.toml)
+          if git diff --quiet "$BASE" HEAD -- src android pyproject.toml; then
+            echo "O app não mudou; o merge não gera release."
+          elif [ "$antes" = "$depois" ]; then
+            echo "::error::O app mudou, mas o version continua $depois. Aumente o version no pyproject.toml."
+            exit 1
+          else
+            echo "Versão $antes -> $depois: o merge publica o release v$depois."
+          fi
+
   apk:
     needs: testes
     # PRs vindos de forks não recebem os segredos da chave.

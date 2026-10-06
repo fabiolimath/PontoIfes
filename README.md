@@ -105,15 +105,18 @@ então o site e o aviso de atualização continuam no último release oficial.
 ### Release automático (GitHub Actions)
 
 Com os segredos configurados, o workflow `.github/workflows/release.yml` compila, assina
-e publica o release, sem precisar do Briefcase no PC. Depois de aumentar `version` no
-`pyproject.toml` na branch `master`:
+e publica o release, sem precisar do Briefcase no PC. Ele roda a cada push na branch
+`master` (o merge de um PR): se o `version` do `pyproject.toml` ainda não tiver a tag
+`vX.Y.Z`, o release sai sozinho; se já tiver, o workflow termina sem publicar nada.
 
-- pelo navegador: aba **Actions** > **Release** > **Run workflow**. O workflow cria a tag
-  `vX.Y.Z` com a versão do `pyproject.toml`; ou
+Também dá para disparar à mão:
+
+- pelo navegador: aba **Actions** > **Release** > **Run workflow**; ou
 - pelo terminal: `git tag v1.0.5 && git push origin v1.0.5`.
 
-Se a versão já tiver sido publicada, ou se a tag não bater com o `version`, o workflow
-para com erro antes de compilar.
+Nesses dois casos, se a versão já tiver sido publicada ou se a tag não bater com o
+`version`, o workflow para com erro antes de compilar. O workflow dos PRs falha se o app
+mudar sem aumentar o `version`.
 
 Segredos do repositório
 (*Settings > Secrets and variables > Actions*), configuráveis uma vez com o `gh`:
