@@ -2,8 +2,7 @@
 
 Uso: registrar_pit.py [dd/mm/aaaa] [--obs TEXTO]
 
-Sem data, registra o dia de hoje. Lê SIGRH_USER e SIGRH_PASS do ambiente
-(e TELEGRAM_TOKEN e TELEGRAM_CHAT_ID, opcionais, para a notificação).
+Sem data, registra o dia de hoje. Lê SIGRH_USER e SIGRH_PASS do ambiente.
 
 O SIGRH é JSF + RichFaces: o estado do formulário fica no servidor, então o
 script repete as mesmas requisições AJAX que o navegador faz ao escolher o
@@ -231,19 +230,8 @@ def registrar(dia, observacao, usuario, senha):
 
 
 # -----------------------------------
-# NOTIFICAÇÃO E EXECUÇÃO
+# EXECUÇÃO
 # -----------------------------------
-def enviar_telegram(mensagem):
-    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat:
-        return
-    try:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      data={"chat_id": chat, "text": mensagem}, timeout=TIMEOUT)
-    except Exception as exc:
-        print("Erro ao enviar ao Telegram:", exc)
-
-
 def ler_argumentos(argv):
     parser = argparse.ArgumentParser(prog="registrar_pit.py", description="Registra o PIT no SIGRH.")
     parser.add_argument("data", nargs="?", help="dia no formato dd/mm/aaaa (padrão: hoje)")
@@ -289,12 +277,10 @@ def main(argv=None):
         else:
             mensagem = f"📋✅ SIGRH: PIT de {dia} registrado"
             print(mensagem)
-            enviar_telegram(mensagem)
             return 0
 
     mensagem = f"📋❌ SIGRH: PIT de {dia} não registrado: {erro}"
     print(mensagem)
-    enviar_telegram(mensagem)
     return 1
 
 

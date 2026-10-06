@@ -124,10 +124,8 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRI
 def mensagem_final(saida):
     """Última linha não vazia da saída: o resultado que o script anuncia."""
     for linha in reversed(saida.splitlines()):
-        linha = linha.strip()
-        # Falha do Telegram não é o resultado da ação.
-        if linha and not linha.startswith("Erro ao enviar ao Telegram"):
-            return linha
+        if linha.strip():
+            return linha.strip()
     return ""
 
 

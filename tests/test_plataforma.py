@@ -63,22 +63,6 @@ class FakeArrayList(list):
         self.append(item)
 
 
-class FakeHtml:
-    FROM_HTML_MODE_LEGACY = 0
-
-    @staticmethod
-    def fromHtml(html, modo):
-        return ("html", html, modo)
-
-
-class FakeTextView:
-    def setText(self, texto):
-        self.texto = texto
-
-    def setMovementMethod(self, metodo):
-        self.metodo = metodo
-
-
 class FakeNotificacao:
     class Builder:
         def __init__(self, contexto, canal=None):
@@ -172,10 +156,7 @@ def android(monkeypatch):
     modulo("android.graphics.drawable",
            Icon=types.SimpleNamespace(createWithResource=lambda ctx, res: f"icone:{res}"))
     modulo("java.util", ArrayList=FakeArrayList)
-    modulo("android.text", Html=FakeHtml,
-           InputType=types.SimpleNamespace(TYPE_CLASS_NUMBER=2))
-    modulo("android.text.method",
-           LinkMovementMethod=types.SimpleNamespace(getInstance=lambda: "movimento-links"))
+    modulo("android.text", InputType=types.SimpleNamespace(TYPE_CLASS_NUMBER=2))
 
     def app_com(atividade):
         return types.SimpleNamespace(_impl=types.SimpleNamespace(native=atividade))
@@ -187,7 +168,6 @@ def test_fora_do_android_nao_faz_nada():
     app = types.SimpleNamespace(_impl=None)
     assert plataforma.acao_do_intent(app) is None
     assert plataforma.copiar(app, "x") is False
-    assert plataforma.links(app, "<a href='x'>x</a>") is False
 
 
 def test_acao_do_intent(android):
@@ -220,14 +200,6 @@ def test_acao_pelo_dado_do_intent(android, dado):
 def test_dado_desconhecido_e_ignorado(android):
     intent = FakeIntent(data="https://exemplo.com")
     assert plataforma.acao_do_intent(android(FakeAtividade(intent))) is None
-
-
-def test_links(android):
-    texto = FakeTextView()
-    rotulo = types.SimpleNamespace(_impl=types.SimpleNamespace(native=texto))
-    assert plataforma.links(rotulo, '<a href="https://t.me/x">x</a>') is True
-    assert texto.texto == ("html", '<a href="https://t.me/x">x</a>', 0)
-    assert texto.metodo == "movimento-links"
 
 
 def test_confirmacao_em_portugues_no_android(monkeypatch):

@@ -17,10 +17,6 @@ java="${JAVA_HOME:-$ferramentas/java17}"
 export PATH="$java/bin:$PATH"  # o apksigner precisa do java
 chave="${PONTO_KEYSTORE:-$HOME/.config/ponto/ponto-release.jks}"
 
-if [[ ! -f src/ponto/segredo_telegram.py ]]; then
-    echo "Aviso: sem src/ponto/segredo_telegram.py, o APK sai sem notificações do Telegram." >&2
-fi
-
 if [[ ! -f $chave ]]; then
     echo "Criando a chave de assinatura em $chave"
     mkdir -p "$(dirname "$chave")"

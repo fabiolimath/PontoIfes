@@ -14,7 +14,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 ## O que o app faz
 
 1. Tela principal com três botões, um por função, e campo de data para o PIT.
-2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH e Chat ID do Telegram, opcional),
+2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
    guardadas na área privada do app e editáveis no botão **Credenciais**.
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
@@ -29,28 +29,24 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 ## Estrutura
 
-- `src/ponto/app.py` — interface Toga (botões, credenciais, log, dica do Telegram com links).
+- `src/ponto/app.py` — interface Toga (botões, configurações, log, notificações).
 - `src/ponto/executor.py` — roda os scripts como módulos (`runpy`, pacote `ponto.scripts`), definindo
   `os.environ` com as credenciais e capturando stdout/stderr para o log; um script por vez.
 - `src/ponto/credenciais.py` — leitura/gravação das credenciais (JSON na área privada).
-- `src/ponto/plataforma.py` — código específico do Android (intent, área de transferência, links
-  clicáveis com `Html.fromHtml`); no PC devolve valores neutros.
-- `src/ponto/scripts/` — os três scripts (leem `SIGRH_USER`, `SIGRH_PASS`, `TELEGRAM_TOKEN`,
-  `TELEGRAM_CHAT_ID` do ambiente).
-- `android/res/` — atalhos de launcher (`xml/shortcuts.xml`, `values/atalhos.xml`).
+- `src/ponto/plataforma.py` — código específico do Android (intent, área de transferência,
+  notificações, teclados); no PC devolve valores neutros.
+- `src/ponto/scripts/` — os três scripts (leem `SIGRH_USER` e `SIGRH_PASS` do ambiente).
+- `android/res/` — atalhos de launcher (`xml/shortcuts.xml`, `values/atalhos.xml`) e ícone das
+  notificações (`drawable/ic_notificacao.xml`).
 - `android/release.sh` — empacota, alinha e assina o APK release → `dist/ponto-ifes.apk`.
 - `.github/workflows/release.yml` — build e publicação automáticos.
 - `docs/` — site de instalação para usuários leigos (GitHub Pages, branch master, pasta /docs).
 - `tests/` — pytest: `PYTHONPATH=src python -m pytest -q tests`.
 
-## Telegram
+## Telegram (removido)
 
-- Bot **@MeuPontoIFESBot**. O token vai embutido no APK via `src/ponto/segredo_telegram.py`
-  (fora do Git; modelo em `segredo_telegram.py.exemplo`). O autor aceitou o token no pacote.
-- Cada usuário informa só o próprio Chat ID (obtido com @IDBot).
-- Manter a notificação via Telegram como está, por enquanto: se as notificações do sistema (1.0.10)
-  funcionarem no celular do autor, remover o Telegram dos scripts e do app (aí apagar também o
-  segredo `TELEGRAM_TOKEN` do GitHub).
+- A notificação pelo Telegram (bot @MeuPontoIFESBot) foi substituída pelas notificações do sistema
+  na 1.0.10. O segredo `TELEGRAM_TOKEN` do GitHub não é mais usado e pode ser apagado.
 
 ## Release
 
@@ -59,7 +55,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
   o release com o arquivo `ponto-ifes.apk`.
 - Por isso, **todo PR que muda o app deve aumentar `version` no `pyproject.toml`** (é também o
   versionCode do Android). Tags v1.0.0 a v1.0.6 já existem.
-- Segredos do repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `TELEGRAM_TOKEN`.
+- Segredos do repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`.
 - Chave de assinatura: `~/.config/ponto/ponto-release.jks` (alias `ponto`) no PC do autor, com
   cópia de segurança. Nunca entra no repositório (`*.jks` no `.gitignore`); sem a mesma chave, quem
   já instalou não consegue atualizar.
@@ -82,7 +78,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 ## Regras
 
 - Nunca commitar credenciais; o repositório não deve conter valores reais.
-- O site (`docs/`) é para quem só instala o APK: sem uso no PC, sem token do Telegram, sem build e,
+- O site (`docs/`) é para quem só instala o APK: sem uso no PC, sem build e,
   no Tasker, só a opção Executar app (não Enviar Intent).
 
 ## Sobre o usuário

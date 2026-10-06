@@ -64,7 +64,7 @@ logs/
 # Briefcase local configuratoin
 .briefcase/
 
-# Token do bot do Telegram, embutido no APK mas nunca no Git
+# Arquivo antigo com o token do bot do Telegram (não é mais usado): nunca no Git
 src/ponto/segredo_telegram.py
 
 # Chave de assinatura do APK release

@@ -10,22 +10,6 @@ from toga.style.pack import COLUMN, ROW, Pack
 
 from ponto import atualizacao, configuracoes, credenciais, executor, mascara, plataforma
 
-BOT_TELEGRAM = "https://t.me/MeuPontoIFESBot"
-ID_BOT = "https://t.me/IDBot?start=getid"
-
-# Texto simples (desktop) e com links clicáveis (Android) abaixo do campo Chat ID.
-DICA_TELEGRAM = (
-    "Para receber notificações no Telegram,\n"
-    "inicie um chat com @MeuPontoIFESBot.\n"
-    "Depois, mande /getid para @IDBot para descobrir seu Chat ID."
-)
-DICA_TELEGRAM_HTML = (
-    "Para receber notificações no Telegram,<br>"
-    f'inicie um chat com <a href="{BOT_TELEGRAM}">Meu Ponto IFES Bot</a>.<br>'
-    f'Depois, entre <a href="{ID_BOT}">aqui</a> para descobrir seu Chat ID.'
-)
-
-
 class Ponto(toga.App):
     def startup(self):
         dados = self.paths.data
@@ -222,15 +206,6 @@ class Ponto(toga.App):
             if campo == "SIGRH_USER":
                 plataforma.campo_numerico(entrada)
             filhos += [toga.Label(rotulo), entrada]
-            if campo == "TELEGRAM_CHAT_ID":
-                dica = toga.Label(DICA_TELEGRAM, style=Pack(margin_bottom=8))
-                plataforma.links(dica, DICA_TELEGRAM_HTML)
-                filhos.append(dica)
-        if not credenciais.token_telegram():
-            filhos.append(toga.Label(
-                "Este APK foi gerado sem o token do bot:\nas notificações do Telegram estão desativadas.",
-                style=Pack(margin_bottom=8),
-            ))
 
         self.observacao_pit = toga.TextInput(
             value=configuracoes.carregar(self.config_path)["observacao_pit"],

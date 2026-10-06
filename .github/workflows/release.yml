@@ -4,7 +4,6 @@
 # Segredos do repositório usados:
 #   ANDROID_KEYSTORE_BASE64    chave de assinatura (ponto-release.jks) em base64
 #   ANDROID_KEYSTORE_PASSWORD  senha da chave
-#   TELEGRAM_TOKEN             token do bot, embutido no APK
 name: Release
 
 on:
@@ -49,10 +48,8 @@ jobs:
       - name: Preparar segredos
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ponto-release.jks"
-          printf 'TELEGRAM_TOKEN = "%s"\n' "$TELEGRAM_TOKEN" > src/ponto/segredo_telegram.py
 
       - name: Instalar o Briefcase
         run: pip install briefcase==0.4.5

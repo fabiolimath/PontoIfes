@@ -112,5 +112,4 @@ def test_escritas_de_outras_threads_ficam_fora_do_log(tmp_path, pacote, capsys):
 
 def test_mensagem_final():
     assert executor.mensagem_final("Tentativa 1\n✅ entrada registrada\n\n") == "✅ entrada registrada"
-    assert executor.mensagem_final("❌ falhou\nErro ao enviar ao Telegram: x\n") == "❌ falhou"
     assert executor.mensagem_final("") == ""

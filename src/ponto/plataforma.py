@@ -29,22 +29,6 @@ def copiar(app, texto):
     return True
 
 
-def links(rotulo, html):
-    """Troca o texto do toga.Label por HTML com links clicáveis (só no Android).
-
-    Fora do Android devolve False e o rótulo fica com o texto simples.
-    """
-    try:
-        from android.text import Html
-        from android.text.method import LinkMovementMethod
-    except ImportError:
-        return False
-    texto = rotulo._impl.native  # TextView
-    texto.setText(Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY))
-    texto.setMovementMethod(LinkMovementMethod.getInstance())
-    return True
-
-
 def acao_do_intent(app):
     """Ação pedida pelo intent que abriu o app (atalho, Tasker...), ou None.
 

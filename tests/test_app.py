@@ -20,7 +20,7 @@ def app(tmp_path, monkeypatch):
 
 
 def test_primeira_execucao_pede_credenciais(app):
-    assert set(app.campos) == {"SIGRH_USER", "SIGRH_PASS", "TELEGRAM_CHAT_ID"}
+    assert set(app.campos) == {"SIGRH_USER", "SIGRH_PASS"}
     assert app.main_window.content is not app.tela_principal
 
 
@@ -243,8 +243,7 @@ def test_notifica_o_resultado(app, tmp_path, monkeypatch):
     notificacoes = []
     monkeypatch.setattr(plataforma, "notificar", lambda app, *a: notificacoes.append(a))
     _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto",
-                     "print('Tentativa 1...')\nprint('SIGRH: saída registrada às 17:00')\n"
-                     "print('Erro ao enviar ao Telegram: sem rede')\n")
+                     "print('Tentativa 1...')\nprint('SIGRH: saída registrada às 17:00')\n")
 
     app.loop.run_until_complete(app.rodar("fechar_ponto"))
     configuracoes.salvar(app.config_path, {"notificacoes": False})

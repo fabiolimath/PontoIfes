@@ -2,8 +2,7 @@
 
 Uso: fechar_ponto.py
 
-Lê SIGRH_USER e SIGRH_PASS do ambiente (e TELEGRAM_TOKEN e TELEGRAM_CHAT_ID,
-opcionais, para a notificação).
+Lê SIGRH_USER e SIGRH_PASS do ambiente.
 
 Passos, como o navegador faz: login, tela do ponto eletrônico (direto após o
 login ou pelo link do portal) e o botão "Registrar Saída". O sucesso é a
@@ -198,19 +197,8 @@ def fechar(usuario, senha):
 
 
 # -----------------------------------
-# NOTIFICAÇÃO E EXECUÇÃO
+# EXECUÇÃO
 # -----------------------------------
-def enviar_telegram(mensagem):
-    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat:
-        return
-    try:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      data={"chat_id": chat, "text": mensagem}, timeout=TIMEOUT)
-    except Exception as exc:
-        print("Erro ao enviar ao Telegram:", exc)
-
-
 def main():
     usuario, senha = os.getenv("SIGRH_USER"), os.getenv("SIGRH_PASS")
     if not usuario or not senha:
@@ -233,12 +221,10 @@ def main():
         else:
             mensagem = f"✅🔐📌 SIGRH: saída registrada às {time.strftime('%H:%M')}"
             print(mensagem)
-            enviar_telegram(mensagem)
             return 0
 
     mensagem = f"🔐❌ SIGRH: saída não registrada: {erro}"
     print(mensagem)
-    enviar_telegram(mensagem)
     return 1
 
 
