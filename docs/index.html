@@ -86,12 +86,13 @@
     display: block; width: 100%; height: auto; border-radius: 12px;
     border: 1px solid var(--borda);
   }
-  .com-imagem { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: start; }
-  .com-imagem figure { margin-top: 16px; }
+  .com-imagem { display: grid; grid-template-columns: 220px 1fr; column-gap: 22px; align-items: start; }
+  .com-imagem h2 { grid-column: 1 / -1; }
+  .com-imagem figure { margin-top: 8px; }
   .larga { max-width: 520px; margin: 12px auto; }
   @media (max-width: 600px) {
     .com-imagem { grid-template-columns: 1fr; }
-    .com-imagem figure { max-width: 260px; margin: 16px auto 0; }
+    .com-imagem figure { max-width: 260px; margin: 8px auto 0; }
   }
   footer { text-align: center; color: var(--suave); font-size: .9rem; margin-top: 32px; }
   footer a { color: inherit; }
@@ -130,7 +131,7 @@
   </section>
 
   <section class="com-imagem">
-      <h2>Tela principal</h2>
+    <h2>Tela principal</h2>
     <figure><img src="img/tela-principal.jpg" alt="Tela principal do app, com os botões Abrir ponto, Fechar ponto e Registrar PIT" loading="lazy" width="540" height="1155"></figure>
     <div>
       <ul>
@@ -144,7 +145,7 @@
   </section>
 
   <section class="com-imagem">
-      <h2>Configurações</h2>
+    <h2>Configurações</h2>
     <figure><img src="img/configuracoes.jpg" alt="Tela de Configurações do app" loading="lazy" width="540" height="1040"></figure>
     <div>
       <ul>
