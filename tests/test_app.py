@@ -67,10 +67,10 @@ def test_pit_com_data_passa_argumento(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
-    assert app.saida.value == "['02/10/2026']\n"
+    assert app.saida.value == "['02/10/2026', '--obs', 'Conforme PIT docente.']\n"
     assert app.status.text == "Registrar PIT (02/10/2026): concluído."
     assert app.data_pit.value == ""
-    assert "· registrar_pit 02/10/2026 ===" in app.log_path.read_text(encoding="utf-8")
+    assert "· registrar_pit 02/10/2026 --obs Conforme PIT docente. ===" in app.log_path.read_text(encoding="utf-8")
 
 
 def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
@@ -79,7 +79,17 @@ def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
-    assert app.saida.value == "[]\n"
+    assert app.saida.value == "['--obs', 'Conforme PIT docente.']\n"
+
+
+def test_pit_usa_observacao_das_configuracoes(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "import sys\nprint(sys.argv[1:])\n")
+    configuracoes.salvar(app.config_path, {"observacao_pit": "PIT segundo portaria"})
+    app.data_pit.value = "02/10/2026"
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert app.saida.value == "['02/10/2026', '--obs', 'PIT segundo portaria']\n"
 
 
 def test_pit_com_data_invalida_nao_roda(app, tmp_path, monkeypatch):
@@ -184,11 +194,14 @@ def test_tela_de_configuracoes(app):
     app.campos["SIGRH_USER"].value = "a"
     app.campos["SIGRH_PASS"].value = "b"
     app.verificar_atualizacoes.value = False
+    assert app.observacao_pit.value == "Conforme PIT docente."
+    app.observacao_pit.value = " PIT segundo portaria "
 
     app.loop.run_until_complete(app.salvar_configuracoes(None))
 
     assert app.main_window.content is app.tela_principal
-    assert configuracoes.carregar(app.config_path) == {"verificar_atualizacoes": False}
+    assert configuracoes.carregar(app.config_path) == {
+        "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria"}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
 
 

@@ -1,146 +1,252 @@
+"""Abre o ponto no SIGRH (registra a entrada no ponto eletrônico).
+
+Uso: abrir_ponto.py
+
+Lê SIGRH_USER e SIGRH_PASS do ambiente (e TELEGRAM_TOKEN e TELEGRAM_CHAT_ID,
+opcionais, para a notificação).
+
+Depois do login, o SIGRH mostra a tela do ponto eletrônico com o botão
+"Registrar Entrada". O script envia esse formulário e só considera a entrada
+registrada se a resposta trouxer "Operação realizada com sucesso" (ou já
+mostrar o botão "Registrar Saída"). Fora da rede do campus o SIGRH já mostra,
+na tela do ponto, "O Endereço IP de seu computador não tem autorização para
+registrar o Ponto Eletrônico": o script não envia o formulário, tenta de novo
+(a Wi-Fi pode estar conectando) e, se persistir, avisa e sai com código 1.
+"""
+
 import os
+import re
 import sys
 import time
+
 import requests
 from bs4 import BeautifulSoup
 
-USUARIO = os.getenv("SIGRH_USER")
-SENHA = os.getenv("SIGRH_PASS")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
 BASE = "https://sigrh.ifes.edu.br"
-CLASSICO_URL = BASE + "/sigrh?modo=classico"
 LOGIN_URL = BASE + "/sigrh/login.jsf"
 PONTO_URL = BASE + "/sigrh/frequencia/ponto_eletronico/cadastro_ponto_eletronico.jsf"
 
-MAX_TENTATIVAS = 3
-ESPERA_ENTRE_TENTATIVAS = 10
+FORM = "idFormDadosEntradaSaida"
+BTN_ENTRADA = FORM + ":idBtnRegistrarEntrada"
+BTN_SAIDA = FORM + ":idBtnRegistrarSaida"
+
+DICA_WIFI = "Confira se o celular está conectado à Wi-Fi do campus."
+FORA_DA_REDE = "fora da rede do campus: o SIGRH não aceita o ponto deste endereço IP. " + DICA_WIFI
+# Trecho da mensagem do SIGRH quando o IP não está liberado (ver captura sigrh.loginFora).
+ERRO_DE_IP = re.compile(r"endere.o ip.*n.o tem autoriza", re.I | re.S)
+# Palavras que, numa mensagem de erro do SIGRH, indicam restrição de rede.
+SINAIS_DE_REDE = ("rede", " ip", "endereço", "local", "computador", "máquina", "permitid", "autorizad")
+
+TIMEOUT = 30
+TENTATIVAS = 3
+ESPERA = 10
+
+
+class Recusado(Exception):
+    """O SIGRH recusou o pedido (senha errada, fora da rede...): não adianta repetir."""
+
+
+class EnvioIncerto(Exception):
+    """Falhou depois de enviar o formulário: não se sabe se a entrada ficou registrada."""
+
+
+class ForaDaRede(Exception):
+    """O IP não é do campus. Repete-se: logo depois de um gatilho a Wi-Fi pode estar conectando."""
+
+
+class JaAberto(Exception):
+    """O ponto já estava aberto: nada a fazer."""
 
 
 # -----------------------------------
-# Send notifications to Telegram bot
+# LEITURA DAS PÁGINAS
 # -----------------------------------
-def enviar_telegram(mensagem):
-
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
-    data = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": mensagem
-    }
-
-    try:
-        resp = requests.post(url, data=data, timeout=30)
-
-        # print("Telegram status:", resp.status_code)
-        # print(resp.text)
-
-    except Exception as e:
-        print("Erro Telegram:", e)
+def sopa(resp):
+    return BeautifulSoup(resp.content, "html.parser")
 
 
-def get_viewstate(html):
-    soup = BeautifulSoup(html, "html.parser")
-    campo = soup.find("input", {"name": "javax.faces.ViewState"})
+def viewstate(pagina):
+    campo = pagina.find("input", {"name": "javax.faces.ViewState"})
     if not campo:
-        raise Exception("ViewState não encontrado")
+        raise Exception("ViewState não encontrado na página")
     return campo["value"]
 
 
-def registrar_entrada():
-
-    session = requests.Session()
-    session.headers.update({
-    "User-Agent": "Mozilla/5.0",
-    "Content-Type": "application/x-www-form-urlencoded",
-})
-
-    # -----------------------------------
-    # LOGIN
-    # -----------------------------------
-    resp = session.get(CLASSICO_URL, timeout=30)
-    viewstate = get_viewstate(resp.text)
+def mensagens(pagina, classe):
+    """Textos das listas de aviso do SIGRH (<ul class="info|erros|warning">)."""
+    return [li.get_text(" ", strip=True) for ul in pagina.find_all("ul", class_=classe)
+            for li in ul.find_all("li")]
 
 
-    data = {
+def erros(pagina):
+    return mensagens(pagina, "erros") + mensagens(pagina, "warning")
+
+
+def com_dica(textos):
+    """Junta as mensagens de erro e acrescenta a dica da Wi-Fi se falarem de rede."""
+    texto = "; ".join(textos)
+    if any(sinal in f" {texto.lower()}" for sinal in SINAIS_DE_REDE):
+        texto += ". " + DICA_WIFI
+    return texto
+
+
+def formulario_ponto(pagina):
+    return pagina.find("form", id=FORM)
+
+
+def tem_botao(pagina, nome):
+    form = formulario_ponto(pagina)
+    return bool(form and form.find("input", {"name": nome}))
+
+
+def horarios(pagina):
+    """(hora de entrada, saída prevista) mostradas na tela do ponto, "" se faltarem."""
+    entrada = prevista = ""
+    form = formulario_ponto(pagina)
+    if form:
+        for th in form.find_all("th"):
+            if th.get_text(strip=True).lower().startswith("hora de entrada"):
+                td = th.find_next_sibling("td")
+                entrada = td.get_text(strip=True) if td else ""
+        span = form.find(id=FORM + ":horaSaidaPrevista")
+        prevista = span.get_text(strip=True) if span else ""
+    return entrada, prevista
+
+
+def descrever(pagina):
+    entrada, prevista = horarios(pagina)
+    texto = f"às {entrada}" if entrada else ""
+    if prevista:
+        texto += f" (saída prevista: {prevista})"
+    return texto.strip()
+
+
+# -----------------------------------
+# PASSOS NO SIGRH
+# -----------------------------------
+def entrar(sessao, usuario, senha):
+    """Faz o login e devolve a página seguinte (normalmente a tela do ponto)."""
+    pagina = sopa(sessao.get(LOGIN_URL, timeout=TIMEOUT))
+    resp = sessao.post(LOGIN_URL, data={
         "formLogin": "formLogin",
         "width": "1920",
         "height": "1080",
         "urlRedirect": "",
         "acessibilidade": "",
-        "login": USUARIO,
-        "senha": SENHA,
+        "login": usuario,
+        "senha": senha,
         "logar": "Entrar",
-        "javax.faces.ViewState": viewstate
-    }
-
-    resp = session.post(LOGIN_URL, data=data, timeout=30, headers={
-        "Referer": LOGIN_URL,
-        "Origin": BASE,
-    })
-
-    # Não checar resp.url — ela pode ser login.jsf mesmo com sucesso
-    # Checar se o ViewState existe (página do ponto tem ViewState diferente)
-    # e se há indicação de login inválido no conteúdo
-    soup = BeautifulSoup(resp.text, "html.parser")
-    erro = soup.find(string=lambda t: t and ("senha" in t.lower() or "inválid" in t.lower() or "incorret" in t.lower()))
-    if erro:
-        raise Exception(f"Credenciais rejeitadas: {erro.strip()}")
-
-    # Tenta extrair ViewState — se não tiver, login falhou de outro jeito
-    viewstate = get_viewstate(resp.text)
-
-    # -----------------------------------
-    # REGISTRAR ENTRADA
-    # -----------------------------------
-    data = {
-        "idFormDadosEntradaSaida": "idFormDadosEntradaSaida",
-        "idFormDadosEntradaSaida:observacoes": "",
-        "idFormDadosEntradaSaida:idBtnRegistrarEntrada": "Registrar Entrada",
-        "javax.faces.ViewState": viewstate
-    }
-
-    resp = session.post(PONTO_URL, data=data, timeout=30, headers={
-        "Referer": PONTO_URL,
-        "Origin": BASE,
-    })
-
-    if resp.status_code != 200:
-        raise Exception(f"Erro HTTP {resp.status_code}")
-
-    # Verifica se há mensagem de sucesso ou erro na resposta
-    if "login.jsf" in resp.url:
-        raise Exception("Sessão perdida antes do registro")
-
-    return True
+        "javax.faces.ViewState": viewstate(pagina),
+    }, timeout=TIMEOUT)
+    pagina = sopa(resp)
+    if pagina.find("form", id="formLogin"):
+        raise Recusado("Login recusado: " + "; ".join(erros(pagina) or ["usuário ou senha inválidos"]))
+    return pagina
 
 
-# -----------------------------------
-# LOOP DE RETRY
-# -----------------------------------
+def tela_do_ponto(sessao, pagina):
+    """Garante que estamos na tela do ponto; se o login levou a outro lugar, abre-a."""
+    if formulario_ponto(pagina):
+        return pagina
+    pagina = sopa(sessao.get(PONTO_URL, timeout=TIMEOUT))
+    if formulario_ponto(pagina):
+        return pagina
+    problemas = erros(pagina)
+    if problemas:
+        raise Recusado(com_dica(problemas))
+    # Sem formulário e sem mensagem: pode ser a rede (ou a Wi-Fi ainda conectando),
+    # então vale tentar de novo.
+    raise Exception("A tela do ponto eletrônico não apareceu. " + DICA_WIFI)
 
-for tentativa in range(1, MAX_TENTATIVAS + 1):
+
+def registrar_entrada(sessao, pagina):
+    """Clica em "Registrar Entrada" e confere a resposta; devolve a página final."""
+    if tem_botao(pagina, BTN_SAIDA):
+        raise JaAberto(descrever(pagina))
+    if any(ERRO_DE_IP.search(texto) for texto in erros(pagina)):
+        raise ForaDaRede(FORA_DA_REDE)
+    if not tem_botao(pagina, BTN_ENTRADA):
+        problemas = erros(pagina)
+        raise Recusado(com_dica(problemas) if problemas
+                       else "O botão Registrar Entrada não está disponível. " + DICA_WIFI)
+
     try:
-        registrar_entrada()
-        mensagem = "✅🔓🕑 SIGRH: entrada registrada com sucesso"
-        print(mensagem)
-        enviar_telegram(mensagem)
+        resp = sessao.post(PONTO_URL, data={
+            FORM: FORM,
+            FORM + ":observacoes": "",
+            BTN_ENTRADA: "Registrar Entrada",
+            "javax.faces.ViewState": viewstate(pagina),
+        }, timeout=TIMEOUT)
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        raise EnvioIncerto(f"falha ao enviar o registro ({exc}); confira no SIGRH") from exc
 
-        break
+    pagina = sopa(resp)
+    problemas = erros(pagina)
+    if any(ERRO_DE_IP.search(texto) for texto in problemas):
+        raise Recusado(FORA_DA_REDE)
+    if problemas:
+        raise Recusado(com_dica(problemas))
+    sucesso = any("sucesso" in texto.lower() for texto in mensagens(pagina, "info"))
+    if not sucesso and not tem_botao(pagina, BTN_SAIDA):
+        raise EnvioIncerto("o SIGRH não confirmou a entrada; confira no SIGRH")
+    return pagina
 
-    except Exception as e:
 
-        print(f"⚠️ Tentativa {tentativa} falhou: {e}")
+def abrir(usuario, senha):
+    sessao = requests.Session()
+    sessao.headers["User-Agent"] = "Mozilla/5.0"
+    pagina = tela_do_ponto(sessao, entrar(sessao, usuario, senha))
+    return registrar_entrada(sessao, pagina)
 
-        if tentativa < MAX_TENTATIVAS:
-            print(f"⏳ Tentando novamente em {ESPERA_ENTRE_TENTATIVAS}s...")
-            time.sleep(ESPERA_ENTRE_TENTATIVAS)
+
+# -----------------------------------
+# NOTIFICAÇÃO E EXECUÇÃO
+# -----------------------------------
+def enviar_telegram(mensagem):
+    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat:
+        return
+    try:
+        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                      data={"chat_id": chat, "text": mensagem}, timeout=TIMEOUT)
+    except Exception as exc:
+        print("Erro ao enviar ao Telegram:", exc)
+
+
+def avisar(mensagem):
+    print(mensagem)
+    enviar_telegram(mensagem)
+
+
+def main(argv=None):
+    usuario, senha = os.getenv("SIGRH_USER"), os.getenv("SIGRH_PASS")
+    if not usuario or not senha:
+        print("SIGRH_USER e SIGRH_PASS não definidos.")
+        return 1
+
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            pagina = abrir(usuario, senha)
+        except JaAberto as exc:
+            avisar(re.sub(r"\s+", " ", f"🔓ℹ️ SIGRH: o ponto já estava aberto {exc}").strip())
+            return 0
+        except (Recusado, EnvioIncerto) as exc:
+            erro = exc
+            break
+        except Exception as exc:
+            erro = exc
+            print(f"Tentativa {tentativa} falhou: {exc}")
+            if tentativa < TENTATIVAS:
+                print(f"Tentando de novo em {ESPERA}s...")
+                time.sleep(ESPERA)
         else:
-            mensagem = "🔓❌ SIGRH: todas as tentativas de entrada falharam"
-            print(mensagem)
-            enviar_telegram(mensagem)
-            sys.exit(1)
+            avisar(re.sub(r"\s+", " ", f"✅🔓🕑 SIGRH: entrada registrada {descrever(pagina)}").strip())
+            return 0
+
+    avisar(f"🔓❌ SIGRH: entrada não registrada: {erro}")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

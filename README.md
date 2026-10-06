@@ -9,6 +9,8 @@ App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
 - Cada botão roda o script correspondente numa thread, mostrando a saída ao vivo.
 - O campo "Registrar o PIT de outro dia" (dd/mm/aaaa) é opcional: se preenchido, o
   botão Registrar PIT usa essa data em vez da data de hoje.
+- O PIT só é registrado de segunda a sexta. O campo Observação do formulário recebe o texto
+  padrão "Conforme PIT docente.", que pode ser trocado em **Configurações > Observação do PIT**.
 - Cada execução é gravada em `ponto.log` (data/hora, saída e código de saída; últimas
   1000 linhas), visível no botão **Log**.
 

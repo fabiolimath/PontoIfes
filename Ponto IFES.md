@@ -41,7 +41,7 @@ Está fechado o ponto. Deve ser executado sempre que o ponto for aberto, e tamb�
 9. Devo escolher uma opção "Registro de PIT" no combo box "Tipo";
 10. Depois, entro com a data do dia no campo "Data de Início";
 11. Então, tenho de aguardar o retorno da página, que vai fazer uma consulta ao sistema interno e depois a página vai preencher um campo "Quantidade de Horas";
-12. Por fim, preencho o campo "Observação" com texto padrão "Registro de PIT";
+12. Por fim, preencho o campo "Observação" com texto padrão "Conforme PIT docente.";
 13. Clico no botão "Cadastrar";
 14. Então a página retorna ao formulário original. 
 
