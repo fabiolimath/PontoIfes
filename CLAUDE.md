@@ -16,9 +16,12 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 1. Tela principal com três botões, um por função, e campo de data para o PIT.
 2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH e Chat ID do Telegram, opcional),
    guardadas na área privada do app e editáveis no botão **Credenciais**.
-3. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
-4. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
-5. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
+3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
+   última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
+   e ao salvar as Configurações.
+4. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
+5. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
+6. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
    `registrar_pit`), ou o mesmo valor no dado (URI) do intent. Usado por Rotinas da Samsung e Tasker.
    - Tasker: ação **Executar app**, campo **Dado** = `abrir_ponto`, com **Sempre Iniciar Nova Cópia**
      marcado (sem isso, com o app aberto, ele só vem para a frente e não executa).
@@ -45,8 +48,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 - Bot **@MeuPontoIFESBot**. O token vai embutido no APK via `src/ponto/segredo_telegram.py`
   (fora do Git; modelo em `segredo_telegram.py.exemplo`). O autor aceitou o token no pacote.
 - Cada usuário informa só o próprio Chat ID (obtido com @IDBot).
-- Manter a notificação via Telegram como está, por enquanto: o autor planeja remover essa integração
-  numa versão futura (aí apagar também o segredo `TELEGRAM_TOKEN` do GitHub).
+- Manter a notificação via Telegram como está, por enquanto: se as notificações do sistema (1.0.10)
+  funcionarem no celular do autor, remover o Telegram dos scripts e do app (aí apagar também o
+  segredo `TELEGRAM_TOKEN` do GitHub).
 
 ## Release
 

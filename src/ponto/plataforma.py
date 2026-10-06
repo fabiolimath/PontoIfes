@@ -97,6 +97,86 @@ def campo_de_data(entrada):
     return True
 
 
+def campo_numerico(entrada):
+    """Teclado só com dígitos no campo de texto (ex.: usuário do SIGRH); só no Android.
+
+    Um TextInput comum, e não um NumberInput, para não perder zeros à esquerda.
+    """
+    try:
+        from android.text import InputType
+    except ImportError:
+        return False
+    entrada._impl.native.setInputType(InputType.TYPE_CLASS_NUMBER)
+    return True
+
+
+# -----------------------------------
+# NOTIFICAÇÕES DO SISTEMA
+# -----------------------------------
+CANAL_NOTIFICACOES = "resultados"
+PERMISSAO_NOTIFICACOES = "android.permission.POST_NOTIFICATIONS"
+
+
+def pedir_permissao_notificacoes(app):
+    """Pede a permissão de notificar (exigida a partir do Android 13).
+
+    Devolve False fora do Android. Se o usuário já respondeu "não" duas
+    vezes, o Android não pergunta mais; aí só pelas configurações do sistema.
+    """
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.content.pm import PackageManager
+    from android.os import Build
+
+    if Build.VERSION.SDK_INT < 33:
+        return True
+    if atividade.checkSelfPermission(PERMISSAO_NOTIFICACOES) != PackageManager.PERMISSION_GRANTED:
+        # Pelo Toga, que repassa a resposta (aqui ignorada) ao callback certo.
+        app._impl.request_permissions([PERMISSAO_NOTIFICACOES], lambda *resposta: None)
+    return True
+
+
+def notificar(app, titulo, texto, ident=1):
+    """Mostra uma notificação do sistema; tocar nela abre o app.
+
+    `ident` igual substitui a notificação anterior. Devolve False fora do Android.
+    """
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.app import Notification, NotificationManager, PendingIntent
+    from android.content import Context
+    from android.os import Build
+
+    gerenciador = atividade.getSystemService(Context.NOTIFICATION_SERVICE)
+    if Build.VERSION.SDK_INT >= 26:
+        from android.app import NotificationChannel
+
+        gerenciador.createNotificationChannel(NotificationChannel(
+            CANAL_NOTIFICACOES, "Resultado das execuções", NotificationManager.IMPORTANCE_DEFAULT
+        ))
+        construtor = Notification.Builder(atividade, CANAL_NOTIFICACOES)
+    else:
+        construtor = Notification.Builder(atividade)
+
+    # Ícone monocromático próprio (android/res/drawable); o ícone do app,
+    # adaptativo, pode derrubar a barra de status em alguns Androids.
+    pacote = atividade.getPackageName()
+    icone = atividade.getResources().getIdentifier("ic_notificacao", "drawable", pacote)
+    abrir = atividade.getPackageManager().getLaunchIntentForPackage(pacote)
+    toque = PendingIntent.getActivity(atividade, 0, abrir, PendingIntent.FLAG_IMMUTABLE)
+
+    construtor.setSmallIcon(icone or atividade.getApplicationInfo().icon)
+    construtor.setContentTitle(titulo)
+    construtor.setContentText(texto)
+    construtor.setStyle(Notification.BigTextStyle().bigText(texto))
+    construtor.setContentIntent(toque)
+    construtor.setAutoCancel(True)
+    gerenciador.notify(ident, construtor.build())
+    return True
+
+
 def cursor_no_fim(entrada):
     """Põe o cursor no fim do texto; no Android, trocar o texto o leva ao início."""
     try:

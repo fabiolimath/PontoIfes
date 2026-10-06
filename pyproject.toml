@@ -1,7 +1,7 @@
 [tool.briefcase]
 project_name = "Ponto"
 bundle = "io.github.fabiolimath"
-version = "1.0.9"
+version = "1.0.10"
 url = "https://github.com/fabiolimath/PontoIfes"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
@@ -52,6 +52,9 @@ system_runtime_requires = [
 requires = [
     "toga-android~=0.5.0",
 ]
+
+# Notificações do sistema com o resultado (pedida em tempo de execução no Android 13+).
+permission."android.permission.POST_NOTIFICATIONS" = true
 
 base_theme = "Theme.MaterialComponents.Light.DarkActionBar"
 

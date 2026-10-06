@@ -194,6 +194,8 @@ def test_tela_de_configuracoes(app):
     app.campos["SIGRH_USER"].value = "a"
     app.campos["SIGRH_PASS"].value = "b"
     app.verificar_atualizacoes.value = False
+    assert app.notificacoes.value is True
+    app.notificacoes.value = False
     assert app.observacao_pit.value == "Conforme PIT docente."
     app.observacao_pit.value = " PIT segundo portaria "
 
@@ -201,7 +203,8 @@ def test_tela_de_configuracoes(app):
 
     assert app.main_window.content is app.tela_principal
     assert configuracoes.carregar(app.config_path) == {
-        "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria"}
+        "notificacoes": False, "verificar_atualizacoes": False,
+        "observacao_pit": "PIT segundo portaria"}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
 
 
@@ -232,3 +235,33 @@ def test_atualizacao_em_dia_so_avisa_se_pedido(app, monkeypatch):
     app.loop.run_until_complete(app.verificar_atualizacao(avisar_sem_novidade=True))
 
     assert app.main_window._impl.dialog_responses["InfoDialog"] == []
+
+
+def test_notifica_o_resultado(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    notificacoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a: notificacoes.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto",
+                     "print('Tentativa 1...')\nprint('SIGRH: saída registrada às 17:00')\n"
+                     "print('Erro ao enviar ao Telegram: sem rede')\n")
+
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+    configuracoes.salvar(app.config_path, {"notificacoes": False})
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+
+    assert notificacoes == [("Fechar ponto: concluído.", "SIGRH: saída registrada às 17:00", 2)]
+
+
+def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    def falha(*a):
+        raise RuntimeError("sem permissão")
+
+    monkeypatch.setattr(plataforma, "notificar", falha)
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "print('ok')\n")
+
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert app.status.text == "Abrir ponto: concluído."

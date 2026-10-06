@@ -121,6 +121,16 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRI
     return codigo, saida.valor()
 
 
+def mensagem_final(saida):
+    """Última linha não vazia da saída: o resultado que o script anuncia."""
+    for linha in reversed(saida.splitlines()):
+        linha = linha.strip()
+        # Falha do Telegram não é o resultado da ação.
+        if linha and not linha.startswith("Erro ao enviar ao Telegram"):
+            return linha
+    return ""
+
+
 def registrar_log(log_path, acao, inicio, saida, codigo):
     """Acrescenta uma execução ao log, mantendo só as últimas LOG_MAX_LINHAS."""
     log_path = Path(log_path)
