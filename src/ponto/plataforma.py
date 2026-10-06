@@ -94,6 +94,29 @@ def campo_numerico(entrada):
     return True
 
 
+def preenchimento(entrada, dica=None):
+    """Diz ao preenchimento automático (Samsung Pass, Google) o que é o campo.
+
+    `dica` "username" ou "password" marca os campos de login; sem dica, o
+    campo é excluído, para o gerenciador de senhas não escrever nele.
+    Só no Android 8+.
+    """
+    try:
+        from android.os import Build
+        from android.view import View
+    except ImportError:
+        return False
+    if Build.VERSION.SDK_INT < 26:
+        return False
+    nativo = entrada._impl.native
+    if dica:
+        nativo.setAutofillHints(dica)
+        nativo.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES)
+    else:
+        nativo.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO)
+    return True
+
+
 # -----------------------------------
 # NOTIFICAÇÕES DO SISTEMA
 # -----------------------------------

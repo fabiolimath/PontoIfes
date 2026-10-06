@@ -57,6 +57,7 @@ class Ponto(toga.App):
         self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", on_change=self._mascara_data,
                                        style=Pack(margin_bottom=4))
         plataforma.campo_de_data(self.data_pit)
+        plataforma.preenchimento(self.data_pit)
 
         self.status = toga.Label("", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
@@ -205,12 +206,14 @@ class Ponto(toga.App):
             self.campos[campo] = entrada
             if campo == "SIGRH_USER":
                 plataforma.campo_numerico(entrada)
+            plataforma.preenchimento(entrada, "username" if campo == "SIGRH_USER" else "password")
             filhos += [toga.Label(rotulo), entrada]
 
         self.observacao_pit = toga.TextInput(
             value=configuracoes.carregar(self.config_path)["observacao_pit"],
             style=Pack(margin_bottom=8),
         )
+        plataforma.preenchimento(self.observacao_pit)
         filhos += [toga.Label("Observação do PIT"), self.observacao_pit]
 
         self.notificacoes = toga.Switch(

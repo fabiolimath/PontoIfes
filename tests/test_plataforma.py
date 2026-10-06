@@ -146,6 +146,8 @@ def android(monkeypatch):
                                          NOTIFICATION_SERVICE="notification"))
     modulo("android.content.pm", ShortcutInfo=types.SimpleNamespace(Builder=FakeBuilder),
            PackageManager=types.SimpleNamespace(PERMISSION_GRANTED=0))
+    modulo("android.view", View=types.SimpleNamespace(IMPORTANT_FOR_AUTOFILL_YES=1,
+                                                      IMPORTANT_FOR_AUTOFILL_NO=2))
     modulo("android.os", Build=types.SimpleNamespace(VERSION=types.SimpleNamespace(SDK_INT=34)))
     modulo("android.app", Notification=FakeNotificacao,
            NotificationChannel=lambda ident, nome, importancia: (ident, nome),
@@ -255,3 +257,21 @@ def test_campo_numerico(android):
         native=types.SimpleNamespace(setInputType=tipos.append)))
     assert plataforma.campo_numerico(entrada)
     assert tipos == [2]
+
+
+def test_preenchimento_automatico(android):
+    class Campo:
+        dicas, importancia = None, None
+
+        def setAutofillHints(self, *dicas):
+            self.dicas = dicas
+
+        def setImportantForAutofill(self, valor):
+            self.importancia = valor
+
+    usuario, observacao = Campo(), Campo()
+    assert plataforma.preenchimento(types.SimpleNamespace(_impl=types.SimpleNamespace(native=usuario)),
+                                    "username")
+    assert plataforma.preenchimento(types.SimpleNamespace(_impl=types.SimpleNamespace(native=observacao)))
+    assert (usuario.dicas, usuario.importancia) == (("username",), 1)
+    assert (observacao.dicas, observacao.importancia) == (None, 2)
