@@ -172,12 +172,12 @@ def pedir_permissao_notificacoes(app):
     return True
 
 
-def notificar(app, titulo, texto, ident=1, tentar_de_novo=None):
+def notificar(app, titulo, texto, ident=1, botao=None):
     """Mostra uma notificação do sistema; tocar nela abre o app.
 
-    `ident` igual substitui a notificação anterior. `tentar_de_novo`, um
-    dicionário de extras (ex.: {"acao": "abrir_ponto"}), acrescenta o botão
-    "Tentar de novo", que abre o app com esses extras e repete a ação.
+    `ident` igual substitui a notificação anterior. `botao`, um par
+    (rótulo, extras), ex.: ("Tentar de novo", {"acao": "abrir_ponto"}),
+    acrescenta um botão que abre o app com esses extras e executa a ação.
     Devolve False fora do Android.
     """
     atividade = _atividade(app)
@@ -211,23 +211,24 @@ def notificar(app, titulo, texto, ident=1, tentar_de_novo=None):
     construtor.setStyle(Notification.BigTextStyle().bigText(texto))
     construtor.setContentIntent(toque)
     construtor.setAutoCancel(True)
-    if tentar_de_novo:
+    if botao:
         from android.content import Intent
         from android.graphics.drawable import Icon
 
-        repetir = Intent()
-        repetir.setClassName(atividade, atividade.getClass().getName())
-        for nome, valor in tentar_de_novo.items():
-            repetir.putExtra(nome, valor)
+        rotulo, extras = botao
+        executar = Intent()
+        executar.setClassName(atividade, atividade.getClass().getName())
+        for nome, valor in extras.items():
+            executar.putExtra(nome, valor)
         # Como o "Sempre Iniciar Nova Cópia" do Tasker: com o app já aberto,
         # só trazê-lo para a frente não executaria a ação.
-        repetir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        botao = PendingIntent.getActivity(
-            atividade, 100 + ident, repetir,
+        executar.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        pendente = PendingIntent.getActivity(
+            atividade, 100 + ident, executar,
             PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT,
         )
         construtor.addAction(Notification.Action.Builder(
-            Icon.createWithResource(atividade, icone), "Tentar de novo", botao
+            Icon.createWithResource(atividade, icone), rotulo, pendente
         ).build())
     gerenciador.notify(ident, construtor.build())
     return True

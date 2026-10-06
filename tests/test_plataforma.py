@@ -284,7 +284,7 @@ def test_notificacao_de_falha_tem_tentar_de_novo(android):
     atividade = FakeAtividade()
     atividade.gerenciador = FakeGerenciador()
     plataforma.notificar(android(atividade), "Registrar PIT: falhou.", "❌", 3,
-                         tentar_de_novo={"acao": "registrar_pit", "data": "02/10/2026"})
+                         botao=("Tentar de novo", {"acao": "registrar_pit", "data": "02/10/2026"}))
     [(icone, rotulo, (_, intent))] = atividade.gerenciador.notificacoes[3]["acoes"]
     assert rotulo == "Tentar de novo"
     assert intent.classe == "org.beeware.android.MainActivity"

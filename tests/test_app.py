@@ -372,12 +372,50 @@ def test_notifica_o_resultado(app, tmp_path, monkeypatch):
     _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto",
                      "print('Tentativa 1...')\nprint('SIGRH: saída registrada às 17:00')\n")
 
+    _hoje(monkeypatch, date(2026, 10, 6))  # terça
+
     app.loop.run_until_complete(app.rodar("fechar_ponto"))
     configuracoes.salvar(app.config_path, {"notificacoes": False})
     app.loop.run_until_complete(app.rodar("fechar_ponto"))
 
     assert notificacoes == [(("Fechar ponto: concluído.", "SIGRH: saída registrada às 17:00", 2),
-                             {"tentar_de_novo": None})]
+                             {"botao": ("Registrar PIT", {"acao": "registrar_pit"})})]
+
+
+def _hoje(monkeypatch, dia):
+    import ponto.app
+
+    class Data(date):
+        @classmethod
+        def today(cls):
+            return dia
+    monkeypatch.setattr(ponto.app, "date", Data)
+
+
+def test_sem_botao_do_pit_no_fim_de_semana_nem_em_outras_acoes(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    botoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: botoes.append(k["botao"]))
+    _hoje(monkeypatch, date(2026, 10, 10))  # sábado
+    app._notificar("fechar_ponto", "Fechar ponto: concluído.", "ok")
+    _hoje(monkeypatch, date(2026, 10, 6))
+    app._notificar("abrir_ponto", "Abrir ponto: concluído.", "ok")
+
+    assert botoes == [None, None]
+
+
+def test_pit_apaga_a_notificacao_do_fechamento(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    apagadas = []
+    monkeypatch.setattr(plataforma, "cancelar_notificacao", lambda app, i: apagadas.append(i))
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('ok')\n")
+    app.data_pit.value = "02/10/2026"
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert apagadas == [3, 2]
 
 
 def test_falha_notifica_com_tentar_de_novo(app, tmp_path, monkeypatch):
@@ -390,7 +428,8 @@ def test_falha_notifica_com_tentar_de_novo(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
-    assert notificacoes == [{"tentar_de_novo": {"acao": "registrar_pit", "data": "02/10/2026"}}]
+    assert notificacoes == [{"botao": ("Tentar de novo",
+                                       {"acao": "registrar_pit", "data": "02/10/2026"})}]
 
 
 def test_nova_execucao_apaga_a_notificacao_anterior(app, tmp_path, monkeypatch):

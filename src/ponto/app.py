@@ -158,8 +158,11 @@ class Ponto(toga.App):
         self.rodando = True
         # Some a notificação anterior desta ação: a do resultado novo aparece de novo,
         # em vez de só substituir em silêncio a que ainda estava na tela.
+        # O PIT também apaga a do fechamento, que tem o botão "Registrar PIT".
+        apagar = [acao] + (["fechar_ponto"] if acao == "registrar_pit" else [])
         try:
-            plataforma.cancelar_notificacao(self, self._ident_notificacao(acao))
+            for outra in apagar:
+                plataforma.cancelar_notificacao(self, self._ident_notificacao(outra))
         except Exception as exc:
             print("Erro ao apagar a notificação:", exc)
         for botao in self.botoes:
@@ -197,18 +200,21 @@ class Ponto(toga.App):
         """Notificação do sistema com o resultado (se ativada nas configurações).
 
         Na falha, a notificação ganha o botão "Tentar de novo" (com a mesma data do PIT).
+        Ao fechar o ponto com sucesso num dia útil, ganha o botão "Registrar PIT" do dia.
         """
         if not configuracoes.carregar(self.config_path)["notificacoes"]:
             return
-        repetir = None
+        botao = None
         if codigo != 0:
             repetir = {plataforma.EXTRA_ACAO: acao}
             if acao == "registrar_pit" and data:
                 repetir[plataforma.EXTRA_DATA] = data
+            botao = ("Tentar de novo", repetir)
+        elif acao == "fechar_ponto" and date.today().weekday() < 5:
+            botao = (executor.ACOES["registrar_pit"], {plataforma.EXTRA_ACAO: "registrar_pit"})
         try:
             plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo,
-                                 self._ident_notificacao(acao),
-                                 tentar_de_novo=repetir)
+                                 self._ident_notificacao(acao), botao=botao)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
 

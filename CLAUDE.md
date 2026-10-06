@@ -19,7 +19,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
    e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
-   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK).
+   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). Ao fechar o ponto com sucesso (seg a sex),
+   botão **Registrar PIT** do dia; o PIT apaga essa notificação.
 4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
    (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze; perde-se ao
    reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:40, editável nas

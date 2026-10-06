@@ -12,6 +12,7 @@ App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
   padrão "Conforme PIT docente.", que pode ser trocado em **Configurações > Observação do PIT**.
 - Ao terminar cada execução, o app mostra uma notificação do sistema com o resultado
   (pode ser desligada em **Configurações**; no Android 13+ o app pede a permissão).
+  Na falha, ela traz o botão **Tentar de novo**; ao fechar o ponto, o botão **Registrar PIT**.
 - Lembrete de fechar o ponto: se o ponto foi aberto e não foi fechado depois de um tempo
   (padrão 01:40, em **Configurações**), o app avisa com uma notificação, mesmo fechado.
 - Cada execução é gravada em `ponto.log` (data/hora, saída e código de saída; últimas
