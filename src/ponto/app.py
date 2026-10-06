@@ -21,6 +21,9 @@ class Ponto(toga.App):
         self.rodando = False
 
         self.main_window = toga.MainWindow(title=self.formal_name)
+        # O Toga escreve "About ..." em inglês no menu de três pontos.
+        if toga.Command.ABOUT in self.commands:
+            self.commands[toga.Command.ABOUT].text = f"Sobre o {self.formal_name}"
         self._montar_principal()
         if credenciais.carregar(self.cred_path) is None:
             self.mostrar_configuracoes()
@@ -297,6 +300,27 @@ class Ponto(toga.App):
             await self.main_window.dialog(toga.InfoDialog(
                 "Atualizações", f"Você já tem a versão mais recente ({self.version})."
             ))
+
+    # -----------------------------------
+    # SOBRE
+    # -----------------------------------
+    def about(self):
+        """Tela "Sobre" em português, com o botão para abrir o repositório."""
+        self.loop.create_task(self._sobre())
+
+    async def _sobre(self):
+        partes = [f"{self.formal_name} {self.version or ''}".strip()]
+        if self.author:
+            partes.append(f"Autor: {self.author}")
+        if self.description:
+            partes.append(f"\n{self.description}")
+        partes.append(f"\nRepositório: {atualizacao.URL_REPOSITORIO}")
+        abrir = await self.main_window.dialog(plataforma.confirmacao(
+            f"Sobre o {self.formal_name}", "\n".join(partes),
+            sim="Abrir repositório", nao="Fechar",
+        ))
+        if abrir:
+            plataforma.abrir_url(self, atualizacao.URL_REPOSITORIO)
 
     # -----------------------------------
     # LOG

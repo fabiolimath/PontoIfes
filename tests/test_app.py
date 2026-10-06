@@ -264,3 +264,17 @@ def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):
     app.loop.run_until_complete(app.rodar("abrir_ponto"))
 
     assert app.status.text == "Abrir ponto: concluído."
+
+
+def test_sobre_em_portugues_abre_o_repositorio(app, monkeypatch):
+    from ponto import atualizacao, plataforma
+
+    abertos = []
+    monkeypatch.setattr(plataforma, "abrir_url", lambda app, url: abertos.append(url))
+    app.main_window._impl.dialog_responses["ConfirmDialog"] = [True]
+
+    app.loop.run_until_complete(app._sobre())
+
+    assert abertos == [atualizacao.URL_REPOSITORIO]
+    if toga.Command.ABOUT in app.commands:
+        assert app.commands[toga.Command.ABOUT].text == "Sobre o Ponto"

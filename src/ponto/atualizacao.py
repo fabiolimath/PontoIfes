@@ -6,6 +6,7 @@ import requests
 
 REPO = "fabiolimath/PontoIfes"
 API_ULTIMA = f"https://api.github.com/repos/{REPO}/releases/latest"
+URL_REPOSITORIO = f"https://github.com/{REPO}"
 URL_DOWNLOAD = f"https://github.com/{REPO}/releases/latest/download/ponto-ifes.apk"
 
 
