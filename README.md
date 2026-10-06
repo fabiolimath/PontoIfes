@@ -1,9 +1,11 @@
 # Ponto IFES
 
-App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
-**Abrir ponto**, **Fechar ponto** e **Registrar PIT**.
+> **Quer só instalar e usar o app?** Vá para a página do Ponto IFES:
+> **<https://fabiolimath.github.io/PontoIfes/>**. Lá estão o download, a instalação e o uso
+> no dia a dia. Este README é para quem quer entender como o projeto funciona por dentro.
 
-Site para quem só instala o app: <https://fabiolimath.github.io/PontoIfes/> (pasta `docs/`).
+App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
+**Abrir ponto**, **Fechar ponto** e **Registrar PIT**. A página acima fica em `docs/`.
 
 - Na primeira execução o app pede as credenciais do SIGRH (o usuário abre o teclado numérico) e as
   guarda na área privada do app (`credenciais.json`, permissão 600). O botão **Configurações**
