@@ -1,268 +1,302 @@
+"""Registra o PIT no SIGRH (Solicitações > Ausências > Informar Ausência).
+
+Uso: registrar_pit.py [dd/mm/aaaa] [--obs TEXTO]
+
+Sem data, registra o dia de hoje. Lê SIGRH_USER e SIGRH_PASS do ambiente
+(e TELEGRAM_TOKEN e TELEGRAM_CHAT_ID, opcionais, para a notificação).
+
+O SIGRH é JSF + RichFaces: o estado do formulário fica no servidor, então o
+script repete as mesmas requisições AJAX que o navegador faz ao escolher o
+tipo e a data, e só então envia o formulário.
+"""
+
+import argparse
 import os
 import re
 import sys
 import time
-import requests
 from datetime import date, datetime
-from bs4 import BeautifulSoup
 
-USUARIO = os.getenv("SIGRH_USER")
-SENHA = os.getenv("SIGRH_PASS")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+import requests
+from bs4 import BeautifulSoup
 
 BASE = "https://sigrh.ifes.edu.br"
 LOGIN_URL = BASE + "/sigrh/login.jsf"
 PONTO_URL = BASE + "/sigrh/frequencia/ponto_eletronico/cadastro_ponto_eletronico.jsf"
-MENU_URL = BASE + "/sigrh/servidor/portal/servidor.jsf"
+PORTAL_URL = BASE + "/sigrh/servidor/portal/servidor.jsf"
 AUSENCIA_URL = BASE + "/sigrh/dap/ausencia/form.jsf"
 
-AUSENCIA_PIT_ID = "600337"
+OBSERVACAO_PADRAO = "Conforme PIT docente."
+# Valor da opção "REGISTRO DO PIT - DOCENTE"; usado se a opção não for achada pelo texto.
+TIPO_PIT_PADRAO = "600337"
+# O navegador manda o combo "Tipo de documento" (desabilitado) com este valor nas chamadas AJAX.
+TIPO_DOCUMENTO = "104"
+ZERO = ("00:00", "0:00")
 
-MAX_TENTATIVAS = 3
-ESPERA_ENTRE_TENTATIVAS = 10
-
-
-def enviar_telegram(mensagem):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    try:
-        requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensagem}, timeout=30)
-    except Exception as e:
-        print("Erro Telegram:", e)
+TIMEOUT = 30
+TENTATIVAS = 3
+ESPERA = 10
+DIAS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
 
 
-def get_viewstate(html):
-    soup = BeautifulSoup(html, "html.parser")
-    campo = soup.find("input", {"name": "javax.faces.ViewState"})
+class Recusado(Exception):
+    """O SIGRH recusou o pedido (senha errada, PIT já registrado...): não adianta repetir."""
+
+
+class EnvioIncerto(Exception):
+    """Falhou depois de enviar o formulário: repetir poderia registrar duas vezes."""
+
+
+# -----------------------------------
+# LEITURA DAS PÁGINAS
+# -----------------------------------
+def sopa(resp):
+    return BeautifulSoup(resp.content, "html.parser")
+
+
+def viewstate(pagina):
+    campo = pagina.find("input", {"name": "javax.faces.ViewState"})
     if not campo:
-        raise Exception("ViewState não encontrado")
+        raise Exception("ViewState não encontrado na página")
     return campo["value"]
 
 
-def extrair_horas(xml_text):
-    m = re.search(
-        r'name=["\']cadastroAusencia:horasAusente["\'][^>]*value=["\']([^"\'>]+)["\']',
-        xml_text
-    )
+def mensagens(pagina, classe):
+    """Textos das listas de aviso do SIGRH (<ul class="info|erros|warning">)."""
+    return [li.get_text(" ", strip=True) for ul in pagina.find_all("ul", class_=classe)
+            for li in ul.find_all("li")]
+
+
+def a4j(js):
+    """(AJAXREQUEST, parâmetro) de uma chamada A4J.AJAX.Submit(...) do RichFaces."""
+    m = re.search(r"'parameters':\{'([^']+)':'[^']*'\}\s*,\s*'containerId':'([^']+)'", js or "")
     if not m:
-        raise Exception(
-            "Não foi possível extrair horasAusente da resposta AJAX. "
-            f"Resposta (primeiros 500 chars): {xml_text[:500]}"
-        )
-    return m.group(1).strip()
+        raise Exception("Chamada AJAX do formulário não encontrada")
+    return m.group(2), m.group(1)
 
 
-def registrar_pit():
-    session = requests.Session()
-    session.headers.update({"User-Agent": "Mozilla/5.0"})
+def tipo_pit(form):
+    """Valor da opção de Registro de PIT no combo Tipo."""
+    combo = form.find("select", {"name": "cadastroAusencia:ausencia"})
+    for opcao in combo.find_all("option") if combo else []:
+        if "PIT" in opcao.get_text().upper():
+            return opcao["value"]
+    return TIPO_PIT_PADRAO
 
-    # --- 1. LOGIN ---
-    # GET modo=classico redireciona para login.jsf e gera o ViewState correto.
-    # Não fazer GET separado de login.jsf — quebraria a continuidade da sessão JSF.
-    resp = session.get(BASE + "/sigrh?modo=classico", timeout=30)
-    viewstate = get_viewstate(resp.text)
 
-    # POST do login
-    resp = session.post(LOGIN_URL, data={
+def horas(resposta):
+    """Quantidade de Horas devolvida numa resposta AJAX ("" se não vier)."""
+    campo = BeautifulSoup(resposta, "html.parser").find(
+        "input", {"name": "cadastroAusencia:horasAusente"})
+    return (campo.get("value") or "").strip() if campo else ""
+
+
+# -----------------------------------
+# PASSOS NO SIGRH
+# -----------------------------------
+def entrar(sessao, usuario, senha):
+    """Faz o login e devolve a página do portal do servidor."""
+    pagina = sopa(sessao.get(LOGIN_URL, timeout=TIMEOUT))
+    resp = sessao.post(LOGIN_URL, data={
         "formLogin": "formLogin",
         "width": "1920",
         "height": "1080",
         "urlRedirect": "",
         "acessibilidade": "",
-        "login": USUARIO,
-        "senha": SENHA,
+        "login": usuario,
+        "senha": senha,
         "logar": "Entrar",
-        "javax.faces.ViewState": viewstate,
-    }, timeout=30, headers={"Referer": LOGIN_URL, "Origin": BASE,
-                            "Content-Type": "application/x-www-form-urlencoded"})
+        "javax.faces.ViewState": viewstate(pagina),
+    }, timeout=TIMEOUT)
+    pagina = sopa(resp)
+    if pagina.find("form", id="formLogin"):
+        erros = mensagens(pagina, "erros") or ["usuário ou senha inválidos"]
+        raise Recusado("Login recusado: " + "; ".join(erros))
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    erro = soup.find(string=lambda t: t and (
-        "senha" in t.lower() or "inválid" in t.lower() or "incorret" in t.lower()
-    ))
-    if erro:
-        raise Exception(f"Credenciais rejeitadas: {erro.strip()}")
-
-    # --- 2. TELA DO PONTO: "Continuar Acessando o Sistema" ---
-    # O ViewState do ponto vem da resposta do POST do login (não de um GET separado).
-    # Se não encontrar na resposta atual, faz GET do ponto como fallback.
-    try:
-        viewstate = get_viewstate(resp.text)
-        ponto_html = resp.text
-    except Exception:
-        resp = session.get(PONTO_URL, timeout=30)
-        viewstate = get_viewstate(resp.text)
-        ponto_html = resp.text
-
-    # Verifica se estamos de fato na tela do ponto (contém o botão Continuar)
-    if "idBtnContinuar" not in ponto_html:
-        # Já caiu direto no portal — vai para o menu
-        resp = session.get(MENU_URL, timeout=30)
-    else:
-        resp = session.post(PONTO_URL, data={
+    # Com o ponto pendente, o SIGRH mostra antes a tela do ponto; o botão
+    # "Continuar Acessando o Sistema" (e o OK do diálogo) leva ao portal.
+    if "idBtnContinuar" in str(pagina):
+        resp = sessao.post(PONTO_URL, data={
             "idFormDadosEntradaSaida": "idFormDadosEntradaSaida",
             "idFormDadosEntradaSaida:observacoes": "",
             "idFormDadosEntradaSaida:idBtnContinuar": "Continuar Acessando o Sistema >>",
-            "javax.faces.ViewState": viewstate,
-        }, timeout=30, headers={"Referer": PONTO_URL, "Origin": BASE,
-                                "Content-Type": "application/x-www-form-urlencoded"})
+            "javax.faces.ViewState": viewstate(pagina),
+        }, timeout=TIMEOUT)
+        pagina = sopa(resp)
 
-        # Segue redirects 302 → entrarPortalServidor → servidor.jsf
-        if "servidor.jsf" not in resp.url:
-            resp = session.get(MENU_URL, timeout=30)
+    if not pagina.find("form", id="menu:FormMenuServidor"):
+        pagina = sopa(sessao.get(PORTAL_URL, timeout=TIMEOUT))
+    return pagina
 
-    # --- 3. MENU: Solicitações > Ausências > Informar Ausência ---
-    viewstate = get_viewstate(resp.text)
 
-    resp = session.post(MENU_URL, data={
+def abrir_formulario(sessao, portal):
+    """Menu Solicitações > Ausências > Informar Ausência."""
+    resp = sessao.post(PORTAL_URL, data={
         "menu:FormMenuServidor": "menu:FormMenuServidor",
+        "javax.faces.ViewState": viewstate(portal),
         "menu:InformarAusencia": "menu:InformarAusencia",
-        "javax.faces.ViewState": viewstate,
-    }, timeout=30, headers={"Referer": MENU_URL, "Origin": BASE,
-                            "Content-Type": "application/x-www-form-urlencoded"})
+    }, timeout=TIMEOUT)
+    pagina = sopa(resp)
+    if not pagina.find("form", id="cadastroAusencia"):
+        raise Exception("O formulário de ausência não abriu")
+    return pagina
 
-    # --- 4. FORMULÁRIO DE AUSÊNCIA ---
-    resp = session.get(AUSENCIA_URL, timeout=30)
-    viewstate = get_viewstate(resp.text)
 
-    if len(sys.argv) > 1:
-        try:
-            hoje = datetime.strptime(sys.argv[1], "%d/%m/%Y").strftime("%d/%m/%Y")
-            print(f"ℹ️  Usando data do argumento: {hoje}")
-        except ValueError:
-            raise Exception(f"Data inválida: {sys.argv[1]!r}. Use o formato DD/MM/AAAA.")
-    else:
-        hoje = date.today().strftime("%d/%m/%Y")
-
-    # 4a. Selecionar tipo de ausência
-    session.post(AUSENCIA_URL, data={
-        "AJAXREQUEST": "cadastroAusencia:j_id_jsp_837310543_487",
+def campos(estado, tipo, dia="", horas_ausente=None, observacao=""):
+    dados = {
         "cadastroAusencia": "cadastroAusencia",
         "cadastroAusencia:idAusencia": "0",
         "confirmButton": "Cadastrar",
-        "cadastroAusencia:ausencia": AUSENCIA_PIT_ID,
-        "cadastroAusencia:DataInicio": "",
-        "cadastroAusencia:DataTermino": "",
-        "cadastroAusencia:observacao": "",
-        "cadastroAusencia:tipoDocumento": "104",
-        "cadastroAusencia:arquivo": "",
-        "javax.faces.ViewState": viewstate,
-        "cadastroAusencia:j_id_jsp_837310543_491": "cadastroAusencia:j_id_jsp_837310543_491",
-    }, timeout=30, headers={"Referer": AUSENCIA_URL, "Origin": BASE,
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-Requested-With": "XMLHttpRequest"})
-
-    # 4b. Preencher data de início — primeira POST (servidor retorna 00:00)
-    session.post(AUSENCIA_URL, data={
-        "AJAXREQUEST": "j_id_jsp_837310543_0",
-        "cadastroAusencia": "cadastroAusencia",
-        "cadastroAusencia:idAusencia": "0",
-        "confirmButton": "Cadastrar",
-        "cadastroAusencia:ausencia": AUSENCIA_PIT_ID,
-        "cadastroAusencia:DataInicio": hoje,
-        "cadastroAusencia:horasAusente": "",
-        "cadastroAusencia:observacao": "",
-        "cadastroAusencia:tipoDocumento": "104",
-        "cadastroAusencia:arquivo": "",
-        "javax.faces.ViewState": viewstate,
-        "cadastroAusencia:j_id_jsp_837310543_431": "cadastroAusencia:j_id_jsp_837310543_431",
-    }, timeout=30, headers={"Referer": AUSENCIA_URL, "Origin": BASE,
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-Requested-With": "XMLHttpRequest"})
-
-    # 4c. Segunda POST — servidor recalcula e retorna o horasAusente correto
-    resp_ajax = session.post(AUSENCIA_URL, data={
-        "AJAXREQUEST": "cadastroAusencia:j_id_jsp_837310543_528",
-        "cadastroAusencia": "cadastroAusencia",
-        "cadastroAusencia:idAusencia": "0",
-        "confirmButton": "Cadastrar",
-        "cadastroAusencia:ausencia": AUSENCIA_PIT_ID,
-        "cadastroAusencia:DataInicio": hoje,
-        "cadastroAusencia:horasAusente": "",
-        "cadastroAusencia:observacao": "",
-        "cadastroAusencia:tipoDocumento": "104",
-        "cadastroAusencia:arquivo": "",
-        "javax.faces.ViewState": viewstate,
-        "cadastroAusencia:j_id_jsp_837310543_530": "cadastroAusencia:j_id_jsp_837310543_530",
-    }, timeout=30, headers={"Referer": AUSENCIA_URL, "Origin": BASE,
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-Requested-With": "XMLHttpRequest"})
-
-    horas_ausente = extrair_horas(resp_ajax.text)
-    print(f"ℹ️  horasAusente calculado pelo servidor: {horas_ausente}")
-
-    # 4d. AJAX final com horas e observação preenchidos
-    session.post(AUSENCIA_URL, data={
-        "AJAXREQUEST": "cadastroAusencia:j_id_jsp_837310543_582",
-        "cadastroAusencia": "cadastroAusencia",
-        "cadastroAusencia:idAusencia": "0",
-        "confirmButton": "Cadastrar",
-        "cadastroAusencia:ausencia": AUSENCIA_PIT_ID,
-        "cadastroAusencia:DataInicio": hoje,
-        "cadastroAusencia:horasAusente": horas_ausente,
-        "cadastroAusencia:observacao": ".",
-        "cadastroAusencia:tipoDocumento": "104",
-        "cadastroAusencia:arquivo": "",
-        "javax.faces.ViewState": viewstate,
-        "cadastroAusencia:j_id_jsp_837310543_584": "cadastroAusencia:j_id_jsp_837310543_584",
-    }, timeout=30, headers={"Referer": AUSENCIA_URL, "Origin": BASE,
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-Requested-With": "XMLHttpRequest"})
-
-    # --- 5. CADASTRAR (POST multipart final) ---
-    resp = session.post(AUSENCIA_URL, files={
-        "cadastroAusencia": (None, "cadastroAusencia"),
-        "cadastroAusencia:idAusencia": (None, "0"),
-        "confirmButton": (None, "Cadastrar"),
-        "cadastroAusencia:ausencia": (None, AUSENCIA_PIT_ID),
-        "cadastroAusencia:DataInicio": (None, hoje),
-        "cadastroAusencia:horasAusente": (None, horas_ausente),
-        "cadastroAusencia:observacao": (None, "."),
-        "cadastroAusencia:arquivo": ("", b"", "application/octet-stream"),
-        "cadastroAusencia:cadastrarAusencia": (None, "Cadastrar"),
-        "javax.faces.ViewState": (None, viewstate),
-    }, timeout=60, headers={"Referer": AUSENCIA_URL, "Origin": BASE})
-
-    if resp.status_code != 200:
-        raise Exception(f"Erro HTTP {resp.status_code} no cadastro final")
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    texto = soup.get_text(separator=" ", strip=True).lower()
-
-    if "sucesso" in texto or "submetida" in texto or "homologa" in texto:
-        return True
-
-    erro = soup.find(string=lambda t: t and (
-        "erro" in t.lower() or "falha" in t.lower() or "inválid" in t.lower()
-    ))
-    if erro:
-        raise Exception(f"Erro no cadastro: {erro.strip()}")
-
-    return True
+        "cadastroAusencia:ausencia": tipo,
+        "cadastroAusencia:DataInicio": dia,
+    }
+    if horas_ausente is not None:
+        dados["cadastroAusencia:horasAusente"] = horas_ausente
+    dados["cadastroAusencia:observacao"] = observacao
+    dados["javax.faces.ViewState"] = estado
+    return dados
 
 
-# -----------------------------------
-# LOOP DE RETRY
-# -----------------------------------
-for tentativa in range(1, MAX_TENTATIVAS + 1):
+def ajax(sessao, chamada, dados):
+    container, parametro = chamada
+    dados = {"AJAXREQUEST": container, **dados, "cadastroAusencia:tipoDocumento": TIPO_DOCUMENTO,
+             "cadastroAusencia:arquivo": "", parametro: parametro}
+    resp = sessao.post(AUSENCIA_URL, data=dados, timeout=TIMEOUT)
+    resp.raise_for_status()
+    return resp.text
+
+
+def preencher(sessao, pagina, dia, observacao):
+    """Escolhe o tipo e a data como o navegador faz; devolve os campos finais."""
+    form = pagina.find("form", id="cadastroAusencia")
+    estado = viewstate(pagina)
+    tipo = tipo_pit(form)
+
+    combo = form.find("select", {"name": "cadastroAusencia:ausencia"})
+    ajax(sessao, a4j(combo.get("onchange")),
+         {**campos(estado, tipo), "cadastroAusencia:DataTermino": ""})
+
+    # Ao mudar a data, a página dispara duas chamadas: atualizaPeriodoAusencia()
+    # e outra ligada ao campo. Na captura, a primeira devolveu as horas (03:47)
+    # e a segunda 00:00; o formulário ficou com o valor calculado.
+    periodo = re.search(r"atualizaPeriodoAusencia=function\(\)\{(.*?)\};", str(pagina), re.S)
+    data_inicio = form.find("input", {"name": "cadastroAusencia:DataInicio"})
+    respostas = []
+    if periodo:
+        respostas.append(ajax(sessao, a4j(periodo.group(1)), campos(estado, tipo, dia, "")))
+    respostas.append(ajax(sessao, a4j(data_inicio.get("onchange")), campos(estado, tipo, dia, "")))
+    valores = [h for h in map(horas, respostas) if h]
+    if not valores:
+        raise Exception("O SIGRH não devolveu a Quantidade de Horas")
+    horas_ausente = next((h for h in valores if h not in ZERO), valores[0])
+    print(f"Quantidade de horas calculada pelo SIGRH: {horas_ausente}")
+    if horas_ausente in ZERO:
+        raise Recusado(f"O SIGRH calculou 00:00 horas para {dia}: nada a registrar")
+
+    textarea = form.find("textarea", {"name": "cadastroAusencia:observacao"})
+    if textarea and textarea.get("onchange"):
+        ajax(sessao, a4j(textarea["onchange"]), campos(estado, tipo, dia, horas_ausente, observacao))
+    return campos(estado, tipo, dia, horas_ausente, observacao)
+
+
+def cadastrar(sessao, dados):
+    """Envia o formulário (multipart, como o navegador) e confere a resposta."""
+    partes = {nome: (None, valor) for nome, valor in dados.items() if nome != "javax.faces.ViewState"}
+    partes["cadastroAusencia:arquivo"] = ("", b"", "application/octet-stream")
+    partes["cadastroAusencia:cadastrarAusencia"] = (None, "Cadastrar")
+    partes["javax.faces.ViewState"] = (None, dados["javax.faces.ViewState"])
     try:
-        registrar_pit()
-        mensagem = "📋✅ SIGRH: PIT registrado com sucesso"
-        print(mensagem)
-        enviar_telegram(mensagem)
-        break
+        resp = sessao.post(AUSENCIA_URL, files=partes, timeout=60)
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        raise EnvioIncerto(f"falha ao enviar o formulário ({exc}); confira no SIGRH") from exc
 
-    except Exception as e:
-        print(f"⚠️ Tentativa {tentativa} falhou: {e}")
+    pagina = sopa(resp)
+    erros = mensagens(pagina, "erros") + mensagens(pagina, "warning")
+    if erros:
+        raise Recusado("; ".join(erros))
+    info = mensagens(pagina, "info")
+    if not any("sucesso" in texto.lower() for texto in info):
+        raise EnvioIncerto("o SIGRH não confirmou o cadastro; confira no SIGRH")
+    return info
 
-        if tentativa < MAX_TENTATIVAS:
-            print(f"⏳ Tentando novamente em {ESPERA_ENTRE_TENTATIVAS}s...")
-            time.sleep(ESPERA_ENTRE_TENTATIVAS)
+
+def registrar(dia, observacao, usuario, senha):
+    sessao = requests.Session()
+    sessao.headers["User-Agent"] = "Mozilla/5.0"
+    portal = entrar(sessao, usuario, senha)
+    pagina = abrir_formulario(sessao, portal)
+    dados = preencher(sessao, pagina, dia, observacao)
+    return cadastrar(sessao, dados)
+
+
+# -----------------------------------
+# NOTIFICAÇÃO E EXECUÇÃO
+# -----------------------------------
+def enviar_telegram(mensagem):
+    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat:
+        return
+    try:
+        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                      data={"chat_id": chat, "text": mensagem}, timeout=TIMEOUT)
+    except Exception as exc:
+        print("Erro ao enviar ao Telegram:", exc)
+
+
+def ler_argumentos(argv):
+    parser = argparse.ArgumentParser(prog="registrar_pit.py", description="Registra o PIT no SIGRH.")
+    parser.add_argument("data", nargs="?", help="dia no formato dd/mm/aaaa (padrão: hoje)")
+    parser.add_argument("--obs", default=OBSERVACAO_PADRAO, help="texto do campo Observação")
+    args = parser.parse_args(argv)
+    if args.data:
+        try:
+            args.data = datetime.strptime(args.data, "%d/%m/%Y").date()
+        except ValueError:
+            parser.error(f"data inválida: {args.data!r}; use dd/mm/aaaa")
+    else:
+        args.data = date.today()
+    args.obs = args.obs.strip() or OBSERVACAO_PADRAO
+    return args
+
+
+def main(argv=None):
+    args = ler_argumentos(sys.argv[1:] if argv is None else argv)
+    dia = args.data.strftime("%d/%m/%Y")
+    if args.data.weekday() >= 5:
+        print(f"{dia} é {DIAS[args.data.weekday()]}: o PIT só é registrado de segunda a sexta. Nada feito.")
+        return 0
+
+    usuario, senha = os.getenv("SIGRH_USER"), os.getenv("SIGRH_PASS")
+    if not usuario or not senha:
+        print("SIGRH_USER e SIGRH_PASS não definidos.")
+        return 1
+
+    print(f"Registrando o PIT de {dia} ({DIAS[args.data.weekday()]}), observação: {args.obs!r}")
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            for texto in registrar(dia, args.obs, usuario, senha):
+                print(texto)
+        except (Recusado, EnvioIncerto) as exc:
+            erro = exc
+            break
+        except Exception as exc:
+            erro = exc
+            print(f"Tentativa {tentativa} falhou: {exc}")
+            if tentativa < TENTATIVAS:
+                print(f"Tentando de novo em {ESPERA}s...")
+                time.sleep(ESPERA)
         else:
-            mensagem = "📋❌ SIGRH: todas as tentativas de registro do PIT falharam"
+            mensagem = f"📋✅ SIGRH: PIT de {dia} registrado"
             print(mensagem)
             enviar_telegram(mensagem)
-            sys.exit(1)
+            return 0
+
+    mensagem = f"📋❌ SIGRH: PIT de {dia} não registrado: {erro}"
+    print(mensagem)
+    enviar_telegram(mensagem)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
