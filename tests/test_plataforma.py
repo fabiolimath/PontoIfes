@@ -11,6 +11,8 @@ from ponto import plataforma
 class FakeIntent:
     ACTION_VIEW = "android.intent.action.VIEW"
     FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY = 0x00100000
+    FLAG_ACTIVITY_NEW_TASK = 0x10000000
+    FLAG_ACTIVITY_CLEAR_TASK = 0x00008000
 
     def __init__(self, action=None, extras=None, flags=0, data=None):
         self.action = action
@@ -36,6 +38,9 @@ class FakeIntent:
 
     def setClassName(self, contexto, classe):
         self.classe = classe
+
+    def addFlags(self, flags):
+        self.flags |= flags
 
 
 class FakeBuilder:
@@ -77,8 +82,20 @@ class FakeNotificacao:
                 return self
             return setter
 
+        def addAction(self, acao):
+            self.info.setdefault("acoes", []).append(acao)
+            return self
+
         def build(self):
             return self.info
+
+    class Action:
+        class Builder:
+            def __init__(self, icone, rotulo, intent):
+                self.acao = (icone, rotulo, intent)
+
+            def build(self):
+                return self.acao
 
     class BigTextStyle:
         def bigText(self, texto):
@@ -153,7 +170,7 @@ def android(monkeypatch):
            NotificationChannel=lambda ident, nome, importancia: (ident, nome),
            NotificationManager=types.SimpleNamespace(IMPORTANCE_DEFAULT=3),
            PendingIntent=types.SimpleNamespace(
-               FLAG_IMMUTABLE=0x04000000,
+               FLAG_IMMUTABLE=0x04000000, FLAG_UPDATE_CURRENT=0x08000000,
                getActivity=lambda ctx, codigo, intent, flags: ("pendente", intent)))
     modulo("android.graphics.drawable",
            Icon=types.SimpleNamespace(createWithResource=lambda ctx, res: f"icone:{res}"))
@@ -236,6 +253,25 @@ def test_notificar(android):
     assert (info["ContentTitle"], info["ContentText"]) == ("Abrir ponto: concluído.", "✅ entrada")
     assert info["ContentIntent"] == ("pendente", "abrir:io.github.fabiolimath.ponto")
     assert info["AutoCancel"] is True
+    assert "acoes" not in info
+
+
+def test_notificacao_de_falha_tem_tentar_de_novo(android):
+    atividade = FakeAtividade()
+    atividade.gerenciador = FakeGerenciador()
+    plataforma.notificar(android(atividade), "Registrar PIT: falhou.", "❌", 3,
+                         tentar_de_novo={"acao": "registrar_pit", "data": "02/10/2026"})
+    [(icone, rotulo, (_, intent))] = atividade.gerenciador.notificacoes[3]["acoes"]
+    assert rotulo == "Tentar de novo"
+    assert intent.classe == "org.beeware.android.MainActivity"
+    assert intent.extras == {"acao": "registrar_pit", "data": "02/10/2026"}
+    assert intent.flags & FakeIntent.FLAG_ACTIVITY_CLEAR_TASK
+
+    # Ao abrir o app por esse botão, a ação e a data são lidas do intent.
+    reaberta = android(FakeAtividade(intent))
+    assert plataforma.acao_do_intent(reaberta) == "registrar_pit"
+    assert plataforma.data_do_intent(reaberta) == "02/10/2026"
+    assert plataforma.data_do_intent(reaberta) is None
 
 
 def test_pede_permissao_so_se_faltar(android):

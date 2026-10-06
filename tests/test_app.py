@@ -139,6 +139,30 @@ def test_aberto_por_intent_executa_a_acao(tmp_path, monkeypatch):
     assert app.status.text == "Fechar ponto: concluído."
 
 
+def test_tentar_de_novo_do_pit_usa_a_data(tmp_path, monkeypatch):
+    monkeypatch.setenv("TOGA_BACKEND", "toga_dummy")
+    monkeypatch.setattr(toga.paths.Paths, "data", property(lambda self: tmp_path))
+    from ponto import credenciais, executor, plataforma
+    from ponto.app import Ponto
+
+    pacote = f"scripts_{uuid.uuid4().hex}"
+    (tmp_path / pacote).mkdir()
+    (tmp_path / pacote / "__init__.py").write_text("")
+    (tmp_path / pacote / "registrar_pit.py").write_text("import sys\nprint(sys.argv[1])\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    original = executor.executar
+    monkeypatch.setattr(executor, "executar", lambda *a, **k: original(*a, pacote=pacote, **k))
+    credenciais.salvar(tmp_path / "credenciais.json", {"SIGRH_USER": "a", "SIGRH_PASS": "b"})
+    monkeypatch.setattr(plataforma, "acao_do_intent", lambda app: "registrar_pit")
+    monkeypatch.setattr(plataforma, "data_do_intent", lambda app: "02/10/2020")
+
+    app = Ponto(formal_name="Ponto", app_id="io.github.fabiolimath.ponto")
+    app.loop.run_until_complete(asyncio.sleep(0.5))
+
+    assert app.saida.value == "02/10/2020\n"
+
+
 def test_pit_do_dia_sem_fechar_o_ponto_pergunta(app, tmp_path, monkeypatch):
     _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
     app.main_window._impl.dialog_responses["ConfirmDialog"] = [False, False]
@@ -241,7 +265,7 @@ def test_notifica_o_resultado(app, tmp_path, monkeypatch):
     from ponto import plataforma
 
     notificacoes = []
-    monkeypatch.setattr(plataforma, "notificar", lambda app, *a: notificacoes.append(a))
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: notificacoes.append((a, k)))
     _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto",
                      "print('Tentativa 1...')\nprint('SIGRH: saída registrada às 17:00')\n")
 
@@ -249,7 +273,21 @@ def test_notifica_o_resultado(app, tmp_path, monkeypatch):
     configuracoes.salvar(app.config_path, {"notificacoes": False})
     app.loop.run_until_complete(app.rodar("fechar_ponto"))
 
-    assert notificacoes == [("Fechar ponto: concluído.", "SIGRH: saída registrada às 17:00", 2)]
+    assert notificacoes == [(("Fechar ponto: concluído.", "SIGRH: saída registrada às 17:00", 2),
+                             {"tentar_de_novo": None})]
+
+
+def test_falha_notifica_com_tentar_de_novo(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    notificacoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: notificacoes.append(k))
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "import sys\nsys.exit(1)\n")
+    app.data_pit.value = "02/10/2026"
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert notificacoes == [{"tentar_de_novo": {"acao": "registrar_pit", "data": "02/10/2026"}}]
 
 
 def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):

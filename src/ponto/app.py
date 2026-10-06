@@ -33,7 +33,10 @@ class Ponto(toga.App):
 
         # Aberto por um atalho ou pelo Tasker com o extra acao=...: executa já.
         acao = plataforma.acao_do_intent(self)
+        data = plataforma.data_do_intent(self)
         if acao:
+            if acao == "registrar_pit" and data:
+                self.data_pit.value = data
             self.loop.create_task(self.rodar(acao))
             return
         preferencias = configuracoes.carregar(self.config_path)
@@ -163,7 +166,7 @@ class Ponto(toga.App):
             )
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
-            self._notificar(acao, self.status.text, saida)
+            self._notificar(acao, self.status.text, saida, codigo, data)
             if acao == "fechar_ponto" and codigo == 0:
                 configuracoes.registrar_fechamento(self.fechamento_path)
             if acao == "registrar_pit" and data and codigo == 0:
@@ -173,13 +176,22 @@ class Ponto(toga.App):
             for botao in self.botoes:
                 botao.enabled = True
 
-    def _notificar(self, acao, titulo, saida):
-        """Notificação do sistema com o resultado (se ativada nas configurações)."""
+    def _notificar(self, acao, titulo, saida, codigo=0, data=""):
+        """Notificação do sistema com o resultado (se ativada nas configurações).
+
+        Na falha, a notificação ganha o botão "Tentar de novo" (com a mesma data do PIT).
+        """
         if not configuracoes.carregar(self.config_path)["notificacoes"]:
             return
+        repetir = None
+        if codigo != 0:
+            repetir = {plataforma.EXTRA_ACAO: acao}
+            if acao == "registrar_pit" and data:
+                repetir[plataforma.EXTRA_DATA] = data
         try:
             ident = list(executor.ACOES).index(acao) + 1  # uma por ação
-            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo, ident)
+            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo, ident,
+                                 tentar_de_novo=repetir)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
 

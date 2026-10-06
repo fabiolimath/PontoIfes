@@ -18,7 +18,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
    guardadas na área privada do app e editáveis no botão **Credenciais**.
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
-   e ao salvar as Configurações.
+   e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
+   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK).
 4. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
 5. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
 6. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,

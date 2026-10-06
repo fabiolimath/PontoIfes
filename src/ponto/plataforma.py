@@ -4,6 +4,8 @@ from ponto import executor
 
 # Extra do intent com a ação a executar ao abrir o app, ex.: acao=abrir_ponto.
 EXTRA_ACAO = "acao"
+# Data do PIT (dd/mm/aaaa) do botão "Tentar de novo" da notificação.
+EXTRA_DATA = "data"
 
 
 def _atividade(app):
@@ -53,6 +55,20 @@ def acao_do_intent(app):
         acao = intent.getDataString().removeprefix("ponto:").strip("/ ")
     return acao if acao in executor.ACOES else None
 
+
+def data_do_intent(app):
+    """Data do PIT (dd/mm/aaaa) pedida pelo intent que abriu o app, ou None."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return None
+    from android.content import Intent
+
+    intent = atividade.getIntent()
+    if intent is None or intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY:
+        return None
+    data = intent.getStringExtra(EXTRA_DATA)
+    intent.removeExtra(EXTRA_DATA)
+    return data or None
 
 
 def abrir_url(app, url):
@@ -144,10 +160,13 @@ def pedir_permissao_notificacoes(app):
     return True
 
 
-def notificar(app, titulo, texto, ident=1):
+def notificar(app, titulo, texto, ident=1, tentar_de_novo=None):
     """Mostra uma notificação do sistema; tocar nela abre o app.
 
-    `ident` igual substitui a notificação anterior. Devolve False fora do Android.
+    `ident` igual substitui a notificação anterior. `tentar_de_novo`, um
+    dicionário de extras (ex.: {"acao": "abrir_ponto"}), acrescenta o botão
+    "Tentar de novo", que abre o app com esses extras e repete a ação.
+    Devolve False fora do Android.
     """
     atividade = _atividade(app)
     if atividade is None:
@@ -180,6 +199,24 @@ def notificar(app, titulo, texto, ident=1):
     construtor.setStyle(Notification.BigTextStyle().bigText(texto))
     construtor.setContentIntent(toque)
     construtor.setAutoCancel(True)
+    if tentar_de_novo:
+        from android.content import Intent
+        from android.graphics.drawable import Icon
+
+        repetir = Intent()
+        repetir.setClassName(atividade, atividade.getClass().getName())
+        for nome, valor in tentar_de_novo.items():
+            repetir.putExtra(nome, valor)
+        # Como o "Sempre Iniciar Nova Cópia" do Tasker: com o app já aberto,
+        # só trazê-lo para a frente não executaria a ação.
+        repetir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        botao = PendingIntent.getActivity(
+            atividade, 100 + ident, repetir,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        construtor.addAction(Notification.Action.Builder(
+            Icon.createWithResource(atividade, icone), "Tentar de novo", botao
+        ).build())
     gerenciador.notify(ident, construtor.build())
     return True
 
