@@ -6,10 +6,10 @@ from ponto import atualizacao, configuracoes, mascara
 def test_preferencias_padrao_e_salvas(tmp_path):
     path = tmp_path / "c.json"
     assert configuracoes.carregar(path) == {"verificar_atualizacoes": True,
-                                            "observacao_pit": "Registro de PIT"}
+                                            "observacao_pit": "Conforme PIT docente."}
     configuracoes.salvar(path, {"verificar_atualizacoes": False})
     assert configuracoes.carregar(path) == {"verificar_atualizacoes": False,
-                                            "observacao_pit": "Registro de PIT"}
+                                            "observacao_pit": "Conforme PIT docente."}
 
 
 def test_fechamento_vale_so_no_dia(tmp_path):

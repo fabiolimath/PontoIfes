@@ -6,7 +6,7 @@ from pathlib import Path
 
 PADRAO = {
     "verificar_atualizacoes": True,
-    "observacao_pit": "Registro de PIT",
+    "observacao_pit": "Conforme PIT docente.",
 }
 
 

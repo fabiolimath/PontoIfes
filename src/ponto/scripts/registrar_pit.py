@@ -26,9 +26,12 @@ PONTO_URL = BASE + "/sigrh/frequencia/ponto_eletronico/cadastro_ponto_eletronico
 PORTAL_URL = BASE + "/sigrh/servidor/portal/servidor.jsf"
 AUSENCIA_URL = BASE + "/sigrh/dap/ausencia/form.jsf"
 
-OBSERVACAO_PADRAO = "Registro de PIT"
+OBSERVACAO_PADRAO = "Conforme PIT docente."
 # Valor da opção "REGISTRO DO PIT - DOCENTE"; usado se a opção não for achada pelo texto.
 TIPO_PIT_PADRAO = "600337"
+# O navegador manda o combo "Tipo de documento" (desabilitado) com este valor nas chamadas AJAX.
+TIPO_DOCUMENTO = "104"
+ZERO = ("00:00", "0:00")
 
 TIMEOUT = 30
 TENTATIVAS = 3
@@ -82,11 +85,10 @@ def tipo_pit(form):
 
 
 def horas(resposta):
+    """Quantidade de Horas devolvida numa resposta AJAX ("" se não vier)."""
     campo = BeautifulSoup(resposta, "html.parser").find(
         "input", {"name": "cadastroAusencia:horasAusente"})
-    if not campo or not campo.get("value"):
-        raise Exception("O SIGRH não devolveu a Quantidade de Horas")
-    return campo["value"].strip()
+    return (campo.get("value") or "").strip() if campo else ""
 
 
 # -----------------------------------
@@ -157,8 +159,9 @@ def campos(estado, tipo, dia="", horas_ausente=None, observacao=""):
 
 def ajax(sessao, chamada, dados):
     container, parametro = chamada
-    resp = sessao.post(AUSENCIA_URL, data={"AJAXREQUEST": container, **dados, parametro: parametro},
-                       timeout=TIMEOUT)
+    dados = {"AJAXREQUEST": container, **dados, "cadastroAusencia:tipoDocumento": TIPO_DOCUMENTO,
+             "cadastroAusencia:arquivo": "", parametro: parametro}
+    resp = sessao.post(AUSENCIA_URL, data=dados, timeout=TIMEOUT)
     resp.raise_for_status()
     return resp.text
 
@@ -170,19 +173,25 @@ def preencher(sessao, pagina, dia, observacao):
     tipo = tipo_pit(form)
 
     combo = form.find("select", {"name": "cadastroAusencia:ausencia"})
-    ajax(sessao, a4j(combo.get("onchange")), campos(estado, tipo))
+    ajax(sessao, a4j(combo.get("onchange")),
+         {**campos(estado, tipo), "cadastroAusencia:DataTermino": ""})
 
     # Ao mudar a data, a página dispara duas chamadas: atualizaPeriodoAusencia()
-    # e a que calcula a Quantidade de Horas.
+    # e outra ligada ao campo. Na captura, a primeira devolveu as horas (03:47)
+    # e a segunda 00:00; o formulário ficou com o valor calculado.
     periodo = re.search(r"atualizaPeriodoAusencia=function\(\)\{(.*?)\};", str(pagina), re.S)
     data_inicio = form.find("input", {"name": "cadastroAusencia:DataInicio"})
+    respostas = []
     if periodo:
-        ajax(sessao, a4j(periodo.group(1)), campos(estado, tipo, dia, ""))
-    resposta = ajax(sessao, a4j(data_inicio.get("onchange")), campos(estado, tipo, dia, ""))
-    horas_ausente = horas(resposta)
+        respostas.append(ajax(sessao, a4j(periodo.group(1)), campos(estado, tipo, dia, "")))
+    respostas.append(ajax(sessao, a4j(data_inicio.get("onchange")), campos(estado, tipo, dia, "")))
+    valores = [h for h in map(horas, respostas) if h]
+    if not valores:
+        raise Exception("O SIGRH não devolveu a Quantidade de Horas")
+    horas_ausente = next((h for h in valores if h not in ZERO), valores[0])
     print(f"Quantidade de horas calculada pelo SIGRH: {horas_ausente}")
-    if horas_ausente in ("00:00", "0:00"):
-        raise Recusado(f"O SIGRH calculou 00:00 horas para {dia} (feriado ou dia sem expediente?)")
+    if horas_ausente in ZERO:
+        raise Recusado(f"O SIGRH calculou 00:00 horas para {dia}: nada a registrar")
 
     textarea = form.find("textarea", {"name": "cadastroAusencia:observacao"})
     if textarea and textarea.get("onchange"):

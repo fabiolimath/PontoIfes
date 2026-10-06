@@ -6,7 +6,7 @@ sem Termux:
 - **Abrir ponto** → `abrir_ponto.py`
 - **Fechar ponto** → `fechar_ponto.py`
 - **Registrar PIT** → `registrar_pit.py [dd/mm/aaaa] [--obs TEXTO]` (sem data, hoje; só de segunda a sexta;
-  o texto da Observação vem das Configurações, padrão "Registro de PIT")
+  o texto da Observação vem das Configurações, padrão "Conforme PIT docente.")
 
 O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado (versão atual em
 `pyproject.toml`).

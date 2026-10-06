@@ -67,10 +67,10 @@ def test_pit_com_data_passa_argumento(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
-    assert app.saida.value == "['02/10/2026', '--obs', 'Registro de PIT']\n"
+    assert app.saida.value == "['02/10/2026', '--obs', 'Conforme PIT docente.']\n"
     assert app.status.text == "Registrar PIT (02/10/2026): concluído."
     assert app.data_pit.value == ""
-    assert "· registrar_pit 02/10/2026 --obs Registro de PIT ===" in app.log_path.read_text(encoding="utf-8")
+    assert "· registrar_pit 02/10/2026 --obs Conforme PIT docente. ===" in app.log_path.read_text(encoding="utf-8")
 
 
 def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
@@ -79,7 +79,7 @@ def test_pit_sem_data_usa_o_dia(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("registrar_pit"))
 
-    assert app.saida.value == "['--obs', 'Registro de PIT']\n"
+    assert app.saida.value == "['--obs', 'Conforme PIT docente.']\n"
 
 
 def test_pit_usa_observacao_das_configuracoes(app, tmp_path, monkeypatch):
@@ -194,7 +194,7 @@ def test_tela_de_configuracoes(app):
     app.campos["SIGRH_USER"].value = "a"
     app.campos["SIGRH_PASS"].value = "b"
     app.verificar_atualizacoes.value = False
-    assert app.observacao_pit.value == "Registro de PIT"
+    assert app.observacao_pit.value == "Conforme PIT docente."
     app.observacao_pit.value = " PIT segundo portaria "
 
     app.loop.run_until_complete(app.salvar_configuracoes(None))
