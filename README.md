@@ -1,17 +1,31 @@
 # Ponto IFES
 
-App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
-**Abrir ponto**, **Fechar ponto** e **Registrar PIT**.
+> **Quer só instalar e usar o app?** Vá para a página do Ponto IFES:
+> **<https://fabiolimath.github.io/PontoIfes/>**. Lá estão o download, a instalação e o uso
+> no dia a dia. Este README é para quem quer entender como o projeto funciona por dentro.
 
-- Na primeira execução o app pede as credenciais do SIGRH e as guarda na área privada do app (`credenciais.json`, permissão 600). O
-  botão **Configurações** permite editá-las depois.
+App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
+**Abrir ponto**, **Fechar ponto** e **Registrar PIT**. A página acima fica em `docs/`.
+
+- Na primeira execução o app pede as credenciais do SIGRH (o usuário abre o teclado numérico) e as
+  guarda na área privada do app (`credenciais.json`, permissão 600). O botão **Configurações**
+  permite editá-las depois.
 - Cada botão roda o script correspondente numa thread, mostrando a saída ao vivo.
-- O campo "Registrar o PIT de outro dia" (dd/mm/aaaa) é opcional: se preenchido, o
-  botão Registrar PIT usa essa data em vez da data de hoje.
+- O campo "Registrar o PIT de outro dia" (dd/mm/aaaa, barras automáticas) é opcional: se
+  preenchido, o botão Registrar PIT usa essa data em vez da data de hoje. O PIT do dia pede
+  para fechar o ponto antes.
 - O PIT só é registrado de segunda a sexta. O campo Observação do formulário recebe o texto
   padrão "Conforme PIT docente.", que pode ser trocado em **Configurações > Observação do PIT**.
 - Ao terminar cada execução, o app mostra uma notificação do sistema com o resultado
   (pode ser desligada em **Configurações**; no Android 13+ o app pede a permissão).
+  Na falha, ela traz o botão **Tentar de novo**; ao fechar o ponto, o botão **Registrar PIT**.
+- O PIT do dia pode ser registrado sozinho ao fechar o ponto (**Configurações > Registrar o PIT
+  do dia automaticamente**): no 1º fechamento do dia, ou no 2º, para quem fecha no almoço.
+- Lembrete de fechar o ponto: se o ponto foi aberto e não foi fechado depois de um tempo
+  (padrão 01:40, em **Configurações**), o app avisa com uma notificação com o botão
+  **Fechar ponto**, mesmo fechado (alarme do Android; perde-se se o celular reiniciar).
+- Ao abrir, o app verifica se há versão nova no GitHub (desligável em **Configurações**).
+  O menu de três pontos tem **Sobre o Ponto IFES**, com a versão e o link do site.
 - Cada execução é gravada em `ponto.log` (data/hora, saída e código de saída; últimas
   1000 linhas), visível no botão **Log**.
 
@@ -24,7 +38,9 @@ variáveis antes de rodá-los com `runpy`, então eles também seguem funcionand
 - Segurando o ícone do app aparecem os atalhos **Abrir ponto**, **Fechar ponto** e
   **Registrar PIT**. Arraste um deles para fixar na tela inicial. Tocar no atalho abre o
   app e executa a ação na hora. Os atalhos são estáticos (`android/res/xml/shortcuts.xml`),
-  por isso também aparecem para o Tasker e para as Rotinas da Samsung.
+  por isso também aparecem para o Tasker e para as Rotinas da Samsung. Cada um tem um ícone
+  verde próprio (play, stop, relógio, em `android/res/drawable*`); o emblema pequeno no canto
+  é posto pelo launcher.
 - No Tasker, o mais simples é a ação *Executar app* com o app Ponto IFES e, no campo
   **Dado**, o nome da ação: `abrir_ponto`, `fechar_ponto` ou `registrar_pit`. Marque
   **Sempre Iniciar Nova Cópia**: sem isso, se o app já estiver aberto em segundo plano,
@@ -42,7 +58,18 @@ variáveis antes de rodá-los com `runpy`, então eles também seguem funcionand
   `adb shell am start -n io.github.fabiolimath.ponto/org.beeware.android.MainActivity --es acao abrir_ponto`
 - Reabrir o app pela tela de recentes não repete a ação.
 
-## Uso no PC
+## Como o app é desenvolvido
+
+1. Cada mudança vem num PR (rascunho) que aumenta o `version` do `pyproject.toml`.
+2. O workflow do PR roda os testes e publica um APK de teste assinado, sempre em
+   <https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk>,
+   que instala por cima do app para testar no celular.
+3. O merge no `master` publica sozinho o release `vX.Y.Z` com `ponto-ifes.apk`, e o botão do
+   site passa a baixar a versão nova.
+
+Os detalhes dos workflows estão no fim deste arquivo. Para testar ou compilar no PC:
+
+### Uso no PC
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
@@ -52,7 +79,7 @@ briefcase dev            # roda no desktop (GTK) para testar a interface
 briefcase dev --test     # roda os testes
 ```
 
-## Android
+### Android no PC
 
 Com o celular ligado por USB e a depuração USB ativa:
 
@@ -69,9 +96,9 @@ Depois de mudar só o código Python, `-u` basta (`briefcase package android -u 
 Se mudar o `pyproject.toml`, o ícone ou algo em `android/`, recrie o projeto Android antes
 com `briefcase create android` (confirme a sobrescrita).
 
-## APK para distribuir (release assinado)
+### Release assinado no PC
 
-O APK debug serve para uso próprio. Para distribuir, gere o release assinado com a
+O caminho normal é o release automático (abaixo). Para gerar o APK assinado à mão, com a
 chave do app:
 
 ```sh
@@ -87,12 +114,7 @@ e digitar as credenciais de novo. O APK assinado sai em `dist/ponto-ifes.apk`.
 Quem tem instalado um APK debug precisa desinstalá-lo antes de instalar o release,
 porque as chaves são diferentes.
 
-A cada nova versão, aumente `version` no `pyproject.toml` (assim o Android e os colegas
-sabem que é uma atualização) e publique o release no GitHub:
-
-```sh
-gh release create v1.0.0 dist/ponto-ifes.apk --title "Ponto IFES 1.0.0" --notes "Primeira versão"
-```
+## Workflows do GitHub
 
 ### Testes e APK de teste em cada PR
 

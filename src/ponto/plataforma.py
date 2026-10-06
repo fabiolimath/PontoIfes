@@ -4,6 +4,8 @@ from ponto import executor
 
 # Extra do intent com a ação a executar ao abrir o app, ex.: acao=abrir_ponto.
 EXTRA_ACAO = "acao"
+# Data do PIT (dd/mm/aaaa) do botão "Tentar de novo" da notificação.
+EXTRA_DATA = "data"
 
 
 def _atividade(app):
@@ -54,6 +56,20 @@ def acao_do_intent(app):
     return acao if acao in executor.ACOES else None
 
 
+def data_do_intent(app):
+    """Data do PIT (dd/mm/aaaa) pedida pelo intent que abriu o app, ou None."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return None
+    from android.content import Intent
+
+    intent = atividade.getIntent()
+    if intent is None or intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY:
+        return None
+    data = intent.getStringExtra(EXTRA_DATA)
+    intent.removeExtra(EXTRA_DATA)
+    return data or None
+
 
 def abrir_url(app, url):
     """Abre o endereço no navegador (no Android, por um intent ACTION_VIEW)."""
@@ -77,6 +93,18 @@ def campo_de_data(entrada):
         return False
     entrada._impl.native.setInputType(
         InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_DATE
+    )
+    return True
+
+
+def campo_de_hora(entrada):
+    """Teclado numérico de horas (com ":") no campo de texto; só no Android."""
+    try:
+        from android.text import InputType
+    except ImportError:
+        return False
+    entrada._impl.native.setInputType(
+        InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME
     )
     return True
 
@@ -144,10 +172,13 @@ def pedir_permissao_notificacoes(app):
     return True
 
 
-def notificar(app, titulo, texto, ident=1):
+def notificar(app, titulo, texto, ident=1, botao=None):
     """Mostra uma notificação do sistema; tocar nela abre o app.
 
-    `ident` igual substitui a notificação anterior. Devolve False fora do Android.
+    `ident` igual substitui a notificação anterior. `botao`, um par
+    (rótulo, extras), ex.: ("Tentar de novo", {"acao": "abrir_ponto"}),
+    acrescenta um botão que abre o app com esses extras e executa a ação.
+    Devolve False fora do Android.
     """
     atividade = _atividade(app)
     if atividade is None:
@@ -180,7 +211,92 @@ def notificar(app, titulo, texto, ident=1):
     construtor.setStyle(Notification.BigTextStyle().bigText(texto))
     construtor.setContentIntent(toque)
     construtor.setAutoCancel(True)
+    if botao:
+        from android.content import Intent
+        from android.graphics.drawable import Icon
+
+        rotulo, extras = botao
+        executar = Intent()
+        executar.setClassName(atividade, atividade.getClass().getName())
+        for nome, valor in extras.items():
+            executar.putExtra(nome, valor)
+        # Como o "Sempre Iniciar Nova Cópia" do Tasker: com o app já aberto,
+        # só trazê-lo para a frente não executaria a ação.
+        executar.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        pendente = PendingIntent.getActivity(
+            atividade, 100 + ident, executar,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        construtor.addAction(Notification.Action.Builder(
+            Icon.createWithResource(atividade, icone), rotulo, pendente
+        ).build())
     gerenciador.notify(ident, construtor.build())
+    return True
+
+
+def cancelar_notificacao(app, ident):
+    """Apaga a notificação `ident`, se estiver na tela; devolve False fora do Android."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.content import Context
+
+    atividade.getSystemService(Context.NOTIFICATION_SERVICE).cancel(ident)
+    return True
+
+
+# -----------------------------------
+# LEMBRETE DE FECHAR O PONTO
+# -----------------------------------
+IDENT_LEMBRETE = 4  # o mesmo de LembreteReceiver.IDENT (android/java)
+RECEPTOR_LEMBRETE = "io.github.fabiolimath.ponto.LembreteReceiver"
+
+
+def _alarme_lembrete(atividade, titulo="", texto=""):
+    """PendingIntent do alarme que entrega o lembrete ao LembreteReceiver."""
+    from android.app import PendingIntent
+    from android.content import Intent
+
+    intent = Intent()
+    intent.setClassName(atividade, RECEPTOR_LEMBRETE)
+    intent.putExtra("titulo", titulo)
+    intent.putExtra("texto", texto)
+    return PendingIntent.getBroadcast(
+        atividade, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+
+def agendar_lembrete(app, quando, titulo, texto):
+    """Agenda a notificação do lembrete para o datetime `quando`.
+
+    Quem guarda o alarme é o próprio Android (AlarmManager), como um cron:
+    ele dispara com o app fechado ou suspenso. No modo de economia (Doze) pode
+    atrasar alguns minutos; e se perde ao reiniciar o celular.
+    Devolve False fora do Android.
+    """
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.app import AlarmManager
+    from android.content import Context
+
+    alarmes = atividade.getSystemService(Context.ALARM_SERVICE)
+    alarmes.setAndAllowWhileIdle(
+        AlarmManager.RTC_WAKEUP, int(quando.timestamp() * 1000),
+        _alarme_lembrete(atividade, titulo, texto),
+    )
+    return True
+
+
+def cancelar_lembrete(app):
+    """Desfaz o alarme do lembrete e apaga a notificação dele, se estiver na tela."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.content import Context
+
+    atividade.getSystemService(Context.ALARM_SERVICE).cancel(_alarme_lembrete(atividade))
+    atividade.getSystemService(Context.NOTIFICATION_SERVICE).cancel(IDENT_LEMBRETE)
     return True
 
 

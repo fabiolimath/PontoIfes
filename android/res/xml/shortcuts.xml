@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Atalhos do ícone (segurar o ícone). Por serem estáticos, aparecem também
-     para o Tasker e para as Rotinas. Cada um abre o app com o extra "acao". -->
+     para o Tasker e para as Rotinas. Cada um abre o app com o extra "acao".
+     Ícones: símbolo verde (play, stop, relógio) em android/res/drawable*;
+     o emblema pequeno no canto é posto pelo launcher (o ícone do app). -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:shortcutId="abrir_ponto"
         android:enabled="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/atalho_abrir"
         android:shortcutShortLabel="@string/atalho_abrir_ponto">
         <intent
             android:action="android.intent.action.VIEW"
@@ -17,7 +19,7 @@
     <shortcut
         android:shortcutId="fechar_ponto"
         android:enabled="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/atalho_fechar"
         android:shortcutShortLabel="@string/atalho_fechar_ponto">
         <intent
             android:action="android.intent.action.VIEW"
@@ -29,7 +31,7 @@
     <shortcut
         android:shortcutId="registrar_pit"
         android:enabled="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/atalho_pit"
         android:shortcutShortLabel="@string/atalho_registrar_pit">
         <intent
             android:action="android.intent.action.VIEW"

@@ -139,6 +139,30 @@ def test_aberto_por_intent_executa_a_acao(tmp_path, monkeypatch):
     assert app.status.text == "Fechar ponto: concluído."
 
 
+def test_tentar_de_novo_do_pit_usa_a_data(tmp_path, monkeypatch):
+    monkeypatch.setenv("TOGA_BACKEND", "toga_dummy")
+    monkeypatch.setattr(toga.paths.Paths, "data", property(lambda self: tmp_path))
+    from ponto import credenciais, executor, plataforma
+    from ponto.app import Ponto
+
+    pacote = f"scripts_{uuid.uuid4().hex}"
+    (tmp_path / pacote).mkdir()
+    (tmp_path / pacote / "__init__.py").write_text("")
+    (tmp_path / pacote / "registrar_pit.py").write_text("import sys\nprint(sys.argv[1])\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    original = executor.executar
+    monkeypatch.setattr(executor, "executar", lambda *a, **k: original(*a, pacote=pacote, **k))
+    credenciais.salvar(tmp_path / "credenciais.json", {"SIGRH_USER": "a", "SIGRH_PASS": "b"})
+    monkeypatch.setattr(plataforma, "acao_do_intent", lambda app: "registrar_pit")
+    monkeypatch.setattr(plataforma, "data_do_intent", lambda app: "02/10/2020")
+
+    app = Ponto(formal_name="Ponto", app_id="io.github.fabiolimath.ponto")
+    app.loop.run_until_complete(asyncio.sleep(0.5))
+
+    assert app.saida.value == "02/10/2020\n"
+
+
 def test_pit_do_dia_sem_fechar_o_ponto_pergunta(app, tmp_path, monkeypatch):
     _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('rodou')\n")
     app.main_window._impl.dialog_responses["ConfirmDialog"] = [False, False]
@@ -203,9 +227,113 @@ def test_tela_de_configuracoes(app):
 
     assert app.main_window.content is app.tela_principal
     assert configuracoes.carregar(app.config_path) == {
-        "notificacoes": False, "verificar_atualizacoes": False,
-        "observacao_pit": "PIT segundo portaria"}
+        "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:40",
+        "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria",
+        "pit_automatico": 0}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
+
+
+def test_configuracoes_do_lembrete(app, monkeypatch):
+    from ponto import plataforma
+
+    cancelados = []
+    monkeypatch.setattr(plataforma, "cancelar_lembrete", lambda app: cancelados.append(1))
+    dialogos = []
+    monkeypatch.setattr(app.main_window, "dialog", _dialogo_falso(dialogos, None))
+    app.campos["SIGRH_USER"].value = "a"
+    app.campos["SIGRH_PASS"].value = "b"
+    assert app.lembrete_fechar.value is True
+    assert app.lembrete_tempo.value == "01:40"
+    app.lembrete_tempo.value = ""
+    for texto in ["0", "02", "02:3", "02:30"]:
+        app.lembrete_tempo.value = texto
+    assert app.lembrete_tempo.value == "02:30"
+
+    app.lembrete_tempo.value = "1h40"
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+    assert [type(d).__name__ for d in dialogos] == ["ErrorDialog"]
+    assert app.main_window.content is not app.tela_principal
+
+    app.lembrete_tempo.value = " 2:15 "
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+    assert configuracoes.carregar(app.config_path)["lembrete_tempo"] == "2:15"
+    assert cancelados == []
+
+    app.mostrar_configuracoes()
+    app.lembrete_fechar.value = False
+    app.lembrete_tempo.value = ""
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+    preferencias = configuracoes.carregar(app.config_path)
+    assert (preferencias["lembrete_fechar"], preferencias["lembrete_tempo"]) == (False, "01:40")
+    assert cancelados == [1]
+
+
+def _dialogo_falso(dialogos, resposta):
+    async def dialogo(d):
+        dialogos.append(d)
+        return resposta
+    return dialogo
+
+
+def test_abrir_ponto_agenda_o_lembrete(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    agendados = []
+    monkeypatch.setattr(plataforma, "agendar_lembrete", lambda app, *a: agendados.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "print('ok')\n")
+
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+    # Abrir de novo ("já estava aberto") não empurra o lembrete para mais tarde.
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert len(agendados) == 1
+    quando, titulo, texto = agendados[0]
+    assert titulo == "Ponto ainda aberto"
+    assert configuracoes.lembrete_pendente(app.lembrete_path) == quando.replace(microsecond=0)
+
+
+def test_lembrete_conta_do_horario_de_abertura(app, monkeypatch):
+    from datetime import datetime
+
+    from ponto import plataforma
+
+    agendados = []
+    monkeypatch.setattr(plataforma, "agendar_lembrete", lambda app, *a: agendados.append(a))
+    configuracoes.salvar(app.config_path, {"lembrete_tempo": "02:00"})
+
+    app._agendar_lembrete(datetime(2026, 10, 6, 7, 55))
+
+    assert agendados == [(datetime(2026, 10, 6, 9, 55), "Ponto ainda aberto",
+                          "O ponto foi aberto às 07:55 e ainda não foi fechado.")]
+
+
+def test_sem_lembrete_se_desligado_ou_se_abrir_falha(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    agendados = []
+    monkeypatch.setattr(plataforma, "agendar_lembrete", lambda app, *a: agendados.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "import sys\nsys.exit(1)\n")
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+    configuracoes.salvar(app.config_path, {"lembrete_fechar": False})
+    app._agendar_lembrete()
+
+    assert agendados == []
+
+
+def test_fechar_ponto_cancela_o_lembrete(app, tmp_path, monkeypatch):
+    from datetime import datetime, timedelta
+
+    from ponto import plataforma
+
+    cancelados = []
+    monkeypatch.setattr(plataforma, "cancelar_lembrete", lambda app: cancelados.append(1))
+    configuracoes.registrar_lembrete(app.lembrete_path, datetime.now() + timedelta(hours=1))
+    _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto", "print('fechou')\n")
+
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+
+    assert cancelados == [1]
+    assert configuracoes.lembrete_pendente(app.lembrete_path) is None
 
 
 def test_atualizacao_oferece_baixar(app, monkeypatch):
@@ -241,15 +369,81 @@ def test_notifica_o_resultado(app, tmp_path, monkeypatch):
     from ponto import plataforma
 
     notificacoes = []
-    monkeypatch.setattr(plataforma, "notificar", lambda app, *a: notificacoes.append(a))
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: notificacoes.append((a, k)))
     _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto",
                      "print('Tentativa 1...')\nprint('SIGRH: saída registrada às 17:00')\n")
+
+    _hoje(monkeypatch, date(2026, 10, 6))  # terça
 
     app.loop.run_until_complete(app.rodar("fechar_ponto"))
     configuracoes.salvar(app.config_path, {"notificacoes": False})
     app.loop.run_until_complete(app.rodar("fechar_ponto"))
 
-    assert notificacoes == [("Fechar ponto: concluído.", "SIGRH: saída registrada às 17:00", 2)]
+    assert notificacoes == [(("Fechar ponto: concluído.", "SIGRH: saída registrada às 17:00", 2),
+                             {"botao": ("Registrar PIT", {"acao": "registrar_pit"})})]
+
+
+def _hoje(monkeypatch, dia):
+    import ponto.app
+
+    class Data(date):
+        @classmethod
+        def today(cls):
+            return dia
+    monkeypatch.setattr(ponto.app, "date", Data)
+
+
+def test_sem_botao_do_pit_no_fim_de_semana_nem_em_outras_acoes(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    botoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: botoes.append(k["botao"]))
+    _hoje(monkeypatch, date(2026, 10, 10))  # sábado
+    app._notificar("fechar_ponto", "Fechar ponto: concluído.", "ok")
+    _hoje(monkeypatch, date(2026, 10, 6))
+    app._notificar("abrir_ponto", "Abrir ponto: concluído.", "ok")
+
+    assert botoes == [None, None]
+
+
+def test_pit_apaga_a_notificacao_do_fechamento(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    apagadas = []
+    monkeypatch.setattr(plataforma, "cancelar_notificacao", lambda app, i: apagadas.append(i))
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "print('ok')\n")
+    app.data_pit.value = "02/10/2026"
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert apagadas == [3, 2]
+
+
+def test_falha_notifica_com_tentar_de_novo(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    notificacoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: notificacoes.append(k))
+    _preparar_script(app, tmp_path, monkeypatch, "registrar_pit", "import sys\nsys.exit(1)\n")
+    app.data_pit.value = "02/10/2026"
+
+    app.loop.run_until_complete(app.rodar("registrar_pit"))
+
+    assert notificacoes == [{"botao": ("Tentar de novo",
+                                       {"acao": "registrar_pit", "data": "02/10/2026"})}]
+
+
+def test_nova_execucao_apaga_a_notificacao_anterior(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    eventos = []
+    monkeypatch.setattr(plataforma, "cancelar_notificacao", lambda app, i: eventos.append(("apaga", i)))
+    monkeypatch.setattr(plataforma, "notificar", lambda app, t, x, i, **k: eventos.append(("mostra", i)))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "import sys\nsys.exit(1)\n")
+
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert eventos == [("apaga", 1), ("mostra", 1)]
 
 
 def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):
@@ -278,3 +472,69 @@ def test_sobre_em_portugues_abre_o_site(app, monkeypatch):
     assert abertos == [atualizacao.URL_SITE]
     if toga.Command.ABOUT in app.commands:
         assert app.commands[toga.Command.ABOUT].text == "Sobre o Ponto"
+
+
+def test_opcao_do_pit_automatico(app):
+    from ponto.app import EXPLICACAO_PIT_AUTOMATICO
+
+    assert app.pit_automatico.value == "Não"
+    assert app.explicacao_pit.text == EXPLICACAO_PIT_AUTOMATICO[0]
+    app.pit_automatico.value = "No 2º fechamento do dia"
+    assert app.explicacao_pit.text == EXPLICACAO_PIT_AUTOMATICO[2]
+    app.campos["SIGRH_USER"].value = "a"
+    app.campos["SIGRH_PASS"].value = "b"
+
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+
+    assert configuracoes.carregar(app.config_path)["pit_automatico"] == 2
+    app.mostrar_configuracoes()
+    assert app.pit_automatico.value == "No 2º fechamento do dia"
+
+
+def _fechar_e_pit(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto", "print('fechou')\n")
+    # O mesmo pacote de scripts falsos ganha o do PIT.
+    [pacote] = [p for p in tmp_path.glob("scripts_*") if (p / "fechar_ponto.py").exists()]
+    (pacote / "registrar_pit.py").write_text("import sys\nprint('PIT', sys.argv[1:])\n")
+
+
+@pytest.mark.parametrize("quando, pit_nas_vezes", [(0, []), (1, [1]), (2, [2])])
+def test_pit_automatico_no_fechamento_certo(app, tmp_path, monkeypatch, quando, pit_nas_vezes):
+    _fechar_e_pit(app, tmp_path, monkeypatch)
+    _hoje(monkeypatch, date(2026, 10, 6))  # terça
+    configuracoes.salvar(app.config_path, {"pit_automatico": quando})
+    app.data_pit.value = "02/10/2026"  # ignorada pelo PIT automático
+
+    registrou = []
+    for vez in (1, 2):
+        app.loop.run_until_complete(app.rodar("fechar_ponto"))
+        if "PIT" in app.saida.value:
+            registrou.append(vez)
+            assert app.saida.value.startswith("fechou\n")
+            assert "02/10/2026" not in app.saida.value
+            assert app.status.text == "Registrar PIT: concluído."
+
+    assert registrou == pit_nas_vezes
+
+
+def test_sem_pit_automatico_no_fim_de_semana(app, tmp_path, monkeypatch):
+    _fechar_e_pit(app, tmp_path, monkeypatch)
+    _hoje(monkeypatch, date(2026, 10, 10))  # sábado
+    configuracoes.salvar(app.config_path, {"pit_automatico": 1})
+
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+
+    assert app.saida.value == "fechou\n"
+
+
+def test_pit_automatico_tira_o_botao_da_notificacao(app, monkeypatch):
+    from ponto import plataforma
+
+    botoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: botoes.append(k["botao"]))
+    _hoje(monkeypatch, date(2026, 10, 6))
+    configuracoes.salvar(app.config_path, {"pit_automatico": 2})
+
+    app._notificar("fechar_ponto", "Fechar ponto: concluído.", "ok")
+
+    assert botoes == [None]

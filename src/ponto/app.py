@@ -3,12 +3,25 @@ Ponto: abre e fecha o ponto e registra o PIT no SIGRH.
 """
 
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import toga
 from toga.style.pack import COLUMN, ROW, Pack
 
 from ponto import atualizacao, configuracoes, credenciais, executor, mascara, plataforma
+
+# Opções do PIT automático (configuracoes.PADRAO["pit_automatico"]).
+PIT_AUTOMATICO = {
+    0: "Não",
+    1: "No 1º fechamento do dia",
+    2: "No 2º fechamento do dia",
+}
+EXPLICACAO_PIT_AUTOMATICO = {
+    0: "Registre o PIT pelo botão do app\nou pelo da notificação de ponto fechado.",
+    1: "Para quem fecha o ponto uma vez por dia:\no PIT é registrado logo após o fechamento.",
+    2: "Para quem fecha o ponto no almoço:\no PIT é registrado após fechar pela 2ª vez.",
+}
+
 
 class Ponto(toga.App):
     def startup(self):
@@ -18,6 +31,7 @@ class Ponto(toga.App):
         self.log_path = dados / "ponto.log"
         self.config_path = dados / "configuracoes.json"
         self.fechamento_path = dados / "ultimo_fechamento.txt"
+        self.lembrete_path = dados / "lembrete.txt"
         self.rodando = False
 
         self.main_window = toga.MainWindow(title=self.formal_name)
@@ -33,12 +47,16 @@ class Ponto(toga.App):
 
         # Aberto por um atalho ou pelo Tasker com o extra acao=...: executa já.
         acao = plataforma.acao_do_intent(self)
+        data = plataforma.data_do_intent(self)
         if acao:
+            if acao == "registrar_pit" and data:
+                self.data_pit.value = data
             self.loop.create_task(self.rodar(acao))
             return
         preferencias = configuracoes.carregar(self.config_path)
         # Na 1ª execução, a permissão é pedida ao salvar as configurações.
-        if preferencias["notificacoes"] and credenciais.carregar(self.cred_path) is not None:
+        notifica = preferencias["notificacoes"] or preferencias["lembrete_fechar"]
+        if notifica and credenciais.carregar(self.cred_path) is not None:
             self._pedir_permissao_notificacoes()
         if preferencias["verificar_atualizacoes"]:
             self.loop.create_task(self.verificar_atualizacao(avisar_sem_novidade=False))
@@ -56,8 +74,8 @@ class Ponto(toga.App):
             )
             self.botoes.append(botao)
 
-        self._data_anterior = ""
-        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa", on_change=self._mascara_data,
+        self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa",
+                                       on_change=self._mascara(mascara.formatar_data),
                                        style=Pack(margin_bottom=4))
         plataforma.campo_de_data(self.data_pit)
         plataforma.preenchimento(self.data_pit)
@@ -89,15 +107,21 @@ class Ponto(toga.App):
     def mostrar_principal(self):
         self.main_window.content = self.tela_principal
 
-    def _mascara_data(self, widget, **kwargs):
-        novo = widget.value
-        apagando = len(novo) < len(self._data_anterior)
-        formatado = mascara.formatar_data(novo, apagando)
-        self._data_anterior = formatado
-        if formatado != novo:
-            # Dispara on_change de novo, mas formatar o já formatado não muda nada.
-            widget.value = formatado
-            plataforma.cursor_no_fim(widget)
+    @staticmethod
+    def _mascara(formatar):
+        """on_change que aplica a máscara `formatar` (data ou hora) enquanto se digita."""
+        anterior = [""]
+
+        def aplicar(widget, **kwargs):
+            novo = widget.value
+            apagando = len(novo) < len(anterior[0])
+            formatado = formatar(novo, apagando)
+            anterior[0] = formatado
+            if formatado != novo:
+                # Dispara on_change de novo, mas formatar o já formatado não muda nada.
+                widget.value = formatado
+                plataforma.cursor_no_fim(widget)
+        return aplicar
 
     def _ao_tocar(self, acao):
         async def handler(widget, **kwargs):
@@ -108,7 +132,9 @@ class Ponto(toga.App):
         self.saida.value += texto
         self.saida.scroll_to_bottom()
 
-    async def rodar(self, acao):
+    async def rodar(self, acao, encadeado=False):
+        """Executa a ação. `encadeado`: PIT automático logo após fechar o ponto,
+        sempre do dia (ignora o campo de data) e sem apagar a saída do fechamento."""
         if self.rodando:
             return
         cred = credenciais.carregar(self.cred_path)
@@ -117,7 +143,7 @@ class Ponto(toga.App):
             return
 
         args = ()
-        data = self.data_pit.value.strip()
+        data = "" if encadeado else self.data_pit.value.strip()
         if acao == "registrar_pit" and data:
             try:
                 datetime.strptime(data, "%d/%m/%Y")
@@ -145,12 +171,23 @@ class Ponto(toga.App):
             args += ("--obs", configuracoes.carregar(self.config_path)["observacao_pit"])
 
         self.rodando = True
+        # Some a notificação anterior desta ação: a do resultado novo aparece de novo,
+        # em vez de só substituir em silêncio a que ainda estava na tela.
+        # O PIT pelo botão também apaga a do fechamento, que tem o botão "Registrar PIT";
+        # o automático a mantém, com o resultado do fechamento.
+        apagar = [acao] + (["fechar_ponto"] if acao == "registrar_pit" and not encadeado else [])
+        try:
+            for outra in apagar:
+                plataforma.cancelar_notificacao(self, self._ident_notificacao(outra))
+        except Exception as exc:
+            print("Erro ao apagar a notificação:", exc)
         for botao in self.botoes:
             botao.enabled = False
-        self.saida.value = ""
+        self.saida.value = self.saida.value + "\n" if encadeado else ""
         self.status.text = f"Executando: {rotulo}…"
 
         loop = asyncio.get_running_loop()
+        pit_em_seguida = False
 
         def ao_escrever(texto):
             loop.call_soon_threadsafe(self._anexar, texto)
@@ -163,25 +200,86 @@ class Ponto(toga.App):
             )
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
-            self._notificar(acao, self.status.text, saida)
+            self._notificar(acao, self.status.text, saida, codigo, data)
+            if acao == "abrir_ponto" and codigo == 0:
+                self._agendar_lembrete()
             if acao == "fechar_ponto" and codigo == 0:
-                configuracoes.registrar_fechamento(self.fechamento_path)
+                vezes = configuracoes.registrar_fechamento(self.fechamento_path)
+                self._cancelar_lembrete()
+                pit_em_seguida = self._pit_automatico_agora(vezes)
             if acao == "registrar_pit" and data and codigo == 0:
                 self.data_pit.value = ""
         finally:
             self.rodando = False
             for botao in self.botoes:
                 botao.enabled = True
+        if pit_em_seguida:
+            await self.rodar("registrar_pit", encadeado=True)
 
-    def _notificar(self, acao, titulo, saida):
-        """Notificação do sistema com o resultado (se ativada nas configurações)."""
+    def _pit_automatico_agora(self, vezes):
+        """Se o fechamento nº `vezes` do dia é o que registra o PIT sozinho (seg a sex)."""
+        quando = configuracoes.carregar(self.config_path)["pit_automatico"]
+        return quando in (1, 2) and vezes == quando and date.today().weekday() < 5
+
+    def _notificar(self, acao, titulo, saida, codigo=0, data=""):
+        """Notificação do sistema com o resultado (se ativada nas configurações).
+
+        Na falha, a notificação ganha o botão "Tentar de novo" (com a mesma data do PIT).
+        Ao fechar o ponto com sucesso num dia útil, ganha o botão "Registrar PIT" do dia.
+        """
         if not configuracoes.carregar(self.config_path)["notificacoes"]:
             return
+        botao = None
+        if codigo != 0:
+            repetir = {plataforma.EXTRA_ACAO: acao}
+            if acao == "registrar_pit" and data:
+                repetir[plataforma.EXTRA_DATA] = data
+            botao = ("Tentar de novo", repetir)
+        elif (acao == "fechar_ponto" and date.today().weekday() < 5
+              and not configuracoes.carregar(self.config_path)["pit_automatico"]):
+            # Com o PIT automático ligado, o app registra sozinho: sem botão.
+            botao = (executor.ACOES["registrar_pit"], {plataforma.EXTRA_ACAO: "registrar_pit"})
         try:
-            ident = list(executor.ACOES).index(acao) + 1  # uma por ação
-            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo, ident)
+            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo,
+                                 self._ident_notificacao(acao), botao=botao)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
+
+    def _agendar_lembrete(self, agora=None):
+        """Agenda o lembrete de fechar o ponto, contado a partir da abertura.
+
+        Se já há um lembrete pendente (o ponto foi aberto de novo, ou "já estava
+        aberto"), ele fica como está, em vez de ser empurrado para mais tarde.
+        """
+        preferencias = configuracoes.carregar(self.config_path)
+        tempo = configuracoes.tempo_lembrete(preferencias["lembrete_tempo"])
+        if not preferencias["lembrete_fechar"] or tempo is None:
+            return
+        agora = agora or datetime.now()
+        if configuracoes.lembrete_pendente(self.lembrete_path, agora):
+            return
+        quando = agora + tempo
+        try:
+            plataforma.agendar_lembrete(
+                self, quando, "Ponto ainda aberto",
+                f"O ponto foi aberto às {agora:%H:%M} e ainda não foi fechado.",
+            )
+        except Exception as exc:
+            print("Erro ao agendar o lembrete:", exc)
+            return
+        configuracoes.registrar_lembrete(self.lembrete_path, quando)
+
+    def _cancelar_lembrete(self):
+        configuracoes.apagar_lembrete(self.lembrete_path)
+        try:
+            plataforma.cancelar_lembrete(self)
+        except Exception as exc:
+            print("Erro ao cancelar o lembrete:", exc)
+
+    @staticmethod
+    def _ident_notificacao(acao):
+        """Uma notificação por ação: a nova substitui a anterior da mesma ação."""
+        return list(executor.ACOES).index(acao) + 1
 
     def _pedir_permissao_notificacoes(self):
         """No Android 13+, pergunta uma vez se o app pode notificar."""
@@ -212,23 +310,58 @@ class Ponto(toga.App):
             plataforma.preenchimento(entrada, "username" if campo == "SIGRH_USER" else "password")
             filhos += [toga.Label(rotulo), entrada]
 
+        preferencias = configuracoes.carregar(self.config_path)
         self.observacao_pit = toga.TextInput(
-            value=configuracoes.carregar(self.config_path)["observacao_pit"],
+            value=preferencias["observacao_pit"],
             style=Pack(margin_bottom=8),
         )
         plataforma.preenchimento(self.observacao_pit)
         filhos += [toga.Label("Observação do PIT"), self.observacao_pit]
 
+        self.pit_automatico = toga.Selection(
+            items=list(PIT_AUTOMATICO.values()),
+            value=PIT_AUTOMATICO.get(preferencias["pit_automatico"], PIT_AUTOMATICO[0]),
+            on_change=self._explicar_pit_automatico,
+            style=Pack(margin_bottom=4),
+        )
+        self.explicacao_pit = toga.Label("", style=Pack(margin_bottom=8, font_size=12))
+        self._explicar_pit_automatico(self.pit_automatico)
+        filhos += [toga.Label("Registrar o PIT do dia automaticamente"),
+                   self.pit_automatico, self.explicacao_pit]
+
         self.notificacoes = toga.Switch(
             "Notificar o resultado de cada execução",
-            value=configuracoes.carregar(self.config_path)["notificacoes"],
+            value=preferencias["notificacoes"],
             style=Pack(margin=(8, 0)),
         )
         filhos.append(self.notificacoes)
 
+        self.lembrete_fechar = toga.Switch(
+            "Lembrar de fechar o ponto",
+            value=preferencias["lembrete_fechar"],
+            style=Pack(margin=(8, 0)),
+        )
+        self.lembrete_tempo = toga.TextInput(
+            value=preferencias["lembrete_tempo"], placeholder="hh:mm",
+            on_change=self._mascara(mascara.formatar_hora), style=Pack(width=88),
+        )
+        plataforma.campo_de_hora(self.lembrete_tempo)
+        plataforma.preenchimento(self.lembrete_tempo)
+        filhos += [
+            self.lembrete_fechar,
+            toga.Box(
+                children=[
+                    toga.Label("Avisar quanto tempo depois de abrir",
+                               style=Pack(flex=1, margin_right=8)),
+                    self.lembrete_tempo,
+                ],
+                style=Pack(direction=ROW, align_items="center", margin_bottom=8),
+            ),
+        ]
+
         self.verificar_atualizacoes = toga.Switch(
             "Verificar atualizações ao abrir o app",
-            value=configuracoes.carregar(self.config_path)["verificar_atualizacoes"],
+            value=preferencias["verificar_atualizacoes"],
             style=Pack(margin=(8, 0)),
         )
         filhos += [
@@ -256,15 +389,35 @@ class Ponto(toga.App):
                 "Credenciais incompletas", "Preencha: " + ", ".join(falta) + "."
             ))
             return
+        tempo = self.lembrete_tempo.value.strip()
+        if self.lembrete_fechar.value and configuracoes.tempo_lembrete(tempo) is None:
+            await self.main_window.dialog(toga.ErrorDialog(
+                "Tempo inválido",
+                f"{tempo!r} não é um tempo no formato hh:mm (ex.: 01:40), entre 00:01 e 23:59.",
+            ))
+            return
         credenciais.salvar(self.cred_path, novas)
         configuracoes.salvar(self.config_path, {
             "notificacoes": self.notificacoes.value,
+            "lembrete_fechar": self.lembrete_fechar.value,
+            "lembrete_tempo": tempo if configuracoes.tempo_lembrete(tempo)
+                              else configuracoes.PADRAO["lembrete_tempo"],
             "verificar_atualizacoes": self.verificar_atualizacoes.value,
             "observacao_pit": self.observacao_pit.value.strip() or configuracoes.PADRAO["observacao_pit"],
+            "pit_automatico": self._opcao_pit_automatico(),
         })
-        if self.notificacoes.value:
+        if not self.lembrete_fechar.value:
+            self._cancelar_lembrete()
+        if self.notificacoes.value or self.lembrete_fechar.value:
             self._pedir_permissao_notificacoes()
         self.mostrar_principal()
+
+    def _opcao_pit_automatico(self):
+        return next(n for n, texto in PIT_AUTOMATICO.items() if texto == self.pit_automatico.value)
+
+    def _explicar_pit_automatico(self, widget, **kwargs):
+        """Texto abaixo da seleção, conforme a opção escolhida."""
+        self.explicacao_pit.text = EXPLICACAO_PIT_AUTOMATICO[self._opcao_pit_automatico()]
 
     async def _verificar_agora(self, widget, **kwargs):
         await self.verificar_atualizacao(avisar_sem_novidade=True)
