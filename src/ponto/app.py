@@ -137,6 +137,7 @@ class Ponto(toga.App):
 
         # PIT do dia (sem data ou com a data de hoje) só depois de fechar o ponto.
         hoje = not args or datetime.strptime(args[0], "%d/%m/%Y").date() == date.today()
+        rotulo = executor.ACOES[acao] + (f" ({args[0]})" if args else "")
         if acao == "registrar_pit" and hoje and not configuracoes.fechou_no_dia(self.fechamento_path):
             mesmo_assim = await self.main_window.dialog(plataforma.confirmacao(
                 "Ponto não fechado",
@@ -147,12 +148,13 @@ class Ponto(toga.App):
             ))
             if not mesmo_assim:
                 return
+        if acao == "registrar_pit":
+            args += ("--obs", configuracoes.carregar(self.config_path)["observacao_pit"])
 
         self.rodando = True
         for botao in self.botoes:
             botao.enabled = False
         self.saida.value = ""
-        rotulo = executor.ACOES[acao] + (f" ({args[0]})" if args else "")
         self.status.text = f"Executando: {rotulo}…"
 
         loop = asyncio.get_running_loop()
@@ -170,7 +172,7 @@ class Ponto(toga.App):
             self.status.text = f"{rotulo}: {resultado}."
             if acao == "fechar_ponto" and codigo == 0:
                 configuracoes.registrar_fechamento(self.fechamento_path)
-            if args and codigo == 0:
+            if acao == "registrar_pit" and data and codigo == 0:
                 self.data_pit.value = ""
         finally:
             self.rodando = False
@@ -205,6 +207,12 @@ class Ponto(toga.App):
                 style=Pack(margin_bottom=8),
             ))
 
+        self.observacao_pit = toga.TextInput(
+            value=configuracoes.carregar(self.config_path)["observacao_pit"],
+            style=Pack(margin_bottom=8),
+        )
+        filhos += [toga.Label("Observação do PIT"), self.observacao_pit]
+
         self.verificar_atualizacoes = toga.Switch(
             "Verificar atualizações ao abrir o app",
             value=configuracoes.carregar(self.config_path)["verificar_atualizacoes"],
@@ -236,8 +244,10 @@ class Ponto(toga.App):
             ))
             return
         credenciais.salvar(self.cred_path, novas)
-        configuracoes.salvar(self.config_path,
-                             {"verificar_atualizacoes": self.verificar_atualizacoes.value})
+        configuracoes.salvar(self.config_path, {
+            "verificar_atualizacoes": self.verificar_atualizacoes.value,
+            "observacao_pit": self.observacao_pit.value.strip() or configuracoes.PADRAO["observacao_pit"],
+        })
         self.mostrar_principal()
 
     async def _verificar_agora(self, widget, **kwargs):
