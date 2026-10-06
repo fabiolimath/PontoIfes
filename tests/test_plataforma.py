@@ -112,6 +112,9 @@ class FakeGerenciador:
     def notify(self, ident, notificacao):
         self.notificacoes[ident] = notificacao
 
+    def cancel(self, ident):
+        self.notificacoes.pop(ident, None)
+
 
 class FakeAtividade:
     def __init__(self, intent=None):
@@ -240,6 +243,7 @@ def test_fora_do_android_sem_notificacao():
     app = types.SimpleNamespace(_impl=None)
     assert plataforma.notificar(app, "t", "x") is False
     assert plataforma.pedir_permissao_notificacoes(app) is False
+    assert plataforma.cancelar_notificacao(app, 1) is False
 
 
 def test_notificar(android):
@@ -311,3 +315,12 @@ def test_preenchimento_automatico(android):
     assert plataforma.preenchimento(types.SimpleNamespace(_impl=types.SimpleNamespace(native=observacao)))
     assert (usuario.dicas, usuario.importancia) == (("username",), 1)
     assert (observacao.dicas, observacao.importancia) == (None, 2)
+
+
+def test_cancelar_notificacao(android):
+    atividade = FakeAtividade()
+    atividade.gerenciador = FakeGerenciador()
+    app = android(atividade)
+    plataforma.notificar(app, "Abrir ponto: falhou.", "❌", 1)
+    assert plataforma.cancelar_notificacao(app, 1)
+    assert atividade.gerenciador.notificacoes == {}

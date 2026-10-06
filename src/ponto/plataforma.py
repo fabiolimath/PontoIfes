@@ -221,6 +221,17 @@ def notificar(app, titulo, texto, ident=1, tentar_de_novo=None):
     return True
 
 
+def cancelar_notificacao(app, ident):
+    """Apaga a notificação `ident`, se estiver na tela; devolve False fora do Android."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.content import Context
+
+    atividade.getSystemService(Context.NOTIFICATION_SERVICE).cancel(ident)
+    return True
+
+
 def cursor_no_fim(entrada):
     """Põe o cursor no fim do texto; no Android, trocar o texto o leva ao início."""
     try:

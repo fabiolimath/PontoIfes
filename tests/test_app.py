@@ -290,6 +290,19 @@ def test_falha_notifica_com_tentar_de_novo(app, tmp_path, monkeypatch):
     assert notificacoes == [{"tentar_de_novo": {"acao": "registrar_pit", "data": "02/10/2026"}}]
 
 
+def test_nova_execucao_apaga_a_notificacao_anterior(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    eventos = []
+    monkeypatch.setattr(plataforma, "cancelar_notificacao", lambda app, i: eventos.append(("apaga", i)))
+    monkeypatch.setattr(plataforma, "notificar", lambda app, t, x, i, **k: eventos.append(("mostra", i)))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "import sys\nsys.exit(1)\n")
+
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert eventos == [("apaga", 1), ("mostra", 1)]
+
+
 def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):
     from ponto import plataforma
 

@@ -148,6 +148,12 @@ class Ponto(toga.App):
             args += ("--obs", configuracoes.carregar(self.config_path)["observacao_pit"])
 
         self.rodando = True
+        # Some a notificação anterior desta ação: a do resultado novo aparece de novo,
+        # em vez de só substituir em silêncio a que ainda estava na tela.
+        try:
+            plataforma.cancelar_notificacao(self, self._ident_notificacao(acao))
+        except Exception as exc:
+            print("Erro ao apagar a notificação:", exc)
         for botao in self.botoes:
             botao.enabled = False
         self.saida.value = ""
@@ -189,11 +195,16 @@ class Ponto(toga.App):
             if acao == "registrar_pit" and data:
                 repetir[plataforma.EXTRA_DATA] = data
         try:
-            ident = list(executor.ACOES).index(acao) + 1  # uma por ação
-            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo, ident,
+            plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo,
+                                 self._ident_notificacao(acao),
                                  tentar_de_novo=repetir)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
+
+    @staticmethod
+    def _ident_notificacao(acao):
+        """Uma notificação por ação: a nova substitui a anterior da mesma ação."""
+        return list(executor.ACOES).index(acao) + 1
 
     def _pedir_permissao_notificacoes(self):
         """No Android 13+, pergunta uma vez se o app pode notificar."""
