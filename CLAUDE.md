@@ -30,7 +30,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
    Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver` em Java; fechar o
    ponto com sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`).
 5. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
-6. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
+6. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis; ícone de
+   cada um com o símbolo vermelho (play, stop, relógio). O emblema pequeno do canto é posto pelo
+   launcher (o ícone do app) e não dá para mudar.
 7. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
    `registrar_pit`), ou o mesmo valor no dado (URI) do intent. Usado por Rotinas da Samsung e Tasker.
    - Tasker: ação **Executar app**, campo **Dado** = `abrir_ponto`, com **Sempre Iniciar Nova Cópia**
