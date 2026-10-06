@@ -161,3 +161,25 @@ def test_sem_credenciais(monkeypatch, capsys):
     monkeypatch.delenv("SIGRH_USER", raising=False)
     monkeypatch.delenv("SIGRH_PASS", raising=False)
     assert ap.main([]) == 1
+
+
+# Como na captura sigrh.loginFora: o erro já vem na tela do ponto, logo após o login.
+ERRO_IP = ("""<ul class="erros"><li>O Endereço IP de seu computador não tem autorização para registrar """
+           """o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração do Sistema."""
+           """</li></ul>""")
+
+
+def test_fora_do_campus_nao_envia_e_tenta_de_novo(sigrh, capsys):
+    falso = sigrh(apos_login=ERRO_IP + PONTO_FECHADO)
+    assert ap.main([]) == 1
+    assert falso.registros() == []
+    assert sum(1 for c in falso.chamadas if c[1] == ap.LOGIN_URL and c[0] == "POST") == ap.TENTATIVAS
+    ultima = capsys.readouterr().out.splitlines()[-1]
+    assert "fora da rede do campus" in ultima and "Wi-Fi do campus" in ultima
+
+
+def test_fora_do_campus_na_resposta_do_registro(sigrh, capsys):
+    falso = sigrh(registro=ERRO_IP + PONTO_FECHADO)
+    assert ap.main([]) == 1
+    assert len(falso.registros()) == 1
+    assert "fora da rede do campus" in capsys.readouterr().out

@@ -8,8 +8,10 @@ opcionais, para a notificação).
 Depois do login, o SIGRH mostra a tela do ponto eletrônico com o botão
 "Registrar Entrada". O script envia esse formulário e só considera a entrada
 registrada se a resposta trouxer "Operação realizada com sucesso" (ou já
-mostrar o botão "Registrar Saída"). Fora da rede do campus a tela do ponto
-pode não aparecer ou vir com erro: o script avisa e sai com código 1.
+mostrar o botão "Registrar Saída"). Fora da rede do campus o SIGRH já mostra,
+na tela do ponto, "O Endereço IP de seu computador não tem autorização para
+registrar o Ponto Eletrônico": o script não envia o formulário, tenta de novo
+(a Wi-Fi pode estar conectando) e, se persistir, avisa e sai com código 1.
 """
 
 import os
@@ -29,6 +31,9 @@ BTN_ENTRADA = FORM + ":idBtnRegistrarEntrada"
 BTN_SAIDA = FORM + ":idBtnRegistrarSaida"
 
 DICA_WIFI = "Confira se o celular está conectado à Wi-Fi do campus."
+FORA_DA_REDE = "fora da rede do campus: o SIGRH não aceita o ponto deste endereço IP. " + DICA_WIFI
+# Trecho da mensagem do SIGRH quando o IP não está liberado (ver captura sigrh.loginFora).
+ERRO_DE_IP = re.compile(r"endere.o ip.*n.o tem autoriza", re.I | re.S)
 # Palavras que, numa mensagem de erro do SIGRH, indicam restrição de rede.
 SINAIS_DE_REDE = ("rede", " ip", "endereço", "local", "computador", "máquina", "permitid", "autorizad")
 
@@ -43,6 +48,10 @@ class Recusado(Exception):
 
 class EnvioIncerto(Exception):
     """Falhou depois de enviar o formulário: não se sabe se a entrada ficou registrada."""
+
+
+class ForaDaRede(Exception):
+    """O IP não é do campus. Repete-se: logo depois de um gatilho a Wi-Fi pode estar conectando."""
 
 
 class JaAberto(Exception):
@@ -154,6 +163,8 @@ def registrar_entrada(sessao, pagina):
     """Clica em "Registrar Entrada" e confere a resposta; devolve a página final."""
     if tem_botao(pagina, BTN_SAIDA):
         raise JaAberto(descrever(pagina))
+    if any(ERRO_DE_IP.search(texto) for texto in erros(pagina)):
+        raise ForaDaRede(FORA_DA_REDE)
     if not tem_botao(pagina, BTN_ENTRADA):
         problemas = erros(pagina)
         raise Recusado(com_dica(problemas) if problemas
@@ -172,6 +183,8 @@ def registrar_entrada(sessao, pagina):
 
     pagina = sopa(resp)
     problemas = erros(pagina)
+    if any(ERRO_DE_IP.search(texto) for texto in problemas):
+        raise Recusado(FORA_DA_REDE)
     if problemas:
         raise Recusado(com_dica(problemas))
     sucesso = any("sucesso" in texto.lower() for texto in mensagens(pagina, "info"))
