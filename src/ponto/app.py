@@ -3,7 +3,7 @@ Ponto: abre e fecha o ponto e registra o PIT no SIGRH.
 """
 
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import toga
 from toga.style.pack import COLUMN, ROW, Pack
@@ -18,6 +18,7 @@ class Ponto(toga.App):
         self.log_path = dados / "ponto.log"
         self.config_path = dados / "configuracoes.json"
         self.fechamento_path = dados / "ultimo_fechamento.txt"
+        self.lembrete_path = dados / "lembrete.txt"
         self.rodando = False
 
         self.main_window = toga.MainWindow(title=self.formal_name)
@@ -41,7 +42,8 @@ class Ponto(toga.App):
             return
         preferencias = configuracoes.carregar(self.config_path)
         # Na 1ª execução, a permissão é pedida ao salvar as configurações.
-        if preferencias["notificacoes"] and credenciais.carregar(self.cred_path) is not None:
+        notifica = preferencias["notificacoes"] or preferencias["lembrete_fechar"]
+        if notifica and credenciais.carregar(self.cred_path) is not None:
             self._pedir_permissao_notificacoes()
         if preferencias["verificar_atualizacoes"]:
             self.loop.create_task(self.verificar_atualizacao(avisar_sem_novidade=False))
@@ -173,8 +175,11 @@ class Ponto(toga.App):
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
             self._notificar(acao, self.status.text, saida, codigo, data)
+            if acao == "abrir_ponto" and codigo == 0:
+                self._agendar_lembrete()
             if acao == "fechar_ponto" and codigo == 0:
                 configuracoes.registrar_fechamento(self.fechamento_path)
+                self._cancelar_lembrete()
             if acao == "registrar_pit" and data and codigo == 0:
                 self.data_pit.value = ""
         finally:
@@ -200,6 +205,37 @@ class Ponto(toga.App):
                                  tentar_de_novo=repetir)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
+
+    def _agendar_lembrete(self, agora=None):
+        """Agenda o lembrete de fechar o ponto, contado a partir da abertura.
+
+        Se já há um lembrete pendente (o ponto foi aberto de novo, ou "já estava
+        aberto"), ele fica como está, em vez de ser empurrado para mais tarde.
+        """
+        preferencias = configuracoes.carregar(self.config_path)
+        tempo = configuracoes.tempo_lembrete(preferencias["lembrete_tempo"])
+        if not preferencias["lembrete_fechar"] or tempo is None:
+            return
+        agora = agora or datetime.now()
+        if configuracoes.lembrete_pendente(self.lembrete_path, agora):
+            return
+        quando = agora + tempo
+        try:
+            plataforma.agendar_lembrete(
+                self, quando, "Ponto ainda aberto",
+                f"O ponto foi aberto às {agora:%H:%M} e ainda não foi fechado.",
+            )
+        except Exception as exc:
+            print("Erro ao agendar o lembrete:", exc)
+            return
+        configuracoes.registrar_lembrete(self.lembrete_path, quando)
+
+    def _cancelar_lembrete(self):
+        configuracoes.apagar_lembrete(self.lembrete_path)
+        try:
+            plataforma.cancelar_lembrete(self)
+        except Exception as exc:
+            print("Erro ao cancelar o lembrete:", exc)
 
     @staticmethod
     def _ident_notificacao(acao):
@@ -235,8 +271,9 @@ class Ponto(toga.App):
             plataforma.preenchimento(entrada, "username" if campo == "SIGRH_USER" else "password")
             filhos += [toga.Label(rotulo), entrada]
 
+        preferencias = configuracoes.carregar(self.config_path)
         self.observacao_pit = toga.TextInput(
-            value=configuracoes.carregar(self.config_path)["observacao_pit"],
+            value=preferencias["observacao_pit"],
             style=Pack(margin_bottom=8),
         )
         plataforma.preenchimento(self.observacao_pit)
@@ -244,14 +281,30 @@ class Ponto(toga.App):
 
         self.notificacoes = toga.Switch(
             "Notificar o resultado de cada execução",
-            value=configuracoes.carregar(self.config_path)["notificacoes"],
+            value=preferencias["notificacoes"],
             style=Pack(margin=(8, 0)),
         )
         filhos.append(self.notificacoes)
 
+        self.lembrete_fechar = toga.Switch(
+            "Lembrar de fechar o ponto",
+            value=preferencias["lembrete_fechar"],
+            style=Pack(margin=(8, 0)),
+        )
+        self.lembrete_tempo = toga.TextInput(
+            value=preferencias["lembrete_tempo"], placeholder="hh:mm", style=Pack(margin_bottom=8),
+        )
+        plataforma.campo_de_hora(self.lembrete_tempo)
+        plataforma.preenchimento(self.lembrete_tempo)
+        filhos += [
+            self.lembrete_fechar,
+            toga.Label("Avisar quanto tempo depois de abrir (hh:mm)"),
+            self.lembrete_tempo,
+        ]
+
         self.verificar_atualizacoes = toga.Switch(
             "Verificar atualizações ao abrir o app",
-            value=configuracoes.carregar(self.config_path)["verificar_atualizacoes"],
+            value=preferencias["verificar_atualizacoes"],
             style=Pack(margin=(8, 0)),
         )
         filhos += [
@@ -279,13 +332,25 @@ class Ponto(toga.App):
                 "Credenciais incompletas", "Preencha: " + ", ".join(falta) + "."
             ))
             return
+        tempo = self.lembrete_tempo.value.strip()
+        if self.lembrete_fechar.value and configuracoes.tempo_lembrete(tempo) is None:
+            await self.main_window.dialog(toga.ErrorDialog(
+                "Tempo inválido",
+                f"{tempo!r} não é um tempo no formato hh:mm (ex.: 01:40), entre 00:01 e 23:59.",
+            ))
+            return
         credenciais.salvar(self.cred_path, novas)
         configuracoes.salvar(self.config_path, {
             "notificacoes": self.notificacoes.value,
+            "lembrete_fechar": self.lembrete_fechar.value,
+            "lembrete_tempo": tempo if configuracoes.tempo_lembrete(tempo)
+                              else configuracoes.PADRAO["lembrete_tempo"],
             "verificar_atualizacoes": self.verificar_atualizacoes.value,
             "observacao_pit": self.observacao_pit.value.strip() or configuracoes.PADRAO["observacao_pit"],
         })
-        if self.notificacoes.value:
+        if not self.lembrete_fechar.value:
+            self._cancelar_lembrete()
+        if self.notificacoes.value or self.lembrete_fechar.value:
             self._pedir_permissao_notificacoes()
         self.mostrar_principal()
 

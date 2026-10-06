@@ -20,9 +20,14 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
    e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
    `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK).
-4. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
-5. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
-6. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
+4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
+   (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze; perde-se ao
+   reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:40, editável nas
+   Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver` em Java; fechar o
+   ponto com sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`).
+5. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
+6. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis.
+7. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
    `registrar_pit`), ou o mesmo valor no dado (URI) do intent. Usado por Rotinas da Samsung e Tasker.
    - Tasker: ação **Executar app**, campo **Dado** = `abrir_ponto`, com **Sempre Iniciar Nova Cópia**
      marcado (sem isso, com o app aberto, ele só vem para a frente e não executa).
@@ -37,6 +42,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 - `src/ponto/plataforma.py` — código específico do Android (intent, área de transferência,
   notificações, teclados); no PC devolve valores neutros.
 - `src/ponto/scripts/` — os três scripts (leem `SIGRH_USER` e `SIGRH_PASS` do ambiente).
+- `android/java/` — `LembreteReceiver.java`, que mostra a notificação do lembrete (incluído no
+  Gradle por `build_gradle_extra_content` e no manifesto pelo `pyproject.toml`).
 - `android/res/` — atalhos de launcher (`xml/shortcuts.xml`, `values/atalhos.xml`) e ícone das
   notificações (`drawable/ic_notificacao.xml`).
 - `android/release.sh` — empacota, alinha e assina o APK release → `dist/ponto-ifes.apk`.

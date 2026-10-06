@@ -116,6 +116,19 @@ class FakeGerenciador:
         self.notificacoes.pop(ident, None)
 
 
+class FakeAlarmes:
+    def __init__(self):
+        self.agendados = {}
+
+    def setAndAllowWhileIdle(self, tipo, quando_ms, pendente):
+        _, codigo, intent = pendente
+        self.agendados[(intent.classe, codigo)] = (tipo, quando_ms, intent.extras)
+
+    def cancel(self, pendente):
+        _, codigo, intent = pendente
+        self.agendados.pop((intent.classe, codigo), None)
+
+
 class FakeAtividade:
     def __init__(self, intent=None):
         self.intent = intent
@@ -133,10 +146,13 @@ class FakeAtividade:
     def getSystemService(self, nome):
         if nome == "notification":
             return self.gerenciador
+        if nome == "alarm":
+            return self.alarmes
         assert nome == "shortcut"
         return types.SimpleNamespace(setDynamicShortcuts=lambda lista: setattr(self, "atalhos", lista))
 
     gerenciador = None
+    alarmes = None
     permissao = -1
 
     def getPackageName(self):
@@ -163,7 +179,8 @@ def android(monkeypatch):
     monkeypatch.setitem(sys.modules, "android", None)
     modulo("android.content", Intent=FakeIntent,
            Context=types.SimpleNamespace(SHORTCUT_SERVICE="shortcut",
-                                         NOTIFICATION_SERVICE="notification"))
+                                         NOTIFICATION_SERVICE="notification",
+                                         ALARM_SERVICE="alarm"))
     modulo("android.content.pm", ShortcutInfo=types.SimpleNamespace(Builder=FakeBuilder),
            PackageManager=types.SimpleNamespace(PERMISSION_GRANTED=0))
     modulo("android.view", View=types.SimpleNamespace(IMPORTANT_FOR_AUTOFILL_YES=1,
@@ -174,11 +191,14 @@ def android(monkeypatch):
            NotificationManager=types.SimpleNamespace(IMPORTANCE_DEFAULT=3),
            PendingIntent=types.SimpleNamespace(
                FLAG_IMMUTABLE=0x04000000, FLAG_UPDATE_CURRENT=0x08000000,
-               getActivity=lambda ctx, codigo, intent, flags: ("pendente", intent)))
+               getActivity=lambda ctx, codigo, intent, flags: ("pendente", intent),
+               getBroadcast=lambda ctx, codigo, intent, flags: ("difusao", codigo, intent)),
+           AlarmManager=types.SimpleNamespace(RTC_WAKEUP=0))
     modulo("android.graphics.drawable",
            Icon=types.SimpleNamespace(createWithResource=lambda ctx, res: f"icone:{res}"))
     modulo("java.util", ArrayList=FakeArrayList)
-    modulo("android.text", InputType=types.SimpleNamespace(TYPE_CLASS_NUMBER=2))
+    modulo("android.text", InputType=types.SimpleNamespace(
+        TYPE_CLASS_NUMBER=2, TYPE_CLASS_DATETIME=4, TYPE_DATETIME_VARIATION_TIME=32))
 
     def app_com(atividade):
         return types.SimpleNamespace(_impl=types.SimpleNamespace(native=atividade))
@@ -324,3 +344,39 @@ def test_cancelar_notificacao(android):
     plataforma.notificar(app, "Abrir ponto: falhou.", "❌", 1)
     assert plataforma.cancelar_notificacao(app, 1)
     assert atividade.gerenciador.notificacoes == {}
+
+
+def test_campo_de_hora(android):
+    tipos = []
+    entrada = types.SimpleNamespace(_impl=types.SimpleNamespace(
+        native=types.SimpleNamespace(setInputType=tipos.append)))
+    assert plataforma.campo_de_hora(entrada)
+    assert tipos == [4 | 32]
+
+
+def test_agendar_e_cancelar_lembrete(android):
+    from datetime import datetime, timezone
+
+    atividade = FakeAtividade()
+    atividade.gerenciador = FakeGerenciador()
+    atividade.alarmes = FakeAlarmes()
+    app = android(atividade)
+    quando = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+
+    assert plataforma.agendar_lembrete(app, quando, "Ponto ainda aberto", "Aberto às 10:20.")
+    receptor = ("io.github.fabiolimath.ponto.LembreteReceiver", 0)
+    assert atividade.alarmes.agendados == {receptor: (
+        0, 1791288000000, {"titulo": "Ponto ainda aberto", "texto": "Aberto às 10:20."})}
+
+    atividade.gerenciador.notify(plataforma.IDENT_LEMBRETE, {"ContentTitle": "Ponto ainda aberto"})
+    assert plataforma.cancelar_lembrete(app)
+    assert atividade.alarmes.agendados == {}
+    assert atividade.gerenciador.notificacoes == {}
+
+
+def test_lembrete_fora_do_android():
+    from datetime import datetime
+
+    app = types.SimpleNamespace(_impl=None)
+    assert plataforma.agendar_lembrete(app, datetime.now(), "t", "x") is False
+    assert plataforma.cancelar_lembrete(app) is False

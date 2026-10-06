@@ -70,11 +70,17 @@ build_gradle_dependencies = [
 android_manifest_activity_extra_content = """
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
 """
+# Receptor do alarme do lembrete de fechar o ponto (android/java), que mostra a
+# notificação sem o Python, com o app fechado.
+android_manifest_application_extra_content = """
+        <receiver android:name="io.github.fabiolimath.ponto.LembreteReceiver" android:exported="false" />
+"""
 build_gradle_extra_content = """
 android {
     sourceSets {
         main {
             res.srcDir(new File(rootProject.projectDir, "../../../../android/res"))
+            java.srcDir(new File(rootProject.projectDir, "../../../../android/java"))
         }
     }
 }

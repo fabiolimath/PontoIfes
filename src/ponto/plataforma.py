@@ -97,6 +97,18 @@ def campo_de_data(entrada):
     return True
 
 
+def campo_de_hora(entrada):
+    """Teclado numérico de horas (com ":") no campo de texto; só no Android."""
+    try:
+        from android.text import InputType
+    except ImportError:
+        return False
+    entrada._impl.native.setInputType(
+        InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME
+    )
+    return True
+
+
 def campo_numerico(entrada):
     """Teclado só com dígitos no campo de texto (ex.: usuário do SIGRH); só no Android.
 
@@ -229,6 +241,61 @@ def cancelar_notificacao(app, ident):
     from android.content import Context
 
     atividade.getSystemService(Context.NOTIFICATION_SERVICE).cancel(ident)
+    return True
+
+
+# -----------------------------------
+# LEMBRETE DE FECHAR O PONTO
+# -----------------------------------
+IDENT_LEMBRETE = 4  # o mesmo de LembreteReceiver.IDENT (android/java)
+RECEPTOR_LEMBRETE = "io.github.fabiolimath.ponto.LembreteReceiver"
+
+
+def _alarme_lembrete(atividade, titulo="", texto=""):
+    """PendingIntent do alarme que entrega o lembrete ao LembreteReceiver."""
+    from android.app import PendingIntent
+    from android.content import Intent
+
+    intent = Intent()
+    intent.setClassName(atividade, RECEPTOR_LEMBRETE)
+    intent.putExtra("titulo", titulo)
+    intent.putExtra("texto", texto)
+    return PendingIntent.getBroadcast(
+        atividade, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+
+def agendar_lembrete(app, quando, titulo, texto):
+    """Agenda a notificação do lembrete para o datetime `quando`.
+
+    Quem guarda o alarme é o próprio Android (AlarmManager), como um cron:
+    ele dispara com o app fechado ou suspenso. No modo de economia (Doze) pode
+    atrasar alguns minutos; e se perde ao reiniciar o celular.
+    Devolve False fora do Android.
+    """
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.app import AlarmManager
+    from android.content import Context
+
+    alarmes = atividade.getSystemService(Context.ALARM_SERVICE)
+    alarmes.setAndAllowWhileIdle(
+        AlarmManager.RTC_WAKEUP, int(quando.timestamp() * 1000),
+        _alarme_lembrete(atividade, titulo, texto),
+    )
+    return True
+
+
+def cancelar_lembrete(app):
+    """Desfaz o alarme do lembrete e apaga a notificação dele, se estiver na tela."""
+    atividade = _atividade(app)
+    if atividade is None:
+        return False
+    from android.content import Context
+
+    atividade.getSystemService(Context.ALARM_SERVICE).cancel(_alarme_lembrete(atividade))
+    atividade.getSystemService(Context.NOTIFICATION_SERVICE).cancel(IDENT_LEMBRETE)
     return True
 
 

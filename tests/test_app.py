@@ -227,9 +227,108 @@ def test_tela_de_configuracoes(app):
 
     assert app.main_window.content is app.tela_principal
     assert configuracoes.carregar(app.config_path) == {
-        "notificacoes": False, "verificar_atualizacoes": False,
-        "observacao_pit": "PIT segundo portaria"}
+        "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:40",
+        "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria"}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
+
+
+def test_configuracoes_do_lembrete(app, monkeypatch):
+    from ponto import plataforma
+
+    cancelados = []
+    monkeypatch.setattr(plataforma, "cancelar_lembrete", lambda app: cancelados.append(1))
+    dialogos = []
+    monkeypatch.setattr(app.main_window, "dialog", _dialogo_falso(dialogos, None))
+    app.campos["SIGRH_USER"].value = "a"
+    app.campos["SIGRH_PASS"].value = "b"
+    assert app.lembrete_fechar.value is True
+    assert app.lembrete_tempo.value == "01:40"
+
+    app.lembrete_tempo.value = "1h40"
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+    assert [type(d).__name__ for d in dialogos] == ["ErrorDialog"]
+    assert app.main_window.content is not app.tela_principal
+
+    app.lembrete_tempo.value = " 2:15 "
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+    assert configuracoes.carregar(app.config_path)["lembrete_tempo"] == "2:15"
+    assert cancelados == []
+
+    app.mostrar_configuracoes()
+    app.lembrete_fechar.value = False
+    app.lembrete_tempo.value = ""
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+    preferencias = configuracoes.carregar(app.config_path)
+    assert (preferencias["lembrete_fechar"], preferencias["lembrete_tempo"]) == (False, "01:40")
+    assert cancelados == [1]
+
+
+def _dialogo_falso(dialogos, resposta):
+    async def dialogo(d):
+        dialogos.append(d)
+        return resposta
+    return dialogo
+
+
+def test_abrir_ponto_agenda_o_lembrete(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    agendados = []
+    monkeypatch.setattr(plataforma, "agendar_lembrete", lambda app, *a: agendados.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "print('ok')\n")
+
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+    # Abrir de novo ("já estava aberto") não empurra o lembrete para mais tarde.
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert len(agendados) == 1
+    quando, titulo, texto = agendados[0]
+    assert titulo == "Ponto ainda aberto"
+    assert configuracoes.lembrete_pendente(app.lembrete_path) == quando.replace(microsecond=0)
+
+
+def test_lembrete_conta_do_horario_de_abertura(app, monkeypatch):
+    from datetime import datetime
+
+    from ponto import plataforma
+
+    agendados = []
+    monkeypatch.setattr(plataforma, "agendar_lembrete", lambda app, *a: agendados.append(a))
+    configuracoes.salvar(app.config_path, {"lembrete_tempo": "02:00"})
+
+    app._agendar_lembrete(datetime(2026, 10, 6, 7, 55))
+
+    assert agendados == [(datetime(2026, 10, 6, 9, 55), "Ponto ainda aberto",
+                          "O ponto foi aberto às 07:55 e ainda não foi fechado.")]
+
+
+def test_sem_lembrete_se_desligado_ou_se_abrir_falha(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    agendados = []
+    monkeypatch.setattr(plataforma, "agendar_lembrete", lambda app, *a: agendados.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto", "import sys\nsys.exit(1)\n")
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+    configuracoes.salvar(app.config_path, {"lembrete_fechar": False})
+    app._agendar_lembrete()
+
+    assert agendados == []
+
+
+def test_fechar_ponto_cancela_o_lembrete(app, tmp_path, monkeypatch):
+    from datetime import datetime, timedelta
+
+    from ponto import plataforma
+
+    cancelados = []
+    monkeypatch.setattr(plataforma, "cancelar_lembrete", lambda app: cancelados.append(1))
+    configuracoes.registrar_lembrete(app.lembrete_path, datetime.now() + timedelta(hours=1))
+    _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto", "print('fechou')\n")
+
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+
+    assert cancelados == [1]
+    assert configuracoes.lembrete_pendente(app.lembrete_path) is None
 
 
 def test_atualizacao_oferece_baixar(app, monkeypatch):
