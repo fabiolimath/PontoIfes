@@ -228,7 +228,8 @@ def test_tela_de_configuracoes(app):
     assert app.main_window.content is app.tela_principal
     assert configuracoes.carregar(app.config_path) == {
         "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:40",
-        "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria"}
+        "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria",
+        "pit_automatico": 0}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
 
 
@@ -471,3 +472,69 @@ def test_sobre_em_portugues_abre_o_site(app, monkeypatch):
     assert abertos == [atualizacao.URL_SITE]
     if toga.Command.ABOUT in app.commands:
         assert app.commands[toga.Command.ABOUT].text == "Sobre o Ponto"
+
+
+def test_opcao_do_pit_automatico(app):
+    from ponto.app import EXPLICACAO_PIT_AUTOMATICO
+
+    assert app.pit_automatico.value == "Não"
+    assert app.explicacao_pit.text == EXPLICACAO_PIT_AUTOMATICO[0]
+    app.pit_automatico.value = "No 2º fechamento do dia"
+    assert app.explicacao_pit.text == EXPLICACAO_PIT_AUTOMATICO[2]
+    app.campos["SIGRH_USER"].value = "a"
+    app.campos["SIGRH_PASS"].value = "b"
+
+    app.loop.run_until_complete(app.salvar_configuracoes(None))
+
+    assert configuracoes.carregar(app.config_path)["pit_automatico"] == 2
+    app.mostrar_configuracoes()
+    assert app.pit_automatico.value == "No 2º fechamento do dia"
+
+
+def _fechar_e_pit(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "fechar_ponto", "print('fechou')\n")
+    # O mesmo pacote de scripts falsos ganha o do PIT.
+    [pacote] = [p for p in tmp_path.glob("scripts_*") if (p / "fechar_ponto.py").exists()]
+    (pacote / "registrar_pit.py").write_text("import sys\nprint('PIT', sys.argv[1:])\n")
+
+
+@pytest.mark.parametrize("quando, pit_nas_vezes", [(0, []), (1, [1]), (2, [2])])
+def test_pit_automatico_no_fechamento_certo(app, tmp_path, monkeypatch, quando, pit_nas_vezes):
+    _fechar_e_pit(app, tmp_path, monkeypatch)
+    _hoje(monkeypatch, date(2026, 10, 6))  # terça
+    configuracoes.salvar(app.config_path, {"pit_automatico": quando})
+    app.data_pit.value = "02/10/2026"  # ignorada pelo PIT automático
+
+    registrou = []
+    for vez in (1, 2):
+        app.loop.run_until_complete(app.rodar("fechar_ponto"))
+        if "PIT" in app.saida.value:
+            registrou.append(vez)
+            assert app.saida.value.startswith("fechou\n")
+            assert "02/10/2026" not in app.saida.value
+            assert app.status.text == "Registrar PIT: concluído."
+
+    assert registrou == pit_nas_vezes
+
+
+def test_sem_pit_automatico_no_fim_de_semana(app, tmp_path, monkeypatch):
+    _fechar_e_pit(app, tmp_path, monkeypatch)
+    _hoje(monkeypatch, date(2026, 10, 10))  # sábado
+    configuracoes.salvar(app.config_path, {"pit_automatico": 1})
+
+    app.loop.run_until_complete(app.rodar("fechar_ponto"))
+
+    assert app.saida.value == "fechou\n"
+
+
+def test_pit_automatico_tira_o_botao_da_notificacao(app, monkeypatch):
+    from ponto import plataforma
+
+    botoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: botoes.append(k["botao"]))
+    _hoje(monkeypatch, date(2026, 10, 6))
+    configuracoes.salvar(app.config_path, {"pit_automatico": 2})
+
+    app._notificar("fechar_ponto", "Fechar ponto: concluído.", "ok")
+
+    assert botoes == [None]

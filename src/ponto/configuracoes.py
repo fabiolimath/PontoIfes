@@ -10,6 +10,9 @@ PADRAO = {
     "lembrete_tempo": "01:40",
     "verificar_atualizacoes": True,
     "observacao_pit": "Conforme PIT docente.",
+    # Registrar o PIT do dia sozinho ao fechar o ponto: 0 = não, 1 = no 1º
+    # fechamento do dia (quem não faz almoço), 2 = no 2º (quem fecha no almoço).
+    "pit_automatico": 0,
 }
 
 
@@ -28,17 +31,35 @@ def salvar(path, preferencias):
 
 
 def registrar_fechamento(path, dia=None):
-    """Anota que o ponto foi fechado com sucesso no dia (padrão: hoje)."""
+    """Anota que o ponto foi fechado com sucesso no dia (padrão: hoje).
+
+    Devolve quantas vezes o ponto foi fechado nesse dia, contando esta.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text((dia or date.today()).isoformat(), encoding="utf-8")
+    dia = dia or date.today()
+    vezes = fechamentos_no_dia(path, dia) + 1
+    path.write_text(f"{dia.isoformat()} {vezes}", encoding="utf-8")
+    return vezes
+
+
+def fechamentos_no_dia(path, dia=None):
+    """Quantas vezes o ponto foi fechado com sucesso no dia (padrão: hoje)."""
+    path = Path(path)
+    if not path.exists():
+        return 0
+    # "2026-10-06 2"; as versões antigas gravavam só a data (uma vez).
+    partes = path.read_text(encoding="utf-8").split()
+    if not partes or partes[0] != (dia or date.today()).isoformat():
+        return 0
+    try:
+        return int(partes[1]) if len(partes) > 1 else 1
+    except ValueError:
+        return 1
 
 
 def fechou_no_dia(path, dia=None):
-    path = Path(path)
-    if not path.exists():
-        return False
-    return path.read_text(encoding="utf-8").strip() == (dia or date.today()).isoformat()
+    return fechamentos_no_dia(path, dia) > 0
 
 
 def tempo_lembrete(texto):

@@ -10,6 +10,19 @@ from toga.style.pack import COLUMN, ROW, Pack
 
 from ponto import atualizacao, configuracoes, credenciais, executor, mascara, plataforma
 
+# Opções do PIT automático (configuracoes.PADRAO["pit_automatico"]).
+PIT_AUTOMATICO = {
+    0: "Não",
+    1: "No 1º fechamento do dia",
+    2: "No 2º fechamento do dia",
+}
+EXPLICACAO_PIT_AUTOMATICO = {
+    0: "Registre o PIT pelo botão do app ou pelo da notificação de ponto fechado.",
+    1: "Para quem fecha o ponto uma vez por dia: o PIT é registrado logo após o fechamento.",
+    2: "Para quem fecha o ponto no almoço: o PIT é registrado só após o 2º fechamento do dia.",
+}
+
+
 class Ponto(toga.App):
     def startup(self):
         dados = self.paths.data
@@ -119,7 +132,9 @@ class Ponto(toga.App):
         self.saida.value += texto
         self.saida.scroll_to_bottom()
 
-    async def rodar(self, acao):
+    async def rodar(self, acao, encadeado=False):
+        """Executa a ação. `encadeado`: PIT automático logo após fechar o ponto,
+        sempre do dia (ignora o campo de data) e sem apagar a saída do fechamento."""
         if self.rodando:
             return
         cred = credenciais.carregar(self.cred_path)
@@ -128,7 +143,7 @@ class Ponto(toga.App):
             return
 
         args = ()
-        data = self.data_pit.value.strip()
+        data = "" if encadeado else self.data_pit.value.strip()
         if acao == "registrar_pit" and data:
             try:
                 datetime.strptime(data, "%d/%m/%Y")
@@ -158,8 +173,9 @@ class Ponto(toga.App):
         self.rodando = True
         # Some a notificação anterior desta ação: a do resultado novo aparece de novo,
         # em vez de só substituir em silêncio a que ainda estava na tela.
-        # O PIT também apaga a do fechamento, que tem o botão "Registrar PIT".
-        apagar = [acao] + (["fechar_ponto"] if acao == "registrar_pit" else [])
+        # O PIT pelo botão também apaga a do fechamento, que tem o botão "Registrar PIT";
+        # o automático a mantém, com o resultado do fechamento.
+        apagar = [acao] + (["fechar_ponto"] if acao == "registrar_pit" and not encadeado else [])
         try:
             for outra in apagar:
                 plataforma.cancelar_notificacao(self, self._ident_notificacao(outra))
@@ -167,10 +183,11 @@ class Ponto(toga.App):
             print("Erro ao apagar a notificação:", exc)
         for botao in self.botoes:
             botao.enabled = False
-        self.saida.value = ""
+        self.saida.value = self.saida.value + "\n" if encadeado else ""
         self.status.text = f"Executando: {rotulo}…"
 
         loop = asyncio.get_running_loop()
+        pit_em_seguida = False
 
         def ao_escrever(texto):
             loop.call_soon_threadsafe(self._anexar, texto)
@@ -187,14 +204,22 @@ class Ponto(toga.App):
             if acao == "abrir_ponto" and codigo == 0:
                 self._agendar_lembrete()
             if acao == "fechar_ponto" and codigo == 0:
-                configuracoes.registrar_fechamento(self.fechamento_path)
+                vezes = configuracoes.registrar_fechamento(self.fechamento_path)
                 self._cancelar_lembrete()
+                pit_em_seguida = self._pit_automatico_agora(vezes)
             if acao == "registrar_pit" and data and codigo == 0:
                 self.data_pit.value = ""
         finally:
             self.rodando = False
             for botao in self.botoes:
                 botao.enabled = True
+        if pit_em_seguida:
+            await self.rodar("registrar_pit", encadeado=True)
+
+    def _pit_automatico_agora(self, vezes):
+        """Se o fechamento nº `vezes` do dia é o que registra o PIT sozinho (seg a sex)."""
+        quando = configuracoes.carregar(self.config_path)["pit_automatico"]
+        return quando in (1, 2) and vezes == quando and date.today().weekday() < 5
 
     def _notificar(self, acao, titulo, saida, codigo=0, data=""):
         """Notificação do sistema com o resultado (se ativada nas configurações).
@@ -210,7 +235,9 @@ class Ponto(toga.App):
             if acao == "registrar_pit" and data:
                 repetir[plataforma.EXTRA_DATA] = data
             botao = ("Tentar de novo", repetir)
-        elif acao == "fechar_ponto" and date.today().weekday() < 5:
+        elif (acao == "fechar_ponto" and date.today().weekday() < 5
+              and not configuracoes.carregar(self.config_path)["pit_automatico"]):
+            # Com o PIT automático ligado, o app registra sozinho: sem botão.
             botao = (executor.ACOES["registrar_pit"], {plataforma.EXTRA_ACAO: "registrar_pit"})
         try:
             plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo,
@@ -291,6 +318,17 @@ class Ponto(toga.App):
         plataforma.preenchimento(self.observacao_pit)
         filhos += [toga.Label("Observação do PIT"), self.observacao_pit]
 
+        self.pit_automatico = toga.Selection(
+            items=list(PIT_AUTOMATICO.values()),
+            value=PIT_AUTOMATICO.get(preferencias["pit_automatico"], PIT_AUTOMATICO[0]),
+            on_change=self._explicar_pit_automatico,
+            style=Pack(margin_bottom=4),
+        )
+        self.explicacao_pit = toga.Label("", style=Pack(margin_bottom=8, font_size=12))
+        self._explicar_pit_automatico(self.pit_automatico)
+        filhos += [toga.Label("Registrar o PIT do dia automaticamente"),
+                   self.pit_automatico, self.explicacao_pit]
+
         self.notificacoes = toga.Switch(
             "Notificar o resultado de cada execução",
             value=preferencias["notificacoes"],
@@ -366,12 +404,20 @@ class Ponto(toga.App):
                               else configuracoes.PADRAO["lembrete_tempo"],
             "verificar_atualizacoes": self.verificar_atualizacoes.value,
             "observacao_pit": self.observacao_pit.value.strip() or configuracoes.PADRAO["observacao_pit"],
+            "pit_automatico": self._opcao_pit_automatico(),
         })
         if not self.lembrete_fechar.value:
             self._cancelar_lembrete()
         if self.notificacoes.value or self.lembrete_fechar.value:
             self._pedir_permissao_notificacoes()
         self.mostrar_principal()
+
+    def _opcao_pit_automatico(self):
+        return next(n for n, texto in PIT_AUTOMATICO.items() if texto == self.pit_automatico.value)
+
+    def _explicar_pit_automatico(self, widget, **kwargs):
+        """Texto abaixo da seleção, conforme a opção escolhida."""
+        self.explicacao_pit.text = EXPLICACAO_PIT_AUTOMATICO[self._opcao_pit_automatico()]
 
     async def _verificar_agora(self, widget, **kwargs):
         await self.verificar_atualizacao(avisar_sem_novidade=True)

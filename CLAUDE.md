@@ -21,6 +21,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
    e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
    `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). Ao fechar o ponto com sucesso (seg a sex),
    botão **Registrar PIT** do dia; o PIT apaga essa notificação.
+   - **PIT automático** (Configurações: Não / No 1º / No 2º fechamento do dia): após o fechamento
+     nº N do dia (seg a sex), registra o PIT do dia em seguida; aí a notificação não tem o botão.
+     Os fechamentos do dia ficam em `ultimo_fechamento.txt` ("aaaa-mm-dd N").
 4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
    (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze; perde-se ao
    reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:40, editável nas

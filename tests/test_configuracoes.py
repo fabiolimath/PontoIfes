@@ -6,7 +6,8 @@ from ponto import atualizacao, configuracoes, mascara
 def test_preferencias_padrao_e_salvas(tmp_path):
     path = tmp_path / "c.json"
     padrao = {"notificacoes": True, "lembrete_fechar": True, "lembrete_tempo": "01:40",
-              "verificar_atualizacoes": True, "observacao_pit": "Conforme PIT docente."}
+              "verificar_atualizacoes": True, "observacao_pit": "Conforme PIT docente.",
+              "pit_automatico": 0}
     assert configuracoes.carregar(path) == padrao
     configuracoes.salvar(path, {"verificar_atualizacoes": False})
     assert configuracoes.carregar(path) == {**padrao, "verificar_atualizacoes": False}
@@ -36,6 +37,18 @@ def test_fechamento_vale_so_no_dia(tmp_path):
     configuracoes.registrar_fechamento(path, date(2026, 10, 3))
     assert not configuracoes.fechou_no_dia(path, date(2026, 10, 4))
     assert configuracoes.fechou_no_dia(path, date(2026, 10, 3))
+
+
+def test_conta_os_fechamentos_do_dia(tmp_path):
+    path = tmp_path / "f.txt"
+    assert configuracoes.registrar_fechamento(path, date(2026, 10, 5)) == 1
+    assert configuracoes.registrar_fechamento(path, date(2026, 10, 6)) == 1
+    assert configuracoes.registrar_fechamento(path, date(2026, 10, 6)) == 2
+    assert configuracoes.fechamentos_no_dia(path, date(2026, 10, 6)) == 2
+    assert configuracoes.fechamentos_no_dia(path, date(2026, 10, 7)) == 0
+    # Arquivo das versões anteriores: só a data.
+    path.write_text("2026-10-06")
+    assert configuracoes.fechamentos_no_dia(path, date(2026, 10, 6)) == 1
 
 
 def test_comparacao_de_versoes():
