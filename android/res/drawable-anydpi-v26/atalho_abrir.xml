@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ícone do atalho (Android 8+): fundo branco, como o do app, e o símbolo vermelho. -->
+<!-- Ícone do atalho (Android 8+): fundo branco, como o do app, e o símbolo verde. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@android:color/white" />
     <foreground android:drawable="@drawable/atalho_abrir_simbolo" />
