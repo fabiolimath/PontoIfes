@@ -94,6 +94,14 @@ sabem que é uma atualização) e publique o release no GitHub:
 gh release create v1.0.0 dist/ponto-ifes.apk --title "Ponto IFES 1.0.0" --notes "Primeira versão"
 ```
 
+### Testes e APK de teste em cada PR
+
+O workflow `.github/workflows/pr.yml` roda os testes em cada PR e, se passarem, gera o APK
+assinado com a chave do app e o publica no pré-release `teste`, sempre no mesmo endereço:
+<https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk>.
+Como a chave é a mesma, ele instala por cima do app. O pré-release não conta como "latest",
+então o site e o aviso de atualização continuam no último release oficial.
+
 ### Release automático (GitHub Actions)
 
 Com os segredos configurados, o workflow `.github/workflows/release.yml` compila, assina

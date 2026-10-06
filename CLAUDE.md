@@ -40,6 +40,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
   notificações (`drawable/ic_notificacao.xml`).
 - `android/release.sh` — empacota, alinha e assina o APK release → `dist/ponto-ifes.apk`.
 - `.github/workflows/release.yml` — build e publicação automáticos.
+- `.github/workflows/pr.yml` — em cada PR: testes e APK de teste assinado no pré-release `teste`.
 - `docs/` — site de instalação para usuários leigos (GitHub Pages, branch master, pasta /docs).
 - `tests/` — pytest: `PYTHONPATH=src python -m pytest -q tests`.
 
@@ -66,8 +67,11 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 ## Fluxo de trabalho
 
 - Só o Claude edita o código, por PRs (rascunho); o autor faz o merge no site e clica em Run workflow.
-- A cópia local do autor (fora da pasta do Mega) serve só para testar builds debug no celular via adb
-  (`briefcase run android`).
+- Para testar um PR, o autor instala no celular o APK de teste (mesma chave, instala por cima):
+  `https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk`. O pré-release
+  `teste` é sempre o do último PR que rodou e não conta como "latest".
+- A cópia local do autor (fora da pasta do Mega) ainda serve para builds debug via adb
+  (`briefcase run android -u -d SERIAL`), mas não é mais necessária para testar.
 
 ## Pendências
 
