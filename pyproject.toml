@@ -1,7 +1,7 @@
 [tool.briefcase]
 project_name = "Ponto"
 bundle = "io.github.fabiolimath"
-version = "1.0.10"
+version = "1.0.11"
 url = "https://github.com/fabiolimath/PontoIfes"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
@@ -55,6 +55,9 @@ requires = [
 
 # Notificações do sistema com o resultado (pedida em tempo de execução no Android 13+).
 permission."android.permission.POST_NOTIFICATIONS" = true
+
+# Cor de destaque (interruptores ligados, cursor): verde em vez do rosa padrão do Briefcase.
+accent_color = "#2E7D32"
 
 base_theme = "Theme.MaterialComponents.Light.DarkActionBar"
 
