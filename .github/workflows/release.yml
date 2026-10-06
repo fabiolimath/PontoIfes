@@ -1,6 +1,7 @@
 # Gera o APK assinado e publica o release vX.Y.Z, com X.Y.Z vindo do version do
-# pyproject.toml. Dispara pelo botão "Run workflow" na aba Actions (cria a tag)
-# ou ao enviar a tag vX.Y.Z pelo git.
+# pyproject.toml. Dispara sozinho a cada merge no master que aumente o version
+# (sem versão nova, termina sem publicar nada), pelo botão "Run workflow" na aba
+# Actions ou ao enviar a tag vX.Y.Z pelo git.
 # Segredos do repositório usados:
 #   ANDROID_KEYSTORE_BASE64    chave de assinatura (ponto-release.jks) em base64
 #   ANDROID_KEYSTORE_PASSWORD  senha da chave
@@ -9,7 +10,12 @@ name: Release
 on:
   workflow_dispatch:
   push:
+    branches: [master]
     tags: ["v*"]
+
+# Dois merges seguidos não publicam ao mesmo tempo.
+concurrency:
+  group: release
 
 permissions:
   contents: write
@@ -31,40 +37,53 @@ jobs:
           python-version: "3.12"
 
       - name: Conferir a versão
+        id: versao
         run: |
           versao=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
           tag="v$versao"
-          if [ "$GITHUB_EVENT_NAME" = push ]; then
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
             if [ "$tag" != "$GITHUB_REF_NAME" ]; then
               echo "::error::A tag $GITHUB_REF_NAME não bate com version = \"$versao\" no pyproject.toml"
               exit 1
             fi
           elif git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            if [ "$GITHUB_EVENT_NAME" = push ]; then
+              # Merge sem versão nova (só documentação, workflow...): nada a publicar.
+              echo "::notice::A versão $versao já foi publicada; nenhum release novo."
+              echo "publicar=nao" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "::error::A versão $versao já foi publicada. Aumente o version no pyproject.toml."
             exit 1
           fi
           echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "publicar=sim" >> "$GITHUB_OUTPUT"
 
-      - name: Preparar segredos
+      - if: steps.versao.outputs.publicar == 'sim'
+        name: Preparar segredos
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ponto-release.jks"
 
-      - name: Instalar o Briefcase
+      - if: steps.versao.outputs.publicar == 'sim'
+        name: Instalar o Briefcase
         run: pip install briefcase==0.4.5
 
-      - name: Criar o projeto Android
+      - if: steps.versao.outputs.publicar == 'sim'
+        name: Criar o projeto Android
         # "yes" aceita as licenças do Android SDK.
         run: yes | briefcase create android --no-input
 
-      - name: Gerar e assinar o APK
+      - if: steps.versao.outputs.publicar == 'sim'
+        name: Gerar e assinar o APK
         env:
           PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
           PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: android/release.sh
 
-      - name: Publicar o release
+      - if: steps.versao.outputs.publicar == 'sim'
+        name: Publicar o release
         env:
           GH_TOKEN: ${{ github.token }}
         # Pelo botão, a tag ainda não existe e é criada aqui, no commit compilado.

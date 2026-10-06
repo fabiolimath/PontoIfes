@@ -1,0 +1,114 @@
+# Em cada PR: roda os testes e, se passarem, gera o APK assinado com a chave do
+# app e o publica no pré-release "teste", sempre no mesmo endereço:
+#   https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk
+# Assinado com a mesma chave do release, instala por cima do app já instalado.
+# O pré-release não conta como "latest": o site e o aviso de atualização do app
+# continuam apontando para o último release oficial.
+name: PR
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Um push novo no mesmo PR cancela a rodada anterior.
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar as dependências
+        run: pip install pytest requests beautifulsoup4 "toga-core~=0.5.0" "toga-dummy~=0.5.0"
+
+      - name: Rodar os testes
+        run: PYTHONPATH=src python -m pytest -q tests
+
+      # O release sai sozinho no merge só se o version aumentar (release.yml).
+      - name: Conferir se o version aumentou
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch -q --depth=1 origin "$BASE"
+          versao() { sed -n 's/^version = "\(.*\)"/\1/p' | head -1; }
+          antes=$(git show "$BASE:pyproject.toml" | versao)
+          depois=$(versao < pyproject.toml)
+          if git diff --quiet "$BASE" HEAD -- src android pyproject.toml; then
+            echo "O app não mudou; o merge não gera release."
+          elif [ "$antes" = "$depois" ]; then
+            echo "::error::O app mudou, mas o version continua $depois. Aumente o version no pyproject.toml."
+            exit 1
+          else
+            echo "Versão $antes -> $depois: o merge publica o release v$depois."
+          fi
+
+  apk:
+    needs: testes
+    # PRs vindos de forks não recebem os segredos da chave.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Um só pré-release "teste": dois PRs não o publicam ao mesmo tempo.
+    concurrency:
+      group: apk-teste
+    env:
+      # Como no release.yml: o Briefcase baixa o SDK e o JDK dele.
+      ANDROID_HOME: ""
+      ANDROID_SDK_ROOT: ""
+      JAVA_HOME: ""
+      COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Preparar a chave
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ponto-release.jks"
+
+      - name: Instalar o Briefcase
+        run: pip install briefcase==0.4.5
+
+      - name: Criar o projeto Android
+        run: yes | briefcase create android --no-input
+
+      - name: Gerar e assinar o APK
+        env:
+          PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
+          PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: android/release.sh
+
+      - name: Publicar no pré-release "teste"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          TITULO_PR: ${{ github.event.pull_request.title }}
+          RAMO: ${{ github.event.pull_request.head.ref || github.ref_name }}
+        run: |
+          versao=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
+          origem="${PR:+PR #$PR: $TITULO_PR}"
+          origem="${origem:-branch $RAMO}"
+          gh release delete teste --cleanup-tag --yes || true
+          gh release create teste dist/ponto-ifes.apk --prerelease --target "$COMMIT" \
+            --title "Teste ${versao} (${origem})" \
+            --notes "APK de teste de ${origem}, commit ${COMMIT::7}. Não é uma versão oficial."
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/teste/ponto-ifes.apk"
+          echo "APK de teste (${origem}): $url" >> "$GITHUB_STEP_SUMMARY"
