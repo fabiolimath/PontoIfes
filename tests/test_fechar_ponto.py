@@ -126,6 +126,22 @@ def test_login_recusado_nao_repete(sigrh, capsys):
     assert "Usuário e/ou senha inválidos" in capsys.readouterr().out
 
 
+BLOQUEADO = """<ul class="erros"><li>O Endereço IP de seu computador não tem autorização para registrar
+o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração do Sistema.</li></ul>""" + PORTAL
+
+
+@pytest.mark.parametrize("pagina", [BLOQUEADO, BLOQUEADO.replace('class="erros"', 'class="x"')])
+def test_fora_do_campus_avisa_e_nao_repete(sigrh, capsys, pagina):
+    falso = sigrh(ponto=pagina)
+
+    assert fp.main() == 1
+    assert len([c for c in falso.chamadas if c[1] == fp.LOGIN_URL]) == 2  # uma tentativa só
+    assert not any(c[1] == fp.PONTO_URL and c[0] == "POST" for c in falso.chamadas)
+    saida = capsys.readouterr().out
+    assert "não tem autorização para registrar" in saida
+    assert "fora da rede do campus" in saida
+
+
 def test_erro_do_sigrh_na_saida_e_mostrado(sigrh, capsys):
     sigrh(saida="""<ul class="erros"><li>Horário fora do permitido.</li></ul>""" + ABERTO)
 

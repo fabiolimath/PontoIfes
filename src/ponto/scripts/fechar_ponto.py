@@ -8,7 +8,8 @@ opcionais, para a notificação).
 Passos, como o navegador faz: login, tela do ponto eletrônico (direto após o
 login ou pelo link do portal) e o botão "Registrar Saída". O sucesso é a
 mensagem "Operação realizada com sucesso!" (<ul class="info">); sem entrada
-aberta, a tela só oferece "Registrar Entrada" e não há o que fechar.
+aberta, a tela só oferece "Registrar Entrada" e não há o que fechar. Fora da
+rede do campus, o SIGRH nega a tela do ponto pelo IP; o script avisa e para.
 """
 
 import os
@@ -30,6 +31,9 @@ BTN_ENTRADA = FORM_PONTO + ":idBtnRegistrarEntrada"
 # Link "Ponto Eletrônico" do portal; usados se não forem achados na página.
 FORM_PAINEL = "painelAcessoDadosServidor"
 LINK_PONTO = FORM_PAINEL + ":linkPontoEletronicoAntigo"
+
+# Trecho da mensagem do SIGRH quando o acesso não vem da rede do campus.
+BLOQUEIO_IP = "não tem autorização para registrar o Ponto"
 
 TIMEOUT = 30
 TENTATIVAS = 3
@@ -88,6 +92,21 @@ def link_do_ponto(portal):
     return None
 
 
+def recusa(pagina):
+    """Levanta Recusado se o SIGRH negou a tela do ponto (ex.: IP fora do campus)."""
+    erros = [" ".join(e.split()) for e in mensagens(pagina, "erros")]
+    if not erros and pagina.find("form", id=FORM_PONTO) is None:
+        texto = " ".join(pagina.get_text(" ").split())
+        if BLOQUEIO_IP in texto:
+            erros = [frase for frase in texto.split(".") if BLOQUEIO_IP in frase][:1]
+    if not erros:
+        return
+    mensagem = "; ".join(e.strip() for e in erros)
+    if any(BLOQUEIO_IP in e for e in erros):
+        mensagem += " (o celular está fora da rede do campus?)"
+    raise Recusado("O SIGRH negou o acesso ao ponto: " + mensagem)
+
+
 # -----------------------------------
 # PASSOS NO SIGRH
 # -----------------------------------
@@ -125,8 +144,10 @@ def abrir_ponto_eletronico(sessao, pagina):
         link: link,
     }, timeout=TIMEOUT)
     pagina = sopa(resp)
+    recusa(pagina)
     if not pagina.find("form", id=FORM_PONTO):
         pagina = sopa(sessao.get(PONTO_URL, timeout=TIMEOUT))
+        recusa(pagina)
     if not pagina.find("form", id=FORM_PONTO):
         raise Exception("A tela do ponto eletrônico não abriu")
     return pagina
