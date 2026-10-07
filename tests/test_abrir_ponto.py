@@ -149,6 +149,15 @@ def test_sem_rede_tenta_de_novo(sigrh, capsys):
     assert capsys.readouterr().out.count("falhou") == ap.TENTATIVAS
 
 
+def test_sem_rede_espera_cerca_de_2_minutos(sigrh, monkeypatch):
+    esperas = []
+    monkeypatch.setattr(ap.time, "sleep", esperas.append)
+    sigrh(login=requests.ConnectionError("Failed to resolve 'sigrh.ifes.edu.br'"))
+    assert ap.main([]) == 1
+    assert esperas == list(ap.ESPERAS)
+    assert sum(esperas) >= 120
+
+
 def test_falha_ao_enviar_o_registro_nao_repete(sigrh, capsys):
     falso = sigrh(registro=requests.ConnectionError("caiu"))
     assert ap.main([]) == 1

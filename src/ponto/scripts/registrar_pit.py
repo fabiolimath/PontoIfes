@@ -33,8 +33,10 @@ TIPO_DOCUMENTO = "104"
 ZERO = ("00:00", "0:00")
 
 TIMEOUT = 30
-TENTATIVAS = 3
-ESPERA = 10
+# Espera antes de cada nova tentativa: cresce para aguentar a rede sumir por até
+# uns 2 minutos (troca de Wi-Fi ao chegar no campus, DNS ainda sem resposta).
+ESPERAS = (10, 20, 30, 60)
+TENTATIVAS = len(ESPERAS) + 1
 DIAS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
 
 
@@ -272,8 +274,9 @@ def main(argv=None):
             erro = exc
             print(f"Tentativa {tentativa} falhou: {exc}")
             if tentativa < TENTATIVAS:
-                print(f"Tentando de novo em {ESPERA}s...")
-                time.sleep(ESPERA)
+                espera = ESPERAS[tentativa - 1]
+                print(f"Tentando de novo em {espera}s...")
+                time.sleep(espera)
         else:
             mensagem = f"📋✅ SIGRH: PIT de {dia} registrado"
             print(mensagem)

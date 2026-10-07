@@ -10,7 +10,8 @@ registrada se a resposta trouxer "Operação realizada com sucesso" (ou já
 mostrar o botão "Registrar Saída"). Fora da rede do campus o SIGRH já mostra,
 na tela do ponto, "O Endereço IP de seu computador não tem autorização para
 registrar o Ponto Eletrônico": o script não envia o formulário, tenta de novo
-(a Wi-Fi pode estar conectando) e, se persistir, avisa e sai com código 1.
+(a Wi-Fi pode estar conectando; esperas crescentes, cerca de 2 min ao todo) e,
+se persistir, avisa e sai com código 1.
 """
 
 import os
@@ -37,8 +38,10 @@ ERRO_DE_IP = re.compile(r"endere.o ip.*n.o tem autoriza", re.I | re.S)
 SINAIS_DE_REDE = ("rede", " ip", "endereço", "local", "computador", "máquina", "permitid", "autorizad")
 
 TIMEOUT = 30
-TENTATIVAS = 3
-ESPERA = 10
+# Espera antes de cada nova tentativa: cresce para aguentar a rede sumir por até
+# uns 2 minutos (troca de Wi-Fi ao chegar no campus, DNS ainda sem resposta).
+ESPERAS = (10, 20, 30, 60)
+TENTATIVAS = len(ESPERAS) + 1
 
 
 class Recusado(Exception):
@@ -221,8 +224,9 @@ def main(argv=None):
             erro = exc
             print(f"Tentativa {tentativa} falhou: {exc}")
             if tentativa < TENTATIVAS:
-                print(f"Tentando de novo em {ESPERA}s...")
-                time.sleep(ESPERA)
+                espera = ESPERAS[tentativa - 1]
+                print(f"Tentando de novo em {espera}s...")
+                time.sleep(espera)
         else:
             print(re.sub(r"\s+", " ", f"✅🔓🕑 SIGRH: entrada registrada {descrever(pagina)}").strip())
             return 0

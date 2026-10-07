@@ -35,8 +35,10 @@ LINK_PONTO = FORM_PAINEL + ":linkPontoEletronicoAntigo"
 BLOQUEIO_IP = "não tem autorização para registrar o Ponto"
 
 TIMEOUT = 30
-TENTATIVAS = 3
-ESPERA = 10
+# Espera antes de cada nova tentativa: cresce para aguentar a rede sumir por até
+# uns 2 minutos (troca de Wi-Fi ao chegar no campus, DNS ainda sem resposta).
+ESPERAS = (10, 20, 30, 60)
+TENTATIVAS = len(ESPERAS) + 1
 
 
 class Recusado(Exception):
@@ -216,8 +218,9 @@ def main():
             erro = exc
             print(f"Tentativa {tentativa} falhou: {exc}")
             if tentativa < TENTATIVAS:
-                print(f"Tentando de novo em {ESPERA}s...")
-                time.sleep(ESPERA)
+                espera = ESPERAS[tentativa - 1]
+                print(f"Tentando de novo em {espera}s...")
+                time.sleep(espera)
         else:
             mensagem = f"✅🔐📌 SIGRH: saída registrada às {time.strftime('%H:%M')}"
             print(mensagem)
