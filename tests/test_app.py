@@ -443,7 +443,24 @@ def test_nova_execucao_apaga_a_notificacao_anterior(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("abrir_ponto"))
 
-    assert eventos == [("apaga", 1), ("mostra", 1)]
+    assert eventos == [("apaga", 1), ("mostra", 11)]
+
+
+def test_sucesso_nao_apaga_a_notificacao_de_falha(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    eventos = []
+    monkeypatch.setattr(plataforma, "cancelar_notificacao", lambda app, i: eventos.append(("apaga", i)))
+    monkeypatch.setattr(plataforma, "notificar", lambda app, t, x, i, **k: eventos.append(("mostra", i)))
+    marca = tmp_path / "ja_falhou"
+    # Falha na 1ª execução e dá certo na 2ª.
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto",
+                     f"import pathlib, sys\nm = pathlib.Path({str(marca)!r})\n"
+                     "if not m.exists():\n    m.touch()\n    sys.exit(1)\nprint('ok')\n")
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert eventos == [("apaga", 1), ("mostra", 11), ("apaga", 1), ("mostra", 1)]
 
 
 def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):

@@ -20,7 +20,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
    e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
-   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). Ao fechar o ponto com sucesso (seg a sex),
+   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). A notificação de falha fica na tela mesmo
+   depois de um sucesso da mesma ação (idents próprios). Ao fechar o ponto com sucesso (seg a sex),
    botão **Registrar PIT** do dia; o PIT apaga essa notificação.
    - **PIT automático** (Configurações: Não / No 1º / No 2º fechamento do dia): após o fechamento
      nº N do dia (seg a sex), registra o PIT do dia em seguida; aí a notificação não tem o botão.

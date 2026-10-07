@@ -171,8 +171,9 @@ class Ponto(toga.App):
             args += ("--obs", configuracoes.carregar(self.config_path)["observacao_pit"])
 
         self.rodando = True
-        # Some a notificação anterior desta ação: a do resultado novo aparece de novo,
-        # em vez de só substituir em silêncio a que ainda estava na tela.
+        # Some a notificação de sucesso anterior desta ação: a do resultado novo aparece
+        # de novo, em vez de só substituir em silêncio a que ainda estava na tela.
+        # A de falha fica (tem ident próprio), para não sumir o registro do erro.
         # O PIT pelo botão também apaga a do fechamento, que tem o botão "Registrar PIT";
         # o automático a mantém, com o resultado do fechamento.
         apagar = [acao] + (["fechar_ponto"] if acao == "registrar_pit" and not encadeado else [])
@@ -241,7 +242,7 @@ class Ponto(toga.App):
             botao = (executor.ACOES["registrar_pit"], {plataforma.EXTRA_ACAO: "registrar_pit"})
         try:
             plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo,
-                                 self._ident_notificacao(acao), botao=botao)
+                                 self._ident_notificacao(acao, falha=codigo != 0), botao=botao)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
 
@@ -277,9 +278,13 @@ class Ponto(toga.App):
             print("Erro ao cancelar o lembrete:", exc)
 
     @staticmethod
-    def _ident_notificacao(acao):
-        """Uma notificação por ação: a nova substitui a anterior da mesma ação."""
-        return list(executor.ACOES).index(acao) + 1
+    def _ident_notificacao(acao, falha=False):
+        """Uma notificação de sucesso e uma de falha por ação.
+
+        A nova substitui a anterior do mesmo tipo; o sucesso não apaga a falha.
+        Sucesso: 1 a 3; falha: 11 a 13 (o 4 é o do lembrete).
+        """
+        return list(executor.ACOES).index(acao) + 1 + (10 if falha else 0)
 
     def _pedir_permissao_notificacoes(self):
         """No Android 13+, pergunta uma vez se o app pode notificar."""
