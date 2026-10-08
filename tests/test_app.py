@@ -587,23 +587,26 @@ def test_cancelar_interrompe_sem_notificar(app, tmp_path, monkeypatch):
                      "import os, time\nprint('Tentativa 1 falhou')\n"
                      "while not os.environ.get('PONTO_CANCELAR'):\n    time.sleep(0.05)\n"
                      "raise KeyboardInterrupt\n")
-    assert app.botao_cancelar.style.display == "none"
+    assert not app.botao_cancelar.enabled
     durante = {}
 
     async def cancelar_logo():
         await asyncio.sleep(0.3)
-        durante["botao"] = app.botao_cancelar.style.display
+        durante["cancelar"] = (app.botao_cancelar.enabled, str(app.botao_cancelar.style.background_color))
+        durante["acoes"] = {(b.enabled, str(b.style.background_color)) for b in app.botoes}
         app.cancelar()
-        durante["habilitado"] = app.botao_cancelar.enabled
+        durante["depois"] = app.botao_cancelar.enabled
 
     async def rodar_e_cancelar():
         await asyncio.gather(app.rodar("abrir_ponto"), cancelar_logo())
 
     app.loop.run_until_complete(rodar_e_cancelar())
 
-    assert durante == {"botao": "pack", "habilitado": False}
+    assert durante == {"cancelar": (True, "rgb(127 196 28 / 1.0)"), "acoes": {(False, "None")},
+                       "depois": False}
     assert app.status.text == "Abrir ponto: cancelado."
     assert app.saida.value.endswith("⏹️ Cancelado.\n")
     assert notificacoes == []
-    assert app.botao_cancelar.style.display == "none"
+    assert not app.botao_cancelar.enabled
+    assert {(b.enabled, str(b.style.background_color)) for b in app.botoes} == {(True, "rgb(127 196 28 / 1.0)")}
     assert not app.rodando and not app.cancelando

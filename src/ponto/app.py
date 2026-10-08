@@ -16,6 +16,20 @@ PIT_AUTOMATICO = {
     1: "No 1º fechamento do dia",
     2: "No 2º fechamento do dia",
 }
+# Verde do IFES (o mesmo dos ícones dos atalhos): botão disponível. Indisponível,
+# o botão volta à cor padrão (cinza).
+VERDE = "#7FC41C"
+
+
+def disponivel(botao, sim):
+    """Habilita o botão e o pinta de verde, ou desabilita e volta ao cinza padrão."""
+    botao.enabled = sim
+    if sim:
+        botao.style.background_color = VERDE
+    else:
+        del botao.style.background_color
+
+
 EXPLICACAO_PIT_AUTOMATICO = {
     0: "Registre o PIT pelo botão do app\nou pelo da notificação de ponto fechado.",
     1: "Para quem fecha o ponto uma vez por dia:\no PIT é registrado logo após o fechamento.",
@@ -73,6 +87,7 @@ class Ponto(toga.App):
                 on_press=self._ao_tocar(acao),
                 style=Pack(margin=(4, 0), height=64, font_size=16),
             )
+            disponivel(botao, True)
             self.botoes.append(botao)
 
         self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa",
@@ -95,11 +110,12 @@ class Ponto(toga.App):
             ],
             style=Pack(direction=ROW, margin_top=8),
         )
-        # Só aparece enquanto um script roda (display "none" fora disso).
+        # Lógica inversa à dos botões de ação: verde só enquanto um script roda.
         self.botao_cancelar = toga.Button(
             "Cancelar", on_press=lambda w, **kw: self.cancelar(),
-            style=Pack(margin_top=8, height=56, display="none"),
+            style=Pack(margin_top=8, height=56),
         )
+        disponivel(self.botao_cancelar, False)
         self.tela_principal = toga.Box(
             children=[
                 *self.botoes,
@@ -193,14 +209,13 @@ class Ponto(toga.App):
         except Exception as exc:
             print("Erro ao apagar a notificação:", exc)
         for botao in self.botoes:
-            botao.enabled = False
+            disponivel(botao, False)
         self.saida.value = self.saida.value + "\n" if encadeado else ""
         self.status.text = f"Executando: {rotulo}…"
         self.progresso.style.visibility = "visible"
         self.progresso.start()
         self.cancelando = False
-        self.botao_cancelar.enabled = True
-        self.botao_cancelar.style.display = "pack"
+        disponivel(self.botao_cancelar, True)
 
         loop = asyncio.get_running_loop()
         cronometro = loop.create_task(self._cronometro(rotulo))
@@ -235,11 +250,11 @@ class Ponto(toga.App):
             cronometro.cancel()
             self.progresso.stop()
             self.progresso.style.visibility = "hidden"
-            self.botao_cancelar.style.display = "none"
+            disponivel(self.botao_cancelar, False)
             self.cancelando = False
             self.rodando = False
             for botao in self.botoes:
-                botao.enabled = True
+                disponivel(botao, True)
         if pit_em_seguida:
             await self.rodar("registrar_pit", encadeado=True)
 
@@ -257,7 +272,7 @@ class Ponto(toga.App):
         if not self.rodando or self.cancelando:
             return
         self.cancelando = True
-        self.botao_cancelar.enabled = False
+        disponivel(self.botao_cancelar, False)
         executor.cancelar()
         self.status.text = self.status.text.replace("Executando", "Cancelando", 1)
 
