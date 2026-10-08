@@ -227,7 +227,7 @@ def test_tela_de_configuracoes(app):
 
     assert app.main_window.content is app.tela_principal
     assert configuracoes.carregar(app.config_path) == {
-        "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:40",
+        "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:00",
         "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria",
         "pit_automatico": 0}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
@@ -243,7 +243,7 @@ def test_configuracoes_do_lembrete(app, monkeypatch):
     app.campos["SIGRH_USER"].value = "a"
     app.campos["SIGRH_PASS"].value = "b"
     assert app.lembrete_fechar.value is True
-    assert app.lembrete_tempo.value == "01:40"
+    assert app.lembrete_tempo.value == "01:00"
     app.lembrete_tempo.value = ""
     for texto in ["0", "02", "02:3", "02:30"]:
         app.lembrete_tempo.value = texto
@@ -264,7 +264,7 @@ def test_configuracoes_do_lembrete(app, monkeypatch):
     app.lembrete_tempo.value = ""
     app.loop.run_until_complete(app.salvar_configuracoes(None))
     preferencias = configuracoes.carregar(app.config_path)
-    assert (preferencias["lembrete_fechar"], preferencias["lembrete_tempo"]) == (False, "01:40")
+    assert (preferencias["lembrete_fechar"], preferencias["lembrete_tempo"]) == (False, "01:00")
     assert cancelados == [1]
 
 
@@ -443,7 +443,24 @@ def test_nova_execucao_apaga_a_notificacao_anterior(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(app.rodar("abrir_ponto"))
 
-    assert eventos == [("apaga", 1), ("mostra", 1)]
+    assert eventos == [("apaga", 1), ("mostra", 11)]
+
+
+def test_sucesso_nao_apaga_a_notificacao_de_falha(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    eventos = []
+    monkeypatch.setattr(plataforma, "cancelar_notificacao", lambda app, i: eventos.append(("apaga", i)))
+    monkeypatch.setattr(plataforma, "notificar", lambda app, t, x, i, **k: eventos.append(("mostra", i)))
+    marca = tmp_path / "ja_falhou"
+    # Falha na 1ª execução e dá certo na 2ª.
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto",
+                     f"import pathlib, sys\nm = pathlib.Path({str(marca)!r})\n"
+                     "if not m.exists():\n    m.touch()\n    sys.exit(1)\nprint('ok')\n")
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+    app.loop.run_until_complete(app.rodar("abrir_ponto"))
+
+    assert eventos == [("apaga", 1), ("mostra", 11), ("apaga", 1), ("mostra", 1)]
 
 
 def test_erro_na_notificacao_nao_atrapalha(app, tmp_path, monkeypatch):
@@ -538,3 +555,60 @@ def test_pit_automatico_tira_o_botao_da_notificacao(app, monkeypatch):
     app._notificar("fechar_ponto", "Fechar ponto: concluído.", "ok")
 
     assert botoes == [None]
+
+
+def test_barra_e_cronometro_durante_a_execucao(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto",
+                     "import time\ntime.sleep(1.5)\nprint('ok')\n")
+    assert app.progresso.style.visibility == "hidden"
+    durante = {}
+
+    async def espiar():
+        await asyncio.sleep(1.2)
+        durante["status"] = app.status.text
+        durante["barra"] = (app.progresso.style.visibility, app.progresso.is_running)
+
+    async def rodar_e_espiar():
+        await asyncio.gather(app.rodar("abrir_ponto"), espiar())
+
+    app.loop.run_until_complete(rodar_e_espiar())
+
+    assert durante == {"status": "Executando: Abrir ponto… 0:01", "barra": ("visible", True)}
+    assert app.status.text == "Abrir ponto: concluído."
+    assert (app.progresso.style.visibility, app.progresso.is_running) == ("hidden", False)
+
+
+def test_cancelar_interrompe_sem_notificar(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    notificacoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: notificacoes.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto",
+                     "import os, time\nprint('Tentativa 1 falhou')\n"
+                     "while not os.environ.get('PONTO_CANCELAR'):\n    time.sleep(0.05)\n"
+                     "raise KeyboardInterrupt\n")
+    assert not app.botao_cancelar.enabled
+    durante = {}
+
+    async def cancelar_logo():
+        await asyncio.sleep(0.3)
+        durante["cancelar"] = (app.botao_cancelar.enabled, str(app.botao_cancelar.style.background_color))
+        durante["acoes"] = {(b.enabled, str(b.style.background_color))
+                            for b in app.botoes + app.botoes_rodape}
+        app.cancelar()
+        durante["depois"] = app.botao_cancelar.enabled
+
+    async def rodar_e_cancelar():
+        await asyncio.gather(app.rodar("abrir_ponto"), cancelar_logo())
+
+    app.loop.run_until_complete(rodar_e_cancelar())
+
+    assert durante == {"cancelar": (True, "rgb(127 196 28 / 1.0)"), "acoes": {(False, "None")},
+                       "depois": False}
+    assert app.status.text == "Abrir ponto: cancelado."
+    assert app.saida.value.endswith("⏹️ Cancelado.\n")
+    assert notificacoes == []
+    assert not app.botao_cancelar.enabled
+    assert {(b.enabled, str(b.style.background_color))
+            for b in app.botoes + app.botoes_rodape} == {(True, "rgb(127 196 28 / 1.0)")}
+    assert not app.rodando and not app.cancelando

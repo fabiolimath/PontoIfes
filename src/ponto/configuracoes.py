@@ -7,7 +7,7 @@ from pathlib import Path
 PADRAO = {
     "notificacoes": True,
     "lembrete_fechar": True,
-    "lembrete_tempo": "01:40",
+    "lembrete_tempo": "01:00",
     "verificar_atualizacoes": True,
     "observacao_pit": "Conforme PIT docente.",
     # Registrar o PIT do dia sozinho ao fechar o ponto: 0 = não, 1 = no 1º

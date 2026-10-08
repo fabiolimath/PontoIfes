@@ -16,6 +16,20 @@ PIT_AUTOMATICO = {
     1: "No 1º fechamento do dia",
     2: "No 2º fechamento do dia",
 }
+# Verde do IFES (o mesmo dos ícones dos atalhos): botão disponível. Indisponível,
+# o botão volta à cor padrão (cinza).
+VERDE = "#7FC41C"
+
+
+def disponivel(botao, sim):
+    """Habilita o botão e o pinta de verde, ou desabilita e volta ao cinza padrão."""
+    botao.enabled = sim
+    if sim:
+        botao.style.background_color = VERDE
+    else:
+        del botao.style.background_color
+
+
 EXPLICACAO_PIT_AUTOMATICO = {
     0: "Registre o PIT pelo botão do app\nou pelo da notificação de ponto fechado.",
     1: "Para quem fecha o ponto uma vez por dia:\no PIT é registrado logo após o fechamento.",
@@ -33,6 +47,7 @@ class Ponto(toga.App):
         self.fechamento_path = dados / "ultimo_fechamento.txt"
         self.lembrete_path = dados / "lembrete.txt"
         self.rodando = False
+        self.cancelando = False
 
         self.main_window = toga.MainWindow(title=self.formal_name)
         # O Toga escreve "About ..." em inglês no menu de três pontos.
@@ -72,6 +87,7 @@ class Ponto(toga.App):
                 on_press=self._ao_tocar(acao),
                 style=Pack(margin=(4, 0), height=64, font_size=16),
             )
+            disponivel(botao, True)
             self.botoes.append(botao)
 
         self.data_pit = toga.TextInput(placeholder="dd/mm/aaaa",
@@ -80,25 +96,39 @@ class Ponto(toga.App):
         plataforma.campo_de_data(self.data_pit)
         plataforma.preenchimento(self.data_pit)
 
+        # Barra animada (indeterminada) que só aparece enquanto um script roda.
+        self.progresso = toga.ProgressBar(max=None, style=Pack(margin_top=8, visibility="hidden"))
         self.status = toga.Label("", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
 
+        # Configurações e Log também ficam indisponíveis (cinza) enquanto um script roda.
+        self.botoes_rodape = [
+            toga.Button("Configurações", on_press=lambda w, **kw: self.mostrar_configuracoes(),
+                        style=Pack(flex=1, margin_right=4)),
+            toga.Button("Log", on_press=lambda w, **kw: self.mostrar_log(),
+                        style=Pack(flex=1, margin_left=4)),
+        ]
+        for botao in self.botoes_rodape:
+            disponivel(botao, True)
         rodape = toga.Box(
-            children=[
-                toga.Button("Configurações", on_press=lambda w, **kw: self.mostrar_configuracoes(),
-                            style=Pack(flex=1, margin_right=4)),
-                toga.Button("Log", on_press=lambda w, **kw: self.mostrar_log(),
-                            style=Pack(flex=1, margin_left=4)),
-            ],
+            children=self.botoes_rodape,
             style=Pack(direction=ROW, margin_top=8),
         )
+        # Lógica inversa à dos botões de ação: verde só enquanto um script roda.
+        self.botao_cancelar = toga.Button(
+            "Cancelar", on_press=lambda w, **kw: self.cancelar(),
+            style=Pack(margin_top=8, height=56),
+        )
+        disponivel(self.botao_cancelar, False)
         self.tela_principal = toga.Box(
             children=[
                 *self.botoes,
                 toga.Label("Registrar o PIT de outro dia", style=Pack(margin_top=4)),
                 self.data_pit,
+                self.progresso,
                 self.status,
                 self.saida,
+                self.botao_cancelar,
                 rodape,
             ],
             style=Pack(direction=COLUMN, margin=12),
@@ -171,8 +201,9 @@ class Ponto(toga.App):
             args += ("--obs", configuracoes.carregar(self.config_path)["observacao_pit"])
 
         self.rodando = True
-        # Some a notificação anterior desta ação: a do resultado novo aparece de novo,
-        # em vez de só substituir em silêncio a que ainda estava na tela.
+        # Some a notificação de sucesso anterior desta ação: a do resultado novo aparece
+        # de novo, em vez de só substituir em silêncio a que ainda estava na tela.
+        # A de falha fica (tem ident próprio), para não sumir o registro do erro.
         # O PIT pelo botão também apaga a do fechamento, que tem o botão "Registrar PIT";
         # o automático a mantém, com o resultado do fechamento.
         apagar = [acao] + (["fechar_ponto"] if acao == "registrar_pit" and not encadeado else [])
@@ -181,12 +212,17 @@ class Ponto(toga.App):
                 plataforma.cancelar_notificacao(self, self._ident_notificacao(outra))
         except Exception as exc:
             print("Erro ao apagar a notificação:", exc)
-        for botao in self.botoes:
-            botao.enabled = False
+        for botao in self.botoes + self.botoes_rodape:
+            disponivel(botao, False)
         self.saida.value = self.saida.value + "\n" if encadeado else ""
         self.status.text = f"Executando: {rotulo}…"
+        self.progresso.style.visibility = "visible"
+        self.progresso.start()
+        self.cancelando = False
+        disponivel(self.botao_cancelar, True)
 
         loop = asyncio.get_running_loop()
+        cronometro = loop.create_task(self._cronometro(rotulo))
         pit_em_seguida = False
 
         def ao_escrever(texto):
@@ -198,6 +234,11 @@ class Ponto(toga.App):
                     acao, credenciais.ambiente(cred), self.log_path, ao_escrever, args=args
                 )
             )
+            cronometro.cancel()
+            if codigo == executor.CANCELADO:
+                # Cancelado pelo usuário: sem notificação, lembrete nem PIT em seguida.
+                self.status.text = f"{rotulo}: cancelado."
+                return
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
             self._notificar(acao, self.status.text, saida, codigo, data)
@@ -210,11 +251,34 @@ class Ponto(toga.App):
             if acao == "registrar_pit" and data and codigo == 0:
                 self.data_pit.value = ""
         finally:
+            cronometro.cancel()
+            self.progresso.stop()
+            self.progresso.style.visibility = "hidden"
+            disponivel(self.botao_cancelar, False)
+            self.cancelando = False
             self.rodando = False
-            for botao in self.botoes:
-                botao.enabled = True
+            for botao in self.botoes + self.botoes_rodape:
+                disponivel(botao, True)
         if pit_em_seguida:
             await self.rodar("registrar_pit", encadeado=True)
+
+    async def _cronometro(self, rotulo):
+        """Mostra há quanto tempo o script roda: "Executando: Abrir ponto… 0:42"."""
+        inicio = datetime.now()
+        while True:
+            await asyncio.sleep(1)
+            segundos = int((datetime.now() - inicio).total_seconds())
+            fazendo = "Cancelando" if self.cancelando else "Executando"
+            self.status.text = f"{fazendo}: {rotulo}… {segundos // 60}:{segundos % 60:02d}"
+
+    def cancelar(self):
+        """Botão Cancelar: o script para antes da próxima tentativa ou durante a espera."""
+        if not self.rodando or self.cancelando:
+            return
+        self.cancelando = True
+        disponivel(self.botao_cancelar, False)
+        executor.cancelar()
+        self.status.text = self.status.text.replace("Executando", "Cancelando", 1)
 
     def _pit_automatico_agora(self, vezes):
         """Se o fechamento nº `vezes` do dia é o que registra o PIT sozinho (seg a sex)."""
@@ -241,7 +305,7 @@ class Ponto(toga.App):
             botao = (executor.ACOES["registrar_pit"], {plataforma.EXTRA_ACAO: "registrar_pit"})
         try:
             plataforma.notificar(self, titulo, executor.mensagem_final(saida) or titulo,
-                                 self._ident_notificacao(acao), botao=botao)
+                                 self._ident_notificacao(acao, falha=codigo != 0), botao=botao)
         except Exception as exc:
             print("Erro ao mostrar a notificação:", exc)
 
@@ -277,9 +341,13 @@ class Ponto(toga.App):
             print("Erro ao cancelar o lembrete:", exc)
 
     @staticmethod
-    def _ident_notificacao(acao):
-        """Uma notificação por ação: a nova substitui a anterior da mesma ação."""
-        return list(executor.ACOES).index(acao) + 1
+    def _ident_notificacao(acao, falha=False):
+        """Uma notificação de sucesso e uma de falha por ação.
+
+        A nova substitui a anterior do mesmo tipo; o sucesso não apaga a falha.
+        Sucesso: 1 a 3; falha: 11 a 13 (o 4 é o do lembrete).
+        """
+        return list(executor.ACOES).index(acao) + 1 + (10 if falha else 0)
 
     def _pedir_permissao_notificacoes(self):
         """No Android 13+, pergunta uma vez se o app pode notificar."""

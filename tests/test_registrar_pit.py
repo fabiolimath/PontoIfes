@@ -101,8 +101,8 @@ def test_registra_com_a_sequencia_do_navegador(sigrh, capsys):
     assert final["cadastroAusencia:observacao"] == (None, "PIT segundo portaria")
     assert final["javax.faces.ViewState"] == (None, "j_id3")
     saida = capsys.readouterr().out
-    assert "enviada com sucesso" in saida
-    assert "PIT de 05/10/2026 registrado" in saida
+    assert "enviada com sucesso" not in saida
+    assert saida.splitlines()[-1] == "📋✅ SIGRH: PIT registrado"
 
 
 def test_passa_pela_tela_do_ponto(sigrh):

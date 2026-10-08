@@ -5,7 +5,7 @@ from ponto import atualizacao, configuracoes, mascara
 
 def test_preferencias_padrao_e_salvas(tmp_path):
     path = tmp_path / "c.json"
-    padrao = {"notificacoes": True, "lembrete_fechar": True, "lembrete_tempo": "01:40",
+    padrao = {"notificacoes": True, "lembrete_fechar": True, "lembrete_tempo": "01:00",
               "verificar_atualizacoes": True, "observacao_pit": "Conforme PIT docente.",
               "pit_automatico": 0}
     assert configuracoes.carregar(path) == padrao

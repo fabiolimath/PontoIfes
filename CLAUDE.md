@@ -13,21 +13,28 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 ## O que o app faz
 
-1. Tela principal com três botões, um por função, e campo de data para o PIT.
+1. Tela principal com três botões, um por função, e campo de data para o PIT. Durante a execução,
+   barra animada, tempo decorrido ("Executando: Abrir ponto… 0:42") e botão **Cancelar** embaixo.
+   Botões disponíveis ficam verdes (#7FC41C) e os indisponíveis, cinza: os de ação, Configurações e
+   Log verdes fora da
+   execução, o Cancelar verde só durante ela
+   (o executor define `PONTO_CANCELAR`; o script para antes de cada tentativa, nas esperas e logo
+   antes do envio final, nunca depois dele; sai com código 130, sem notificação).
 2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
    guardadas na área privada do app e editáveis em **Configurações**. Campos de data (PIT) e de
    hora (lembrete) com máscara (`mascara.py`) e teclado próprio.
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
    e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
-   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). Ao fechar o ponto com sucesso (seg a sex),
+   `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). A notificação de falha fica na tela mesmo
+   depois de um sucesso da mesma ação (idents próprios). Ao fechar o ponto com sucesso (seg a sex),
    botão **Registrar PIT** do dia; o PIT apaga essa notificação.
    - **PIT automático** (Configurações: Não / No 1º / No 2º fechamento do dia): após o fechamento
      nº N do dia (seg a sex), registra o PIT do dia em seguida; aí a notificação não tem o botão.
      Os fechamentos do dia ficam em `ultimo_fechamento.txt` ("aaaa-mm-dd N").
 4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
    (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze; perde-se ao
-   reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:40, editável nas
+   reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:00, editável nas
    Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver` em Java; fechar o
    ponto com sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`).
 5. **Configurações** (`configuracoes.json`): credenciais, Observação do PIT, PIT automático,
@@ -99,8 +106,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 ## Pendências
 
 - Testar os gatilhos automáticos (Bluetooth, horário, Wi-Fi) num dia útil.
-- Testar num dia útil (1.0.12): lembrete de fechar o ponto, botão Registrar PIT na notificação e
-  PIT automático.
+- Testar num dia útil: botão Registrar PIT na notificação (o lembrete, o Fechar ponto pelo lembrete e
+  o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
+  chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
   é legado e foi substituído pelo app.
 

@@ -22,7 +22,7 @@ App Android (Briefcase + Toga) que empacota os scripts do ponto do SIGRH:
 - O PIT do dia pode ser registrado sozinho ao fechar o ponto (**Configurações > Registrar o PIT
   do dia automaticamente**): no 1º fechamento do dia, ou no 2º, para quem fecha no almoço.
 - Lembrete de fechar o ponto: se o ponto foi aberto e não foi fechado depois de um tempo
-  (padrão 01:40, em **Configurações**), o app avisa com uma notificação com o botão
+  (padrão 01:00, em **Configurações**), o app avisa com uma notificação com o botão
   **Fechar ponto**, mesmo fechado (alarme do Android; perde-se se o celular reiniciar).
 - Ao abrir, o app verifica se há versão nova no GitHub (desligável em **Configurações**).
   O menu de três pontos tem **Sobre o Ponto IFES**, com a versão e o link do site.

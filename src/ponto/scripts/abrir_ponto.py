@@ -10,7 +10,8 @@ registrada se a resposta trouxer "Operação realizada com sucesso" (ou já
 mostrar o botão "Registrar Saída"). Fora da rede do campus o SIGRH já mostra,
 na tela do ponto, "O Endereço IP de seu computador não tem autorização para
 registrar o Ponto Eletrônico": o script não envia o formulário, tenta de novo
-(a Wi-Fi pode estar conectando) e, se persistir, avisa e sai com código 1.
+(a Wi-Fi pode estar conectando; esperas crescentes, cerca de 2 min ao todo) e,
+se persistir, avisa e sai com código 1.
 """
 
 import os
@@ -29,16 +30,43 @@ FORM = "idFormDadosEntradaSaida"
 BTN_ENTRADA = FORM + ":idBtnRegistrarEntrada"
 BTN_SAIDA = FORM + ":idBtnRegistrarSaida"
 
-DICA_WIFI = "Confira se o celular está conectado à Wi-Fi do campus."
-FORA_DA_REDE = "fora da rede do campus: o SIGRH não aceita o ponto deste endereço IP. " + DICA_WIFI
-# Trecho da mensagem do SIGRH quando o IP não está liberado (ver captura sigrh.loginFora).
-ERRO_DE_IP = re.compile(r"endere.o ip.*n.o tem autoriza", re.I | re.S)
+DICA_WIFI = "Confira se está conectado à Wi-Fi do campus."
+FORA_DA_REDE = DICA_WIFI
+# Mensagens do SIGRH quando o IP não está liberado: "O Endereço IP de seu computador
+# não tem autorização..." ou "...não foi encontrada a configuração que permita o acesso
+# ao registro do ponto eletrônico para o seu endereço IP...".
+ERRO_DE_IP = re.compile(r"endere.o ip", re.I)
 # Palavras que, numa mensagem de erro do SIGRH, indicam restrição de rede.
 SINAIS_DE_REDE = ("rede", " ip", "endereço", "local", "computador", "máquina", "permitid", "autorizad")
 
 TIMEOUT = 30
-TENTATIVAS = 3
-ESPERA = 10
+# Espera antes de cada nova tentativa: cresce para aguentar a rede sumir por até
+# uns 2 minutos (troca de Wi-Fi ao chegar no campus, DNS ainda sem resposta).
+ESPERAS = (10, 20, 30, 60)
+TENTATIVAS = len(ESPERAS) + 1
+
+
+def conferir_cancelamento():
+    """O botão Cancelar do app define PONTO_CANCELAR; aqui o script para."""
+    if os.environ.get("PONTO_CANCELAR"):
+        raise KeyboardInterrupt
+
+
+def esperar(segundos):
+    """time.sleep em passos de meio segundo, conferindo se o app pediu para cancelar."""
+    for _ in range(round(segundos * 2)):
+        conferir_cancelamento()
+        time.sleep(0.5)
+    conferir_cancelamento()
+
+
+def resumir(exc):
+    """Texto curto do erro: sem rede, não mostra a exceção inteira do requests."""
+    if isinstance(exc, requests.Timeout):
+        return "o SIGRH não respondeu a tempo"
+    if isinstance(exc, requests.ConnectionError):
+        return "sem conexão. Confira se está conectado à Wi-Fi do campus."
+    return str(exc)
 
 
 class Recusado(Exception):
@@ -82,10 +110,10 @@ def erros(pagina):
 
 
 def com_dica(textos):
-    """Junta as mensagens de erro e acrescenta a dica da Wi-Fi se falarem de rede."""
+    """Junta as mensagens de erro; se falarem de rede, fica só a dica da Wi-Fi."""
     texto = "; ".join(textos)
     if any(sinal in f" {texto.lower()}" for sinal in SINAIS_DE_REDE):
-        texto += ". " + DICA_WIFI
+        return DICA_WIFI
     return texto
 
 
@@ -169,6 +197,8 @@ def registrar_entrada(sessao, pagina):
         raise Recusado(com_dica(problemas) if problemas
                        else "O botão Registrar Entrada não está disponível. " + DICA_WIFI)
 
+    # Última chance de cancelar: depois do envio final, o registro segue até o fim.
+    conferir_cancelamento()
     try:
         resp = sessao.post(PONTO_URL, data={
             FORM: FORM,
@@ -178,7 +208,7 @@ def registrar_entrada(sessao, pagina):
         }, timeout=TIMEOUT)
         resp.raise_for_status()
     except requests.RequestException as exc:
-        raise EnvioIncerto(f"falha ao enviar o registro ({exc}); confira no SIGRH") from exc
+        raise EnvioIncerto(f"falha ao enviar o registro ({resumir(exc)}); confira no SIGRH") from exc
 
     pagina = sopa(resp)
     problemas = erros(pagina)
@@ -209,6 +239,7 @@ def main(argv=None):
         return 1
 
     for tentativa in range(1, TENTATIVAS + 1):
+        conferir_cancelamento()
         try:
             pagina = abrir(usuario, senha)
         except JaAberto as exc:
@@ -219,15 +250,16 @@ def main(argv=None):
             break
         except Exception as exc:
             erro = exc
-            print(f"Tentativa {tentativa} falhou: {exc}")
+            print(f"Tentativa {tentativa} falhou: {resumir(exc)}")
             if tentativa < TENTATIVAS:
-                print(f"Tentando de novo em {ESPERA}s...")
-                time.sleep(ESPERA)
+                espera = ESPERAS[tentativa - 1]
+                print(f"Tentando de novo em {espera}s...")
+                esperar(espera)
         else:
             print(re.sub(r"\s+", " ", f"✅🔓🕑 SIGRH: entrada registrada {descrever(pagina)}").strip())
             return 0
 
-    print(f"🔓❌ SIGRH: entrada não registrada: {erro}")
+    print(f"🔓❌ SIGRH: entrada não registrada: {resumir(erro)}")
     return 1
 
 

@@ -26,6 +26,17 @@ LOG_MAX_LINHAS = 1000
 # processo; por isso só um script roda por vez.
 _lock = threading.Lock()
 
+# Código de saída de um script cancelado pelo usuário (como o Ctrl+C no terminal).
+CANCELADO = 130
+# Variável de ambiente que pede aos scripts para parar (veja esperar() nos scripts):
+# eles a conferem antes de cada tentativa e a cada meio segundo das esperas.
+VAR_CANCELAR = "PONTO_CANCELAR"
+
+
+def cancelar():
+    """Pede ao script em execução que pare na próxima conferência."""
+    os.environ[VAR_CANCELAR] = "1"
+
 
 class _Saida(io.TextIOBase):
     """Acumula o texto escrito e repassa cada pedaço a um callback."""
@@ -100,6 +111,7 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRI
         env_antigo = dict(os.environ)
         argv_antigo = sys.argv
         os.environ.update({k: v for k, v in credenciais.items() if v})
+        os.environ.pop(VAR_CANCELAR, None)
         sys.argv = [f"{acao}.py", *args]
         try:
             with contextlib.redirect_stdout(_Desvio(saida, sys.stdout)), \
@@ -109,6 +121,9 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRI
                     codigo = 0
                 except SystemExit as exc:
                     codigo = _codigo_de_saida(exc)
+                except KeyboardInterrupt:
+                    print("⏹️ Cancelado.")
+                    codigo = CANCELADO
                 except BaseException:
                     traceback.print_exc()
                     codigo = 1

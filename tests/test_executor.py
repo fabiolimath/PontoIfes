@@ -113,3 +113,24 @@ def test_escritas_de_outras_threads_ficam_fora_do_log(tmp_path, pacote, capsys):
 def test_mensagem_final():
     assert executor.mensagem_final("Tentativa 1\n✅ entrada registrada\n\n") == "✅ entrada registrada"
     assert executor.mensagem_final("") == ""
+
+
+def test_cancelar_para_o_script_e_limpa_o_pedido(tmp_path, pacote):
+    import threading
+
+    _script(tmp_path, pacote, "abrir_ponto",
+            "import os, time\nprint('esperando')\n"
+            "while not os.environ.get('PONTO_CANCELAR'):\n    time.sleep(0.05)\n"
+            "raise KeyboardInterrupt\n")
+    resultado = {}
+    comecou = threading.Event()
+    thread = threading.Thread(target=lambda: resultado.update(r=executor.executar(
+        "abrir_ponto", {}, tmp_path / "ponto.log", lambda texto: comecou.set(), pacote=pacote)))
+    thread.start()
+    assert comecou.wait(5)
+    executor.cancelar()
+    thread.join(5)
+
+    assert resultado["r"] == (executor.CANCELADO, "esperando\n⏹️ Cancelado.\n")
+    assert executor.VAR_CANCELAR not in os.environ
+    assert "saída: 130" in (tmp_path / "ponto.log").read_text(encoding="utf-8")

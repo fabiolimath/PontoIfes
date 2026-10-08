@@ -35,8 +35,33 @@ LINK_PONTO = FORM_PAINEL + ":linkPontoEletronicoAntigo"
 BLOQUEIO_IP = "não tem autorização para registrar o Ponto"
 
 TIMEOUT = 30
-TENTATIVAS = 3
-ESPERA = 10
+# Espera antes de cada nova tentativa: cresce para aguentar a rede sumir por até
+# uns 2 minutos (troca de Wi-Fi ao chegar no campus, DNS ainda sem resposta).
+ESPERAS = (10, 20, 30, 60)
+TENTATIVAS = len(ESPERAS) + 1
+
+
+def conferir_cancelamento():
+    """O botão Cancelar do app define PONTO_CANCELAR; aqui o script para."""
+    if os.environ.get("PONTO_CANCELAR"):
+        raise KeyboardInterrupt
+
+
+def esperar(segundos):
+    """time.sleep em passos de meio segundo, conferindo se o app pediu para cancelar."""
+    for _ in range(round(segundos * 2)):
+        conferir_cancelamento()
+        time.sleep(0.5)
+    conferir_cancelamento()
+
+
+def resumir(exc):
+    """Texto curto do erro: sem rede, não mostra a exceção inteira do requests."""
+    if isinstance(exc, requests.Timeout):
+        return "o SIGRH não respondeu a tempo"
+    if isinstance(exc, requests.ConnectionError):
+        return "sem conexão. Confira se está conectado à Wi-Fi do campus."
+    return str(exc)
 
 
 class Recusado(Exception):
@@ -171,12 +196,14 @@ def registrar_saida(sessao, pagina):
         BTN_SAIDA: "Registrar Saída",
         "javax.faces.ViewState": viewstate(pagina, FORM_PONTO),
     }, encoding="latin-1")
+    # Última chance de cancelar: depois do envio final, o registro segue até o fim.
+    conferir_cancelamento()
     try:
         resp = sessao.post(PONTO_URL, data=corpo, timeout=60, headers={
             "Content-Type": "application/x-www-form-urlencoded"})
         resp.raise_for_status()
     except requests.RequestException as exc:
-        raise EnvioIncerto(f"falha ao registrar a saída ({exc}); confira no SIGRH") from exc
+        raise EnvioIncerto(f"falha ao registrar a saída ({resumir(exc)}); confira no SIGRH") from exc
 
     pagina = sopa(resp)
     erros = mensagens(pagina, "erros") + mensagens(pagina, "warning")
@@ -206,6 +233,7 @@ def main():
         return 1
 
     for tentativa in range(1, TENTATIVAS + 1):
+        conferir_cancelamento()
         try:
             for texto in fechar(usuario, senha):
                 print(texto)
@@ -214,16 +242,17 @@ def main():
             break
         except Exception as exc:
             erro = exc
-            print(f"Tentativa {tentativa} falhou: {exc}")
+            print(f"Tentativa {tentativa} falhou: {resumir(exc)}")
             if tentativa < TENTATIVAS:
-                print(f"Tentando de novo em {ESPERA}s...")
-                time.sleep(ESPERA)
+                espera = ESPERAS[tentativa - 1]
+                print(f"Tentando de novo em {espera}s...")
+                esperar(espera)
         else:
             mensagem = f"✅🔐📌 SIGRH: saída registrada às {time.strftime('%H:%M')}"
             print(mensagem)
             return 0
 
-    mensagem = f"🔐❌ SIGRH: saída não registrada: {erro}"
+    mensagem = f"🔐❌ SIGRH: saída não registrada: {resumir(erro)}"
     print(mensagem)
     return 1
 
