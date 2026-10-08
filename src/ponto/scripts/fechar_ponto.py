@@ -46,7 +46,7 @@ def resumir(exc):
     if isinstance(exc, requests.Timeout):
         return "o SIGRH não respondeu a tempo"
     if isinstance(exc, requests.ConnectionError):
-        return "sem conexão com o SIGRH"
+        return "sem conexão. Confira se está conectado à Wi-Fi do campus."
     return str(exc)
 
 

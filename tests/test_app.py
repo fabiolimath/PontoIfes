@@ -555,3 +555,24 @@ def test_pit_automatico_tira_o_botao_da_notificacao(app, monkeypatch):
     app._notificar("fechar_ponto", "Fechar ponto: concluído.", "ok")
 
     assert botoes == [None]
+
+
+def test_barra_e_cronometro_durante_a_execucao(app, tmp_path, monkeypatch):
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto",
+                     "import time\ntime.sleep(1.5)\nprint('ok')\n")
+    assert app.progresso.style.visibility == "hidden"
+    durante = {}
+
+    async def espiar():
+        await asyncio.sleep(1.2)
+        durante["status"] = app.status.text
+        durante["barra"] = (app.progresso.style.visibility, app.progresso.is_running)
+
+    async def rodar_e_espiar():
+        await asyncio.gather(app.rodar("abrir_ponto"), espiar())
+
+    app.loop.run_until_complete(rodar_e_espiar())
+
+    assert durante == {"status": "Executando: Abrir ponto… 0:01", "barra": ("visible", True)}
+    assert app.status.text == "Abrir ponto: concluído."
+    assert (app.progresso.style.visibility, app.progresso.is_running) == ("hidden", False)

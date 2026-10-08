@@ -80,6 +80,8 @@ class Ponto(toga.App):
         plataforma.campo_de_data(self.data_pit)
         plataforma.preenchimento(self.data_pit)
 
+        # Barra animada (indeterminada) que só aparece enquanto um script roda.
+        self.progresso = toga.ProgressBar(max=None, style=Pack(margin_top=8, visibility="hidden"))
         self.status = toga.Label("", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
 
@@ -97,6 +99,7 @@ class Ponto(toga.App):
                 *self.botoes,
                 toga.Label("Registrar o PIT de outro dia", style=Pack(margin_top=4)),
                 self.data_pit,
+                self.progresso,
                 self.status,
                 self.saida,
                 rodape,
@@ -186,8 +189,11 @@ class Ponto(toga.App):
             botao.enabled = False
         self.saida.value = self.saida.value + "\n" if encadeado else ""
         self.status.text = f"Executando: {rotulo}…"
+        self.progresso.style.visibility = "visible"
+        self.progresso.start()
 
         loop = asyncio.get_running_loop()
+        cronometro = loop.create_task(self._cronometro(rotulo))
         pit_em_seguida = False
 
         def ao_escrever(texto):
@@ -199,6 +205,7 @@ class Ponto(toga.App):
                     acao, credenciais.ambiente(cred), self.log_path, ao_escrever, args=args
                 )
             )
+            cronometro.cancel()
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
             self._notificar(acao, self.status.text, saida, codigo, data)
@@ -211,11 +218,22 @@ class Ponto(toga.App):
             if acao == "registrar_pit" and data and codigo == 0:
                 self.data_pit.value = ""
         finally:
+            cronometro.cancel()
+            self.progresso.stop()
+            self.progresso.style.visibility = "hidden"
             self.rodando = False
             for botao in self.botoes:
                 botao.enabled = True
         if pit_em_seguida:
             await self.rodar("registrar_pit", encadeado=True)
+
+    async def _cronometro(self, rotulo):
+        """Mostra há quanto tempo o script roda: "Executando: Abrir ponto… 0:42"."""
+        inicio = datetime.now()
+        while True:
+            await asyncio.sleep(1)
+            segundos = int((datetime.now() - inicio).total_seconds())
+            self.status.text = f"Executando: {rotulo}… {segundos // 60}:{segundos % 60:02d}"
 
     def _pit_automatico_agora(self, vezes):
         """Se o fechamento nº `vezes` do dia é o que registra o PIT sozinho (seg a sex)."""

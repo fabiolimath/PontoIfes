@@ -147,9 +147,9 @@ def test_sem_rede_tenta_de_novo(sigrh, capsys):
     sigrh(login=requests.ConnectionError("HTTPSConnectionPool(host='sigrh.ifes.edu.br', port=443)"))
     assert ap.main([]) == 1
     saida = capsys.readouterr().out
-    assert saida.count("falhou: sem conexão com o SIGRH") == ap.TENTATIVAS
+    assert saida.count("falhou: sem conexão. Confira se está conectado à Wi-Fi do campus.") == ap.TENTATIVAS
     assert "HTTPSConnectionPool" not in saida
-    assert saida.splitlines()[-1] == "🔓❌ SIGRH: entrada não registrada: sem conexão com o SIGRH"
+    assert saida.splitlines()[-1] == "🔓❌ SIGRH: entrada não registrada: sem conexão. Confira se está conectado à Wi-Fi do campus."
 
 
 def test_sem_rede_espera_cerca_de_2_minutos(sigrh, monkeypatch):

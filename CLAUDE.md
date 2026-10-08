@@ -13,7 +13,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 ## O que o app faz
 
-1. Tela principal com três botões, um por função, e campo de data para o PIT.
+1. Tela principal com três botões, um por função, e campo de data para o PIT. Durante a execução,
+   barra animada e tempo decorrido ("Executando: Abrir ponto… 0:42").
 2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
    guardadas na área privada do app e editáveis em **Configurações**. Campos de data (PIT) e de
    hora (lembrete) com máscara (`mascara.py`) e teclado próprio.
