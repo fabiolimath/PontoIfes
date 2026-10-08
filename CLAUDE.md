@@ -14,7 +14,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 ## O que o app faz
 
 1. Tela principal com três botões, um por função, e campo de data para o PIT. Durante a execução,
-   barra animada e tempo decorrido ("Executando: Abrir ponto… 0:42").
+   barra animada, tempo decorrido ("Executando: Abrir ponto… 0:42") e botão **Cancelar** embaixo
+   (o executor define `PONTO_CANCELAR`; o script para antes de cada tentativa, nas esperas e logo
+   antes do envio final, nunca depois dele; sai com código 130, sem notificação).
 2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
    guardadas na área privada do app e editáveis em **Configurações**. Campos de data (PIT) e de
    hora (lembrete) com máscara (`mascara.py`) e teclado próprio.

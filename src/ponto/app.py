@@ -33,6 +33,7 @@ class Ponto(toga.App):
         self.fechamento_path = dados / "ultimo_fechamento.txt"
         self.lembrete_path = dados / "lembrete.txt"
         self.rodando = False
+        self.cancelando = False
 
         self.main_window = toga.MainWindow(title=self.formal_name)
         # O Toga escreve "About ..." em inglês no menu de três pontos.
@@ -94,6 +95,11 @@ class Ponto(toga.App):
             ],
             style=Pack(direction=ROW, margin_top=8),
         )
+        # Só aparece enquanto um script roda (display "none" fora disso).
+        self.botao_cancelar = toga.Button(
+            "Cancelar", on_press=lambda w, **kw: self.cancelar(),
+            style=Pack(margin_top=8, height=56, display="none"),
+        )
         self.tela_principal = toga.Box(
             children=[
                 *self.botoes,
@@ -102,6 +108,7 @@ class Ponto(toga.App):
                 self.progresso,
                 self.status,
                 self.saida,
+                self.botao_cancelar,
                 rodape,
             ],
             style=Pack(direction=COLUMN, margin=12),
@@ -191,6 +198,9 @@ class Ponto(toga.App):
         self.status.text = f"Executando: {rotulo}…"
         self.progresso.style.visibility = "visible"
         self.progresso.start()
+        self.cancelando = False
+        self.botao_cancelar.enabled = True
+        self.botao_cancelar.style.display = "pack"
 
         loop = asyncio.get_running_loop()
         cronometro = loop.create_task(self._cronometro(rotulo))
@@ -206,6 +216,10 @@ class Ponto(toga.App):
                 )
             )
             cronometro.cancel()
+            if codigo == executor.CANCELADO:
+                # Cancelado pelo usuário: sem notificação, lembrete nem PIT em seguida.
+                self.status.text = f"{rotulo}: cancelado."
+                return
             resultado = "concluído" if codigo == 0 else f"falhou (código {codigo})"
             self.status.text = f"{rotulo}: {resultado}."
             self._notificar(acao, self.status.text, saida, codigo, data)
@@ -221,6 +235,8 @@ class Ponto(toga.App):
             cronometro.cancel()
             self.progresso.stop()
             self.progresso.style.visibility = "hidden"
+            self.botao_cancelar.style.display = "none"
+            self.cancelando = False
             self.rodando = False
             for botao in self.botoes:
                 botao.enabled = True
@@ -233,7 +249,17 @@ class Ponto(toga.App):
         while True:
             await asyncio.sleep(1)
             segundos = int((datetime.now() - inicio).total_seconds())
-            self.status.text = f"Executando: {rotulo}… {segundos // 60}:{segundos % 60:02d}"
+            fazendo = "Cancelando" if self.cancelando else "Executando"
+            self.status.text = f"{fazendo}: {rotulo}… {segundos // 60}:{segundos % 60:02d}"
+
+    def cancelar(self):
+        """Botão Cancelar: o script para antes da próxima tentativa ou durante a espera."""
+        if not self.rodando or self.cancelando:
+            return
+        self.cancelando = True
+        self.botao_cancelar.enabled = False
+        executor.cancelar()
+        self.status.text = self.status.text.replace("Executando", "Cancelando", 1)
 
     def _pit_automatico_agora(self, vezes):
         """Se o fechamento nº `vezes` do dia é o que registra o PIT sozinho (seg a sex)."""

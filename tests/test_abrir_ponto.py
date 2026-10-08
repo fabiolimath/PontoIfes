@@ -157,8 +157,19 @@ def test_sem_rede_espera_cerca_de_2_minutos(sigrh, monkeypatch):
     monkeypatch.setattr(ap.time, "sleep", esperas.append)
     sigrh(login=requests.ConnectionError("Failed to resolve 'sigrh.ifes.edu.br'"))
     assert ap.main([]) == 1
-    assert esperas == list(ap.ESPERAS)
-    assert sum(esperas) >= 120
+    assert sum(esperas) == sum(ap.ESPERAS) >= 120
+    assert set(esperas) == {0.5}  # passos curtos: o Cancelar não espera o minuto inteiro
+
+
+def test_cancelar_interrompe_a_espera(sigrh, monkeypatch):
+    def dormir(segundos):
+        monkeypatch.setenv("PONTO_CANCELAR", "1")
+
+    monkeypatch.setattr(ap.time, "sleep", dormir)
+    falso = sigrh(login=requests.ConnectionError("sem rede"))
+    with pytest.raises(KeyboardInterrupt):
+        ap.main([])
+    assert sum(1 for c in falso.chamadas if c[1] == ap.LOGIN_URL) == 1
 
 
 def test_falha_ao_enviar_o_registro_nao_repete(sigrh, capsys):
@@ -206,3 +217,18 @@ def test_ip_sem_configuracao_de_acesso_vira_so_a_dica_da_wifi(sigrh, capsys):
     saida = capsys.readouterr().out
     assert "Caro usuário" not in saida
     assert saida.splitlines()[-1] == "🔓❌ SIGRH: entrada não registrada: Confira se está conectado à Wi-Fi do campus."
+
+
+def test_cancelar_antes_do_envio_final_nao_registra(sigrh, monkeypatch):
+    original = ap.tela_do_ponto
+
+    def tela_e_cancela(*a):
+        pagina = original(*a)
+        monkeypatch.setenv("PONTO_CANCELAR", "1")
+        return pagina
+
+    monkeypatch.setattr(ap, "tela_do_ponto", tela_e_cancela)
+    falso = sigrh()
+    with pytest.raises(KeyboardInterrupt):
+        ap.main([])
+    assert falso.registros() == []

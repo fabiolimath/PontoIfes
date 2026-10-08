@@ -576,3 +576,34 @@ def test_barra_e_cronometro_durante_a_execucao(app, tmp_path, monkeypatch):
     assert durante == {"status": "Executando: Abrir ponto… 0:01", "barra": ("visible", True)}
     assert app.status.text == "Abrir ponto: concluído."
     assert (app.progresso.style.visibility, app.progresso.is_running) == ("hidden", False)
+
+
+def test_cancelar_interrompe_sem_notificar(app, tmp_path, monkeypatch):
+    from ponto import plataforma
+
+    notificacoes = []
+    monkeypatch.setattr(plataforma, "notificar", lambda app, *a, **k: notificacoes.append(a))
+    _preparar_script(app, tmp_path, monkeypatch, "abrir_ponto",
+                     "import os, time\nprint('Tentativa 1 falhou')\n"
+                     "while not os.environ.get('PONTO_CANCELAR'):\n    time.sleep(0.05)\n"
+                     "raise KeyboardInterrupt\n")
+    assert app.botao_cancelar.style.display == "none"
+    durante = {}
+
+    async def cancelar_logo():
+        await asyncio.sleep(0.3)
+        durante["botao"] = app.botao_cancelar.style.display
+        app.cancelar()
+        durante["habilitado"] = app.botao_cancelar.enabled
+
+    async def rodar_e_cancelar():
+        await asyncio.gather(app.rodar("abrir_ponto"), cancelar_logo())
+
+    app.loop.run_until_complete(rodar_e_cancelar())
+
+    assert durante == {"botao": "pack", "habilitado": False}
+    assert app.status.text == "Abrir ponto: cancelado."
+    assert app.saida.value.endswith("⏹️ Cancelado.\n")
+    assert notificacoes == []
+    assert app.botao_cancelar.style.display == "none"
+    assert not app.rodando and not app.cancelando

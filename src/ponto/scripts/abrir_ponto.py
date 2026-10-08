@@ -46,6 +46,20 @@ ESPERAS = (10, 20, 30, 60)
 TENTATIVAS = len(ESPERAS) + 1
 
 
+def conferir_cancelamento():
+    """O botão Cancelar do app define PONTO_CANCELAR; aqui o script para."""
+    if os.environ.get("PONTO_CANCELAR"):
+        raise KeyboardInterrupt
+
+
+def esperar(segundos):
+    """time.sleep em passos de meio segundo, conferindo se o app pediu para cancelar."""
+    for _ in range(round(segundos * 2)):
+        conferir_cancelamento()
+        time.sleep(0.5)
+    conferir_cancelamento()
+
+
 def resumir(exc):
     """Texto curto do erro: sem rede, não mostra a exceção inteira do requests."""
     if isinstance(exc, requests.Timeout):
@@ -183,6 +197,8 @@ def registrar_entrada(sessao, pagina):
         raise Recusado(com_dica(problemas) if problemas
                        else "O botão Registrar Entrada não está disponível. " + DICA_WIFI)
 
+    # Última chance de cancelar: depois do envio final, o registro segue até o fim.
+    conferir_cancelamento()
     try:
         resp = sessao.post(PONTO_URL, data={
             FORM: FORM,
@@ -223,6 +239,7 @@ def main(argv=None):
         return 1
 
     for tentativa in range(1, TENTATIVAS + 1):
+        conferir_cancelamento()
         try:
             pagina = abrir(usuario, senha)
         except JaAberto as exc:
@@ -237,7 +254,7 @@ def main(argv=None):
             if tentativa < TENTATIVAS:
                 espera = ESPERAS[tentativa - 1]
                 print(f"Tentando de novo em {espera}s...")
-                time.sleep(espera)
+                esperar(espera)
         else:
             print(re.sub(r"\s+", " ", f"✅🔓🕑 SIGRH: entrada registrada {descrever(pagina)}").strip())
             return 0
