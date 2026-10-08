@@ -40,6 +40,15 @@ TENTATIVAS = len(ESPERAS) + 1
 DIAS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
 
 
+def resumir(exc):
+    """Texto curto do erro: sem rede, não mostra a exceção inteira do requests."""
+    if isinstance(exc, requests.Timeout):
+        return "o SIGRH não respondeu a tempo"
+    if isinstance(exc, requests.ConnectionError):
+        return "sem conexão com o SIGRH"
+    return str(exc)
+
+
 class Recusado(Exception):
     """O SIGRH recusou o pedido (senha errada, PIT já registrado...): não adianta repetir."""
 
@@ -210,7 +219,7 @@ def cadastrar(sessao, dados):
         resp = sessao.post(AUSENCIA_URL, files=partes, timeout=60)
         resp.raise_for_status()
     except requests.RequestException as exc:
-        raise EnvioIncerto(f"falha ao enviar o formulário ({exc}); confira no SIGRH") from exc
+        raise EnvioIncerto(f"falha ao enviar o formulário ({resumir(exc)}); confira no SIGRH") from exc
 
     pagina = sopa(resp)
     erros = mensagens(pagina, "erros") + mensagens(pagina, "warning")
@@ -265,24 +274,23 @@ def main(argv=None):
     print(f"Registrando o PIT de {dia} ({DIAS[args.data.weekday()]}), observação: {args.obs!r}")
     for tentativa in range(1, TENTATIVAS + 1):
         try:
-            for texto in registrar(dia, args.obs, usuario, senha):
-                print(texto)
+            registrar(dia, args.obs, usuario, senha)
         except (Recusado, EnvioIncerto) as exc:
             erro = exc
             break
         except Exception as exc:
             erro = exc
-            print(f"Tentativa {tentativa} falhou: {exc}")
+            print(f"Tentativa {tentativa} falhou: {resumir(exc)}")
             if tentativa < TENTATIVAS:
                 espera = ESPERAS[tentativa - 1]
                 print(f"Tentando de novo em {espera}s...")
                 time.sleep(espera)
         else:
-            mensagem = f"📋✅ SIGRH: PIT de {dia} registrado"
+            mensagem = "📋✅ SIGRH: PIT registrado"
             print(mensagem)
             return 0
 
-    mensagem = f"📋❌ SIGRH: PIT de {dia} não registrado: {erro}"
+    mensagem = f"📋❌ SIGRH: PIT de {dia} não registrado: {resumir(erro)}"
     print(mensagem)
     return 1
 

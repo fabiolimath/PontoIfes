@@ -41,6 +41,15 @@ ESPERAS = (10, 20, 30, 60)
 TENTATIVAS = len(ESPERAS) + 1
 
 
+def resumir(exc):
+    """Texto curto do erro: sem rede, não mostra a exceção inteira do requests."""
+    if isinstance(exc, requests.Timeout):
+        return "o SIGRH não respondeu a tempo"
+    if isinstance(exc, requests.ConnectionError):
+        return "sem conexão com o SIGRH"
+    return str(exc)
+
+
 class Recusado(Exception):
     """O SIGRH recusou (senha errada, sem entrada aberta...): não adianta repetir."""
 
@@ -178,7 +187,7 @@ def registrar_saida(sessao, pagina):
             "Content-Type": "application/x-www-form-urlencoded"})
         resp.raise_for_status()
     except requests.RequestException as exc:
-        raise EnvioIncerto(f"falha ao registrar a saída ({exc}); confira no SIGRH") from exc
+        raise EnvioIncerto(f"falha ao registrar a saída ({resumir(exc)}); confira no SIGRH") from exc
 
     pagina = sopa(resp)
     erros = mensagens(pagina, "erros") + mensagens(pagina, "warning")
@@ -216,7 +225,7 @@ def main():
             break
         except Exception as exc:
             erro = exc
-            print(f"Tentativa {tentativa} falhou: {exc}")
+            print(f"Tentativa {tentativa} falhou: {resumir(exc)}")
             if tentativa < TENTATIVAS:
                 espera = ESPERAS[tentativa - 1]
                 print(f"Tentando de novo em {espera}s...")
@@ -226,7 +235,7 @@ def main():
             print(mensagem)
             return 0
 
-    mensagem = f"🔐❌ SIGRH: saída não registrada: {erro}"
+    mensagem = f"🔐❌ SIGRH: saída não registrada: {resumir(erro)}"
     print(mensagem)
     return 1
 

@@ -104,7 +104,7 @@ def test_erro_do_sigrh_no_registro(sigrh, capsys):
     assert ap.main([]) == 1
     assert len(falso.registros()) == 1
     saida = capsys.readouterr().out
-    assert "computador" in saida and "Wi-Fi do campus" in saida
+    assert saida.splitlines()[-1] == "🔓❌ SIGRH: entrada não registrada: Confira se está conectado à Wi-Fi do campus."
 
 
 def test_login_recusado_nao_repete(sigrh, capsys):
@@ -126,7 +126,7 @@ def test_fora_da_rede_com_mensagem(sigrh, capsys):
     assert ap.main([]) == 1
     assert falso.registros() == []
     saida = capsys.readouterr().out
-    assert "não permitido a partir desta rede" in saida and "Wi-Fi do campus" in saida
+    assert saida.splitlines()[-1].endswith(": Confira se está conectado à Wi-Fi do campus.")
 
 
 def test_sem_tela_do_ponto_tenta_de_novo_e_avisa_da_wifi(sigrh, capsys):
@@ -144,9 +144,12 @@ def test_login_cai_no_portal_mas_tela_do_ponto_abre(sigrh):
 
 
 def test_sem_rede_tenta_de_novo(sigrh, capsys):
-    sigrh(login=requests.ConnectionError("sem conexão"))
+    sigrh(login=requests.ConnectionError("HTTPSConnectionPool(host='sigrh.ifes.edu.br', port=443)"))
     assert ap.main([]) == 1
-    assert capsys.readouterr().out.count("falhou") == ap.TENTATIVAS
+    saida = capsys.readouterr().out
+    assert saida.count("falhou: sem conexão com o SIGRH") == ap.TENTATIVAS
+    assert "HTTPSConnectionPool" not in saida
+    assert saida.splitlines()[-1] == "🔓❌ SIGRH: entrada não registrada: sem conexão com o SIGRH"
 
 
 def test_sem_rede_espera_cerca_de_2_minutos(sigrh, monkeypatch):
@@ -183,11 +186,23 @@ def test_fora_do_campus_nao_envia_e_tenta_de_novo(sigrh, capsys):
     assert falso.registros() == []
     assert sum(1 for c in falso.chamadas if c[1] == ap.LOGIN_URL and c[0] == "POST") == ap.TENTATIVAS
     ultima = capsys.readouterr().out.splitlines()[-1]
-    assert "fora da rede do campus" in ultima and "Wi-Fi do campus" in ultima
+    assert ultima == "🔓❌ SIGRH: entrada não registrada: Confira se está conectado à Wi-Fi do campus."
 
 
 def test_fora_do_campus_na_resposta_do_registro(sigrh, capsys):
     falso = sigrh(registro=ERRO_IP + PONTO_FECHADO)
     assert ap.main([]) == 1
     assert len(falso.registros()) == 1
-    assert "fora da rede do campus" in capsys.readouterr().out
+    assert capsys.readouterr().out.splitlines()[-1].endswith("Confira se está conectado à Wi-Fi do campus.")
+
+
+def test_ip_sem_configuracao_de_acesso_vira_so_a_dica_da_wifi(sigrh, capsys):
+    erro = ("""<ul class="erros"><li>Caro usuário, não foi encontrada a configuração que permita """
+            """o acesso ao registro do ponto eletrônico para o seu endereço IP. Em caso de dúvidas """
+            """entrar em contato com a Administração do Sistema.</li></ul>""")
+    falso = sigrh(apos_login=erro + PONTO_FECHADO)
+    assert ap.main([]) == 1
+    assert falso.registros() == []
+    saida = capsys.readouterr().out
+    assert "Caro usuário" not in saida
+    assert saida.splitlines()[-1] == "🔓❌ SIGRH: entrada não registrada: Confira se está conectado à Wi-Fi do campus."
