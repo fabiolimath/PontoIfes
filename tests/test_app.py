@@ -227,7 +227,7 @@ def test_tela_de_configuracoes(app):
 
     assert app.main_window.content is app.tela_principal
     assert configuracoes.carregar(app.config_path) == {
-        "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:40",
+        "notificacoes": False, "lembrete_fechar": True, "lembrete_tempo": "01:00",
         "verificar_atualizacoes": False, "observacao_pit": "PIT segundo portaria",
         "pit_automatico": 0}
     assert not any(isinstance(w, toga.Label) and w.text == "Pronto." for w in app.tela_principal.children)
@@ -243,7 +243,7 @@ def test_configuracoes_do_lembrete(app, monkeypatch):
     app.campos["SIGRH_USER"].value = "a"
     app.campos["SIGRH_PASS"].value = "b"
     assert app.lembrete_fechar.value is True
-    assert app.lembrete_tempo.value == "01:40"
+    assert app.lembrete_tempo.value == "01:00"
     app.lembrete_tempo.value = ""
     for texto in ["0", "02", "02:3", "02:30"]:
         app.lembrete_tempo.value = texto
@@ -264,7 +264,7 @@ def test_configuracoes_do_lembrete(app, monkeypatch):
     app.lembrete_tempo.value = ""
     app.loop.run_until_complete(app.salvar_configuracoes(None))
     preferencias = configuracoes.carregar(app.config_path)
-    assert (preferencias["lembrete_fechar"], preferencias["lembrete_tempo"]) == (False, "01:40")
+    assert (preferencias["lembrete_fechar"], preferencias["lembrete_tempo"]) == (False, "01:00")
     assert cancelados == [1]
 
 

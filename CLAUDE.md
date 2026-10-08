@@ -28,7 +28,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
      Os fechamentos do dia ficam em `ultimo_fechamento.txt` ("aaaa-mm-dd N").
 4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
    (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze; perde-se ao
-   reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:40, editável nas
+   reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:00, editável nas
    Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver` em Java; fechar o
    ponto com sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`).
 5. **Configurações** (`configuracoes.json`): credenciais, Observação do PIT, PIT automático,
