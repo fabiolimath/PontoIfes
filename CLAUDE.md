@@ -108,8 +108,7 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 - Testar os gatilhos automáticos (Bluetooth, horário, Wi-Fi) num dia útil.
 - Testar num dia útil: botão Registrar PIT na notificação (o lembrete, o Fechar ponto pelo lembrete e
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
-  chegar no campus, notificação de falha que fica após o sucesso, mensagens curtas (sem rede, fora
-  do campus, PIT) e o botão Cancelar.
+  chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
   é legado e foi substituído pelo app.
 
