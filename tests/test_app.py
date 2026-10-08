@@ -35,6 +35,24 @@ def test_tela_de_log(app):
     assert app.texto_log.value == "Nenhuma execução registrada ainda."
 
 
+def _botoes(widget):
+    if isinstance(widget, toga.Button):
+        yield widget
+    for filho in getattr(widget, "children", None) or []:
+        yield from _botoes(filho)
+    if isinstance(widget, toga.ScrollContainer):
+        yield from _botoes(widget.content)
+
+
+def test_botoes_de_configuracoes_e_log_sao_verdes(app):
+    for mostrar in (app.mostrar_configuracoes, app.mostrar_log):
+        mostrar()
+        botoes = list(_botoes(app.main_window.content))
+        assert botoes
+        assert {(str(b.style.background_color), str(b.style.color)) for b in botoes} == {
+            ("rgb(56 142 60 / 1.0)", "rgb(255 255 255 / 1.0)")}
+
+
 def _preparar_script(app, tmp_path, monkeypatch, acao, corpo):
     from ponto import credenciais, executor
 
@@ -603,12 +621,12 @@ def test_cancelar_interrompe_sem_notificar(app, tmp_path, monkeypatch):
 
     app.loop.run_until_complete(rodar_e_cancelar())
 
-    assert durante == {"cancelar": (True, "rgb(127 196 28 / 1.0)"), "acoes": {(False, "None")},
+    assert durante == {"cancelar": (True, "rgb(56 142 60 / 1.0)"), "acoes": {(False, "None")},
                        "depois": False}
     assert app.status.text == "Abrir ponto: cancelado."
     assert app.saida.value.endswith("⏹️ Cancelado.\n")
     assert notificacoes == []
     assert not app.botao_cancelar.enabled
     assert {(b.enabled, str(b.style.background_color))
-            for b in app.botoes + app.botoes_rodape} == {(True, "rgb(127 196 28 / 1.0)")}
+            for b in app.botoes + app.botoes_rodape} == {(True, "rgb(56 142 60 / 1.0)")}
     assert not app.rodando and not app.cancelando

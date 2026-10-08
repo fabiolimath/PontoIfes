@@ -16,9 +16,10 @@ PIT_AUTOMATICO = {
     1: "No 1º fechamento do dia",
     2: "No 2º fechamento do dia",
 }
-# Verde do IFES (o mesmo dos ícones dos atalhos): botão disponível. Indisponível,
-# o botão volta à cor padrão (cinza).
-VERDE = "#7FC41C"
+# Verde dos botões disponíveis, com texto branco (mais escuro que o verde claro do
+# IFES dos ícones dos atalhos). Indisponível, o botão volta ao cinza padrão.
+VERDE = "#388E3C"
+TEXTO_BOTAO = "#FFFFFF"
 
 
 def disponivel(botao, sim):
@@ -26,8 +27,16 @@ def disponivel(botao, sim):
     botao.enabled = sim
     if sim:
         botao.style.background_color = VERDE
+        botao.style.color = TEXTO_BOTAO
     else:
         del botao.style.background_color
+        del botao.style.color
+
+
+def verde(botao):
+    """Pinta de verde um botão que fica sempre disponível (Configurações e Log)."""
+    disponivel(botao, True)
+    return botao
 
 
 EXPLICACAO_PIT_AUTOMATICO = {
@@ -434,14 +443,14 @@ class Ponto(toga.App):
         )
         filhos += [
             self.verificar_atualizacoes,
-            toga.Button(f"Verificar agora (versão instalada: {self.version or '?'})",
-                        on_press=self._verificar_agora, style=Pack(margin_bottom=8)),
+            verde(toga.Button(f"Verificar agora (versão instalada: {self.version or '?'})",
+                              on_press=self._verificar_agora, style=Pack(margin_bottom=8))),
         ]
 
-        botoes = [toga.Button("Salvar", on_press=self.salvar_configuracoes, style=Pack(flex=1))]
+        botoes = [verde(toga.Button("Salvar", on_press=self.salvar_configuracoes, style=Pack(flex=1)))]
         if atuais is not None:
-            botoes.insert(0, toga.Button("Cancelar", on_press=lambda w, **kw: self.mostrar_principal(),
-                                         style=Pack(flex=1, margin_right=8)))
+            botoes.insert(0, verde(toga.Button("Cancelar", on_press=lambda w, **kw: self.mostrar_principal(),
+                                               style=Pack(flex=1, margin_right=8))))
         filhos.append(toga.Box(children=botoes, style=Pack(direction=ROW, margin_top=8)))
 
         self.main_window.content = toga.ScrollContainer(
@@ -552,12 +561,12 @@ class Ponto(toga.App):
         )
         botoes = toga.Box(
             children=[
-                toga.Button("Voltar", on_press=lambda w, **kw: self.mostrar_principal(),
-                            style=Pack(flex=1, margin_right=4)),
-                toga.Button("Copiar", on_press=self.copiar_log,
-                            style=Pack(flex=1, margin=(0, 4))),
-                toga.Button("Limpar", on_press=self.limpar_log,
-                            style=Pack(flex=1, margin_left=4)),
+                verde(toga.Button("Voltar", on_press=lambda w, **kw: self.mostrar_principal(),
+                                  style=Pack(flex=1, margin_right=4))),
+                verde(toga.Button("Copiar", on_press=self.copiar_log,
+                                  style=Pack(flex=1, margin=(0, 4)))),
+                verde(toga.Button("Limpar", on_press=self.limpar_log,
+                                  style=Pack(flex=1, margin_left=4))),
             ],
             style=Pack(direction=ROW, margin_top=8),
         )
