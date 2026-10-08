@@ -16,9 +16,9 @@ PIT_AUTOMATICO = {
     1: "No 1º fechamento do dia",
     2: "No 2º fechamento do dia",
 }
-# Verde dos botões disponíveis, com texto branco (mais escuro que o verde claro do
-# IFES dos ícones dos atalhos). Indisponível, o botão volta ao cinza padrão.
-VERDE = "#388E3C"
+# Verde dos botões disponíveis (o mesmo da barra do topo e dos ícones), com texto
+# branco. Indisponível, o botão volta ao cinza padrão.
+VERDE = "#008577"
 TEXTO_BOTAO = "#FFFFFF"
 
 
