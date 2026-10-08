@@ -101,13 +101,17 @@ class Ponto(toga.App):
         self.status = toga.Label("", style=Pack(margin=(8, 0)))
         self.saida = toga.MultilineTextInput(readonly=True, style=Pack(flex=1))
 
+        # Configurações e Log também ficam indisponíveis (cinza) enquanto um script roda.
+        self.botoes_rodape = [
+            toga.Button("Configurações", on_press=lambda w, **kw: self.mostrar_configuracoes(),
+                        style=Pack(flex=1, margin_right=4)),
+            toga.Button("Log", on_press=lambda w, **kw: self.mostrar_log(),
+                        style=Pack(flex=1, margin_left=4)),
+        ]
+        for botao in self.botoes_rodape:
+            disponivel(botao, True)
         rodape = toga.Box(
-            children=[
-                toga.Button("Configurações", on_press=lambda w, **kw: self.mostrar_configuracoes(),
-                            style=Pack(flex=1, margin_right=4)),
-                toga.Button("Log", on_press=lambda w, **kw: self.mostrar_log(),
-                            style=Pack(flex=1, margin_left=4)),
-            ],
+            children=self.botoes_rodape,
             style=Pack(direction=ROW, margin_top=8),
         )
         # Lógica inversa à dos botões de ação: verde só enquanto um script roda.
@@ -208,7 +212,7 @@ class Ponto(toga.App):
                 plataforma.cancelar_notificacao(self, self._ident_notificacao(outra))
         except Exception as exc:
             print("Erro ao apagar a notificação:", exc)
-        for botao in self.botoes:
+        for botao in self.botoes + self.botoes_rodape:
             disponivel(botao, False)
         self.saida.value = self.saida.value + "\n" if encadeado else ""
         self.status.text = f"Executando: {rotulo}…"
@@ -253,7 +257,7 @@ class Ponto(toga.App):
             disponivel(self.botao_cancelar, False)
             self.cancelando = False
             self.rodando = False
-            for botao in self.botoes:
+            for botao in self.botoes + self.botoes_rodape:
                 disponivel(botao, True)
         if pit_em_seguida:
             await self.rodar("registrar_pit", encadeado=True)

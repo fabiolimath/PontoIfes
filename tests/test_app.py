@@ -593,7 +593,8 @@ def test_cancelar_interrompe_sem_notificar(app, tmp_path, monkeypatch):
     async def cancelar_logo():
         await asyncio.sleep(0.3)
         durante["cancelar"] = (app.botao_cancelar.enabled, str(app.botao_cancelar.style.background_color))
-        durante["acoes"] = {(b.enabled, str(b.style.background_color)) for b in app.botoes}
+        durante["acoes"] = {(b.enabled, str(b.style.background_color))
+                            for b in app.botoes + app.botoes_rodape}
         app.cancelar()
         durante["depois"] = app.botao_cancelar.enabled
 
@@ -608,5 +609,6 @@ def test_cancelar_interrompe_sem_notificar(app, tmp_path, monkeypatch):
     assert app.saida.value.endswith("⏹️ Cancelado.\n")
     assert notificacoes == []
     assert not app.botao_cancelar.enabled
-    assert {(b.enabled, str(b.style.background_color)) for b in app.botoes} == {(True, "rgb(127 196 28 / 1.0)")}
+    assert {(b.enabled, str(b.style.background_color))
+            for b in app.botoes + app.botoes_rodape} == {(True, "rgb(127 196 28 / 1.0)")}
     assert not app.rodando and not app.cancelando
