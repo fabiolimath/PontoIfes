@@ -15,9 +15,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 1. Tela principal com três botões, um por função, e campo de data para o PIT. Durante a execução,
    barra animada, tempo decorrido ("Executando: Abrir ponto… 0:42") e botão **Cancelar** embaixo.
-   Botões disponíveis ficam verdes (#7FC41C) e os indisponíveis, cinza: os de ação, Configurações e
-   Log verdes fora da
-   execução, o Cancelar verde só durante ela
+   Botões disponíveis ficam verdes (#008577, o da barra do topo, texto branco) e os
+   indisponíveis, cinza; os das Configurações e do Log também são verdes. Na tela principal:
+   os de ação, Configurações e Log verdes fora da execução, o Cancelar verde só durante ela
    (o executor define `PONTO_CANCELAR`; o script para antes de cada tentativa, nas esperas e logo
    antes do envio final, nunca depois dele; sai com código 130, sem notificação).
 2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
@@ -66,6 +66,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
   Gradle por `build_gradle_extra_content` e no manifesto pelo `pyproject.toml`).
 - `android/res/` — atalhos de launcher (`xml/shortcuts.xml`, `values/atalhos.xml`, ícones
   `drawable*/atalho_*.xml`) e ícone das notificações (`drawable/ic_notificacao.xml`).
+- `icons/` — ícone do app (logo do IFES no verde #008577). `icons/antigos/` guarda os ícones no
+  verde claro original (#7FC41C) do app, do site e dos atalhos, caso se queira voltar a eles.
 - `android/release.sh` — empacota, alinha e assina o APK release → `dist/ponto-ifes.apk`.
 - `.github/workflows/release.yml` — build e publicação automáticos.
 - `.github/workflows/pr.yml` — em cada PR: testes e APK de teste assinado no pré-release `teste`.
