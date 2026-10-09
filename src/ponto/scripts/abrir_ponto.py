@@ -126,26 +126,20 @@ def tem_botao(pagina, nome):
     return bool(form and form.find("input", {"name": nome}))
 
 
-def horarios(pagina):
-    """(hora de entrada, saída prevista) mostradas na tela do ponto, "" se faltarem."""
-    entrada = prevista = ""
+def hora_entrada(pagina):
+    """Hora de entrada mostrada na tela do ponto, "" se faltar."""
     form = formulario_ponto(pagina)
     if form:
         for th in form.find_all("th"):
             if th.get_text(strip=True).lower().startswith("hora de entrada"):
                 td = th.find_next_sibling("td")
-                entrada = td.get_text(strip=True) if td else ""
-        span = form.find(id=FORM + ":horaSaidaPrevista")
-        prevista = span.get_text(strip=True) if span else ""
-    return entrada, prevista
+                return td.get_text(strip=True) if td else ""
+    return ""
 
 
 def descrever(pagina):
-    entrada, prevista = horarios(pagina)
-    texto = f"às {entrada}" if entrada else ""
-    if prevista:
-        texto += f" (saída prevista: {prevista})"
-    return texto.strip()
+    entrada = hora_entrada(pagina)
+    return f"às {entrada}" if entrada else ""
 
 
 # -----------------------------------

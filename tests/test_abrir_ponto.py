@@ -87,7 +87,8 @@ def test_registra_a_entrada_como_o_navegador(sigrh, capsys):
         "javax.faces.ViewState": "j_id1",
     }]
     saida = capsys.readouterr().out
-    assert "entrada registrada às 07:46:40 (saída prevista: 14:53:40)" in saida
+    assert "entrada registrada às 07:46:40" in saida
+    assert "prevista" not in saida
 
 
 def test_sem_mensagem_de_sucesso_nao_diz_que_registrou(sigrh, capsys):
