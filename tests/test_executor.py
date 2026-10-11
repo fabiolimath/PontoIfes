@@ -134,3 +134,13 @@ def test_cancelar_para_o_script_e_limpa_o_pedido(tmp_path, pacote):
     assert resultado["r"] == (executor.CANCELADO, "esperando\n⏹️ Cancelado.\n")
     assert executor.VAR_CANCELAR not in os.environ
     assert "saída: 130" in (tmp_path / "ponto.log").read_text(encoding="utf-8")
+
+
+def test_cabecalho_do_log_nao_repete_a_observacao(tmp_path, pacote):
+    _script(tmp_path, pacote, "registrar_pit", "print('obs no script')\n")
+    log = tmp_path / "l"
+    executor.executar("registrar_pit", {}, log, args=("09/10/2026", "--obs", "Conforme PIT docente."),
+                      pacote=pacote)
+    texto = log.read_text(encoding="utf-8")
+    assert "· registrar_pit 09/10/2026 ===" in texto
+    assert "Conforme PIT docente." not in texto

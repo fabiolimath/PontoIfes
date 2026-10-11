@@ -94,6 +94,15 @@ def _codigo_de_saida(exc):
     return 1
 
 
+def _sem_obs(args):
+    """Argumentos sem `--obs TEXTO`: o script do PIT já mostra a observação na saída."""
+    args = list(args)
+    if "--obs" in args:
+        i = args.index("--obs")
+        del args[i:i + 2]
+    return args
+
+
 def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRIPTS_PACOTE):
     """Roda o script da ação e devolve (código de saída, saída capturada).
 
@@ -132,7 +141,7 @@ def executar(acao, credenciais, log_path, ao_escrever=None, args=(), pacote=SCRI
             os.environ.clear()
             os.environ.update(env_antigo)
 
-    registrar_log(log_path, " ".join([acao, *args]), inicio, saida.valor(), codigo)
+    registrar_log(log_path, " ".join([acao, *_sem_obs(args)]), inicio, saida.valor(), codigo)
     return codigo, saida.valor()
 
 
