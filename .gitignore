@@ -70,3 +70,8 @@ src/ponto/segredo_telegram.py
 # Chave de assinatura do APK release
 *.jks
 *.keystore
+
+# Gradle (app Kotlin)
+.gradle/
+.kotlin/
+local.properties

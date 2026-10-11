@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Ponto.Base" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <item name="colorPrimary">@color/verde</item>
+        <item name="colorPrimaryVariant">@color/verde_escuro</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@color/destaque</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="android:statusBarColor">@color/verde_escuro</item>
+    </style>
+
+    <style name="Theme.Ponto" parent="Theme.Ponto.Base" />
+</resources>

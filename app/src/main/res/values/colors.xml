@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Barra do topo e botões disponíveis (o verde do app Python). -->
+    <color name="verde">#008577</color>
+    <color name="verde_escuro">#00574B</color>
+    <!-- Destaque: interruptores ligados, cursor. -->
+    <color name="destaque">#2E7D32</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
