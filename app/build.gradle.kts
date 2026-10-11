@@ -70,6 +70,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // java.time (usado pelo módulo sigrh) no Android 7 (API 24 e 25).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -85,6 +87,7 @@ kotlin {
 
 dependencies {
     implementation(project(":sigrh"))
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
