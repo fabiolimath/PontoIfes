@@ -95,4 +95,6 @@ dependencies {
     // Testes das classes sem Android (pacote nucleo), na JVM.
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:2.2.21")
     testImplementation("junit:junit:4.13.2")
+    // org.json de verdade: o do android.jar, nos testes da JVM, só tem métodos vazios.
+    testImplementation("org.json:json:20250517")
 }

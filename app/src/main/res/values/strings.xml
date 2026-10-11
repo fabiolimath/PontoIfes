@@ -14,4 +14,20 @@
     <string name="copiado">Copiado</string>
     <string name="limpar">Limpar</string>
     <string name="salvar">Salvar</string>
+    <string name="aviso_credenciais">Informe as credenciais.\nElas ficam guardadas só neste aparelho.</string>
+    <string name="usuario_sigrh">Usuário do SIGRH</string>
+    <string name="senha_sigrh">Senha do SIGRH</string>
+    <string name="observacao_pit">Observação do PIT</string>
+    <string name="pit_automatico">Registrar o PIT do dia automaticamente</string>
+    <string name="pit_auto_0">Não</string>
+    <string name="pit_auto_1">No 1º fechamento do dia</string>
+    <string name="pit_auto_2">No 2º fechamento do dia</string>
+    <string name="pit_auto_expl_0">Registre o PIT pelo botão do app\nou pelo da notificação de ponto fechado.</string>
+    <string name="pit_auto_expl_1">Para quem fecha o ponto uma vez por dia:\no PIT é registrado logo após o fechamento.</string>
+    <string name="pit_auto_expl_2">Para quem fecha o ponto no almoço:\no PIT é registrado após fechar pela 2ª vez.</string>
+    <string name="notificar_resultado">Notificar o resultado de cada execução</string>
+    <string name="lembrar_fechar">Lembrar de fechar o ponto</string>
+    <string name="avisar_depois">Avisar quanto tempo depois de abrir</string>
+    <string name="hora_dica">hh:mm</string>
+    <string name="verificar_ao_abrir">Verificar atualizações ao abrir o app</string>
 </resources>

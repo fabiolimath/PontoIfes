@@ -4,9 +4,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
 
-/** Máscara dd/mm/aaaa da data do PIT. */
+/** Máscaras dd/mm/aaaa (data do PIT) e hh:mm (tempo do lembrete). */
 object Mascara {
     private val completa = Regex("""\d{1,2}/\d{1,2}/\d{4}""")
+    private val horaCompleta = Regex("""\d{1,2}:\d{2}""")
     private val formato = DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT)
 
     /**
@@ -25,6 +26,20 @@ object Mascara {
         if (digitos.length >= 2) resultado += "/" + digitos.drop(2).take(2)
         if (digitos.length >= 4) resultado += "/" + digitos.drop(4)
         return resultado
+    }
+
+    /**
+     * Põe o ":" depois dos dois dígitos da hora enquanto o usuário digita.
+     *
+     * Como em [formatarData]: ao apagar, ou com a hora já completa (ex.: 8:00), fica como está.
+     */
+    fun formatarHora(texto: String, apagando: Boolean = false): String {
+        if (apagando || horaCompleta.matches(texto.trim())) return texto
+        // "8:" vira "08:".
+        val horas = texto.substringBefore(":")
+        val ajustado = if (":" in texto && horas.length == 1) "0$texto" else texto
+        val digitos = ajustado.filter { it in '0'..'9' }.take(4)
+        return digitos.take(2) + if (digitos.length >= 2) ":" + digitos.drop(2) else ""
     }
 
     /** A data "dd/mm/aaaa" (ou "d/m/aaaa"), ou null se não existir. */

@@ -1,13 +1,10 @@
 package io.github.fabiolimath.ponto
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import android.widget.ScrollView
@@ -17,6 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import io.github.fabiolimath.ponto.nucleo.Acao
+import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
 import io.github.fabiolimath.ponto.nucleo.Mascara
 import java.time.LocalDate
@@ -60,12 +58,27 @@ class MainActivity : AppCompatActivity() {
 
         for ((acao, botao) in botoesDeAcao) botao.setOnClickListener { pedir(acao) }
         cancelar.setOnClickListener { Execucao.cancelar() }
-        configuracoes.setOnClickListener { pedirCredenciais(obrigatorio = false) }
+        configuracoes.setOnClickListener { abrirConfiguracoes() }
         log.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
-        dataPit.addTextChangedListener(MascaraDeData(dataPit))
+        dataPit.addTextChangedListener(MascaraDeTexto(dataPit) { texto, apagando ->
+            Mascara.formatarData(texto, apagando)
+        })
 
-        if (Credenciais.carregar(this)?.completas != true) pedirCredenciais(obrigatorio = true)
+        // Só na abertura (não ao girar a tela): sem credenciais, vai direto às Configurações; com
+        // elas, pede a permissão de notificar (no Android 13+) se as notificações estão ligadas.
+        if (savedInstanceState == null) {
+            if (Dados.credenciais(this)?.completas != true) {
+                abrirConfiguracoes()
+            } else {
+                val preferencias = Dados.preferencias(this)
+                if ((preferencias.notificacoes || preferencias.lembreteFechar) &&
+                    PermissaoDeNotificacao.faltando(this)
+                ) PermissaoDeNotificacao.pedir(this)
+            }
+        }
     }
+
+    private fun abrirConfiguracoes() = startActivity(Intent(this, ConfiguracoesActivity::class.java))
 
     override fun onStart() {
         super.onStart()
@@ -111,9 +124,9 @@ class MainActivity : AppCompatActivity() {
     /** Toque num botão de ação: confere credenciais, data e fechamento e executa. */
     private fun pedir(acao: Acao) {
         if (Execucao.rodando) return
-        val credenciais = Credenciais.carregar(this)
+        val credenciais = Dados.credenciais(this)
         if (credenciais == null || !credenciais.completas) {
-            pedirCredenciais(obrigatorio = true)
+            abrirConfiguracoes()
             return
         }
         var dia: LocalDate? = null
@@ -151,67 +164,5 @@ class MainActivity : AppCompatActivity() {
 
     private fun executar(acao: Acao, dia: LocalDate?, credenciais: Credenciais) {
         Execucao.iniciar(this, acao, dia, credenciais)
-    }
-
-    /**
-     * Pede o usuário e a senha do SIGRH. Provisório (etapa 3): a tela de Configurações completa
-     * vem na etapa 4. [obrigatorio]: na 1ª execução não há como cancelar.
-     */
-    private fun pedirCredenciais(obrigatorio: Boolean) {
-        val visao = layoutInflater.inflate(R.layout.dialog_credenciais, null)
-        val usuario = visao.findViewById<EditText>(R.id.usuario)
-        val senha = visao.findViewById<EditText>(R.id.senha)
-        val atuais = Credenciais.carregar(this)
-        usuario.setText(atuais?.usuario ?: "")
-        senha.setText(atuais?.senha ?: "")
-        visao.findViewById<View>(R.id.aviso).visibility = if (atuais == null) View.VISIBLE else View.GONE
-        val dialogo = MaterialAlertDialogBuilder(this)
-            .setTitle("Configurações")
-            .setView(visao)
-            .setCancelable(!obrigatorio)
-            .setPositiveButton(R.string.salvar, null)
-            .also { if (!obrigatorio) it.setNegativeButton(R.string.cancelar, null) }
-            .create()
-        dialogo.show()
-        dialogo.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
-            val novas = Credenciais(usuario.text.toString(), senha.text.toString())
-            val falta = buildList {
-                if (novas.usuario.isBlank()) add("Usuário do SIGRH")
-                if (novas.senha.isBlank()) add("Senha do SIGRH")
-            }
-            if (falta.isNotEmpty()) {
-                MaterialAlertDialogBuilder(this)
-                    .setTitle("Credenciais incompletas")
-                    .setMessage("Preencha: ${falta.joinToString(", ")}.")
-                    .setPositiveButton("OK", null)
-                    .show()
-            } else {
-                Credenciais.salvar(this, novas)
-                dialogo.dismiss()
-            }
-        }
-    }
-}
-
-/** Aplica a máscara dd/mm/aaaa no campo enquanto se digita, com o cursor no fim. */
-private class MascaraDeData(private val campo: EditText) : TextWatcher {
-    private var anterior = ""
-    private var ajustando = false
-
-    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-
-    override fun afterTextChanged(s: Editable) {
-        if (ajustando) return
-        val novo = s.toString()
-        val apagando = novo.length < anterior.length
-        val formatado = Mascara.formatarData(novo, apagando)
-        anterior = formatado
-        if (formatado != novo) {
-            ajustando = true
-            s.replace(0, s.length, formatado)
-            ajustando = false
-            campo.setSelection(formatado.length)
-        }
     }
 }

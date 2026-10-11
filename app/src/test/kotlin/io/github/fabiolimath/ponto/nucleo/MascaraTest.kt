@@ -17,6 +17,16 @@ class MascaraTest {
     }
 
     @Test
+    fun mascara_da_hora() {
+        val casos = mapOf(
+            "0" to "0", "01" to "01:", "01:4" to "01:4", "0140" to "01:40", "01:40" to "01:40",
+            "8:" to "08:", "8:00" to "8:00", "01:405" to "01:40", "1h" to "1",
+        )
+        for ((texto, esperado) in casos) assertEquals(esperado, Mascara.formatarHora(texto), texto)
+        assertEquals("01", Mascara.formatarHora("01", apagando = true))
+    }
+
+    @Test
     fun le_a_data() {
         assertEquals(LocalDate.of(2026, 10, 4), Mascara.lerData("04/10/2026"))
         assertEquals(LocalDate.of(2026, 10, 2), Mascara.lerData(" 2/10/2026 "))

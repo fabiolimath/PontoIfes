@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import io.github.fabiolimath.ponto.nucleo.Acao
+import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.Executor
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
 import io.github.fabiolimath.ponto.nucleo.Mascara
@@ -59,7 +60,7 @@ object Execucao {
     fun iniciar(contexto: Context, acao: Acao, dia: LocalDate?, credenciais: Credenciais) {
         if (rodando) return
         val app = contexto.applicationContext
-        val observacao = Configuracoes.observacaoPit(app)
+        val observacao = Dados.preferencias(app).observacaoPit
         val pedido = Cancelamento()
         cancelamento = pedido
         rodando = true
