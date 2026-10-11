@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -31,5 +32,20 @@
             android:name=".LogActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
+
+        <!-- O alarme do lembrete (o mesmo nome da versão Python: o alarme agendado por ela continua valendo). -->
+        <receiver
+            android:name=".LembreteReceiver"
+            android:exported="false" />
+
+        <!-- Reagenda o lembrete pendente: o Android o perde ao reiniciar o celular e ao atualizar o app. -->
+        <receiver
+            android:name=".InicioReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

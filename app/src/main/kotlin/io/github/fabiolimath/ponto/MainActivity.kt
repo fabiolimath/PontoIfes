@@ -1,5 +1,6 @@
 package io.github.fabiolimath.ponto
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -67,7 +68,13 @@ class MainActivity : AppCompatActivity() {
         // Só na abertura (não ao girar a tela): sem credenciais, vai direto às Configurações; com
         // elas, pede a permissão de notificar (no Android 13+) se as notificações estão ligadas.
         if (savedInstanceState == null) {
-            if (Dados.credenciais(this)?.completas != true) {
+            val acao = acaoDoIntent()
+            if (acao != null) {
+                // Aberto por um botão de notificação, atalho ou Tasker: executa já.
+                if (acao == Acao.REGISTRAR_PIT) intent.getStringExtra(EXTRA_DATA)?.let { dataPit.setText(it) }
+                intent.removeExtra(EXTRA_DATA)
+                pedir(acao)
+            } else if (Dados.credenciais(this)?.completas != true) {
                 abrirConfiguracoes()
             } else {
                 val preferencias = Dados.preferencias(this)
@@ -76,6 +83,19 @@ class MainActivity : AppCompatActivity() {
                 ) PermissaoDeNotificacao.pedir(this)
             }
         }
+    }
+
+    /**
+     * A ação pedida pelo intent que abriu o app: o extra `acao` ou, se faltar, o dado (URI) do intent
+     * ("abrir_ponto" ou "ponto://abrir_ponto", o campo Dado do Tasker). Abrir o app pela tela de
+     * recentes reentrega o intent original; nesse caso a ação é ignorada para não executar de novo.
+     */
+    private fun acaoDoIntent(): Acao? {
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
+        val chave = intent.getStringExtra(EXTRA_ACAO)
+            ?: intent.dataString?.removePrefix("ponto:")?.trim('/', ' ')
+        intent.removeExtra(EXTRA_ACAO)
+        return Acao.da(chave)
     }
 
     private fun abrirConfiguracoes() = startActivity(Intent(this, ConfiguracoesActivity::class.java))
@@ -164,5 +184,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun executar(acao: Acao, dia: LocalDate?, credenciais: Credenciais) {
         Execucao.iniciar(this, acao, dia, credenciais)
+    }
+
+    companion object {
+        /** Extra do intent com a ação a executar ao abrir o app, ex.: `acao=abrir_ponto`. */
+        const val EXTRA_ACAO = "acao"
+
+        /** Extra com a data do PIT (dd/mm/aaaa), no botão "Tentar de novo". */
+        const val EXTRA_DATA = "data"
+
+        /** O intent que abre o app e executa [acao] (com a [data] do PIT, se houver). */
+        fun intentDaAcao(contexto: Context, acao: Acao, data: String? = null): Intent =
+            Intent(contexto, MainActivity::class.java).apply {
+                putExtra(EXTRA_ACAO, acao.chave)
+                if (data != null) putExtra(EXTRA_DATA, data)
+            }
     }
 }

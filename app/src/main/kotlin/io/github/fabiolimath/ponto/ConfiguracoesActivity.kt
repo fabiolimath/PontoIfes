@@ -119,7 +119,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
         )
         Dados.salvarCredenciais(this, novas)
         Dados.salvarPreferencias(this, preferencias)
-        // (O lembrete já agendado é cancelado ao desligar a opção: etapa 5.)
+        if (!preferencias.lembreteFechar) Lembretes.cancelar(this)
         if ((preferencias.notificacoes || preferencias.lembreteFechar) && PermissaoDeNotificacao.faltando(this)) {
             // Fecha ao receber a resposta; fechar já levaria o diálogo do sistema junto.
             PermissaoDeNotificacao.pedir(this)
