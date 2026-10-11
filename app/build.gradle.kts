@@ -51,8 +51,9 @@ android {
         }
         // APK de teste da migração: outro pacote, instala ao lado do app oficial,
         // com o nome "Ponto IFES (teste)" e os ícones de icons/antigos
-        // (recursos em src/teste/res, que sobrepõem os de src/main/res).
-        create("teste") {
+        // (recursos em src/migracao/res, que sobrepõem os de src/main/res).
+        // O nome não pode ser "teste": o AGP recusa build types começados por "test".
+        create("migracao") {
             initWith(getByName("release"))
             applicationIdSuffix = ".teste"
             versionNameSuffix = "-teste"

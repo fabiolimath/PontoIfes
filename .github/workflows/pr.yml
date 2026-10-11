@@ -1,9 +1,9 @@
 # Em cada PR: roda os testes e, se passarem, gera o APK assinado com a chave do
 # app e o publica no pré-release "teste", sempre no mesmo endereço:
 #   https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk
-# Durante a migração para Kotlin, esse APK é o build "teste": outro pacote
+# Durante a migração para Kotlin, esse APK é o de teste: outro pacote
 # (io.github.fabiolimath.ponto.teste, "Ponto IFES (teste)"), que instala ao
-# lado do app oficial em vez de por cima.
+# lado do app oficial em vez de por cima (build type "migracao").
 # O pré-release não conta como "latest": o site e o aviso de atualização do app
 # continuam apontando para o último release oficial.
 name: PR
@@ -98,9 +98,9 @@ jobs:
           PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
           PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          ./gradlew --no-daemon assembleTeste
+          ./gradlew --no-daemon assembleMigracao
           mkdir -p dist
-          cp app/build/outputs/apk/teste/app-teste.apk dist/ponto-ifes.apk
+          cp app/build/outputs/apk/migracao/app-migracao.apk dist/ponto-ifes.apk
           "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" \
             verify --print-certs dist/ponto-ifes.apk | grep -i 'SHA-256'
           ls -l dist/ponto-ifes.apk
