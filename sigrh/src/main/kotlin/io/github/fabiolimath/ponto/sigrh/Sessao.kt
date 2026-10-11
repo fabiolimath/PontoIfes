@@ -105,9 +105,12 @@ internal class Sessao(private val base: String, private val cancelamento: Cancel
 
     /**
      * O envio final: o Cancelar não o interrompe. Quem chama confere o cancelamento logo antes.
+     * Sem a repetição automática do OkHttp numa queda de conexão: ele reenviaria o POST, e o
+     * registro poderia sair duas vezes (o `requests` dos scripts não repete).
      */
     suspend fun enviar(caminho: String, corpo: RequestBody, timeout: Long = TIMEOUT): Resposta {
-        val cliente = if (timeout == TIMEOUT) http else http.newBuilder()
+        val cliente = http.newBuilder()
+            .retryOnConnectionFailure(false)
             .connectTimeout(timeout, TimeUnit.SECONDS)
             .readTimeout(timeout, TimeUnit.SECONDS)
             .writeTimeout(timeout, TimeUnit.SECONDS)
