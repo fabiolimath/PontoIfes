@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Ponto IFES</string>
+    <string name="abrir_ponto">Abrir ponto</string>
+    <string name="fechar_ponto">Fechar ponto</string>
+    <string name="registrar_pit">Registrar PIT</string>
+    <string name="pit_outro_dia">Registrar o PIT de outro dia</string>
+    <string name="data_dica">dd/mm/aaaa</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="configuracoes">Configurações</string>
+    <string name="log">Log</string>
+    <string name="voltar">Voltar</string>
+    <string name="copiar">Copiar</string>
+    <string name="copiado">Copiado</string>
+    <string name="limpar">Limpar</string>
+    <string name="salvar">Salvar</string>
 </resources>

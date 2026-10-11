@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botão disponível: verde; indisponível: cinza. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/botao_desativado" android:state_enabled="false" />
+    <item android:color="@color/verde" />
+</selector>

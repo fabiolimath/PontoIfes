@@ -1,16 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="12dp">
 
-    <!-- Provisório (etapa 1 da migração): a tela principal vem na etapa 3. -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/abrir_ponto"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginVertical="4dp"
+        android:text="@string/abrir_ponto"
+        android:textSize="16sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/fechar_ponto"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginVertical="4dp"
+        android:text="@string/fechar_ponto"
+        android:textSize="16sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/registrar_pit"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginVertical="4dp"
+        android:text="@string/registrar_pit"
+        android:textSize="16sp" />
+
     <TextView
-        android:id="@+id/texto"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textAppearance="?attr/textAppearanceBody1" />
+        android:layout_marginTop="4dp"
+        android:text="@string/pit_outro_dia" />
+
+    <EditText
+        android:id="@+id/data_pit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:hint="@string/data_dica"
+        android:importantForAutofill="no"
+        android:inputType="date"
+        android:minHeight="48dp" />
+
+    <!-- Barra animada: só aparece (INVISIBLE guarda o espaço) enquanto uma ação roda. -->
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progresso"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:indeterminate="true"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="8dp" />
+
+    <ScrollView
+        android:id="@+id/rolagem"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/saida"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textIsSelectable="true" />
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/cancelar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/cancelar" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/configuracoes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:text="@string/configuracoes" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/log"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:text="@string/log" />
+    </LinearLayout>
 </LinearLayout>
