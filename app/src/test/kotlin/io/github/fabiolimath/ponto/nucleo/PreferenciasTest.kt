@@ -57,8 +57,9 @@ class PreferenciasTest {
     @Test
     fun tempo_do_lembrete() {
         assertEquals(Duration.ofMinutes(100), Preferencias.tempoLembrete("01:40"))
-        assertEquals(Duration.ofHours(8), Preferencias.tempoLembrete(" 8:00 "))
-        for (invalido in listOf("", "0:00", "1:60", "24:00", "1h40", "01:40:00", "-1:30", "1:-5", ":")) {
+        assertEquals(Duration.ofHours(6), Preferencias.tempoLembrete(" 6:00 "))
+        assertEquals(Duration.ofMinutes(359), Preferencias.tempoLembrete("05:59"))
+        for (invalido in listOf("", "0:00", "1:60", "06:01", "8:00", "24:00", "1h40", "01:40:00", "-1:30", "1:-5", ":")) {
             assertNull(Preferencias.tempoLembrete(invalido), invalido)
         }
         assertEquals(Duration.ofHours(1), Preferencias().duracaoDoLembrete)

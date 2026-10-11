@@ -37,6 +37,9 @@ data class Preferencias(
     companion object {
         const val OBSERVACAO_PADRAO = "Conforme PIT docente."
 
+        /** O maior tempo aceito no lembrete (06:00). */
+        val MAXIMO_DO_LEMBRETE: Duration = Duration.ofHours(6)
+
         /** Preferências salvas, completadas com os valores padrão (também se o arquivo for ilegível). */
         fun carregar(arquivo: File): Preferencias {
             val padrao = Preferencias()
@@ -57,14 +60,15 @@ data class Preferencias(
             )
         }
 
-        /** "hh:mm" (ex.: "01:40", "8:00") como [Duration]; null se inválido ou zero. */
+        /** "hh:mm" (ex.: "01:40", "6:00") como [Duration]; null se inválido, zero ou acima de 06:00. */
         fun tempoLembrete(texto: String): Duration? {
             val partes = texto.trim().split(":")
             if (partes.size != 2) return null
             val horas = partes[0].toIntOrNull() ?: return null
             val minutos = partes[1].toIntOrNull() ?: return null
-            if (horas !in 0..23 || minutos !in 0..59 || (horas == 0 && minutos == 0)) return null
-            return Duration.ofHours(horas.toLong()).plusMinutes(minutos.toLong())
+            if (horas < 0 || minutos !in 0..59) return null
+            val total = Duration.ofHours(horas.toLong()).plusMinutes(minutos.toLong())
+            return total.takeIf { it > Duration.ZERO && it <= MAXIMO_DO_LEMBRETE }
         }
     }
 }

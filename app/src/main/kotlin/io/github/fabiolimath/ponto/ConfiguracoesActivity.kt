@@ -104,7 +104,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
         if (lembreteFechar.isChecked && !tempoValido) {
             erro(
                 "Tempo inválido",
-                "'$tempo' não é um tempo no formato hh:mm (ex.: 01:40), entre 00:01 e 23:59.",
+                "'$tempo' não é um tempo no formato hh:mm (ex.: 01:40), entre 00:01 e 06:00.",
             )
             return
         }
