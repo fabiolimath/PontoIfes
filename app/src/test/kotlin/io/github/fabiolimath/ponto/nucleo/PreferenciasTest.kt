@@ -57,6 +57,21 @@ class PreferenciasTest {
     }
 
     @Test
+    fun fechamento_automatico() {
+        val arquivo = arquivo()
+        val padrao = Preferencias.carregar(arquivo)
+        assertEquals(false, padrao.fecharAutomatico)
+        assertEquals("", padrao.fecharHorario1)
+        assertEquals("", padrao.fecharHorario2)
+        val novas = padrao.copy(fecharAutomatico = true, fecharHorario1 = "12:00", fecharHorario2 = "18:30")
+        novas.salvar(arquivo)
+        assertEquals(novas, Preferencias.carregar(arquivo))
+        arquivo.writeText("""{"fechar_automatico": true, "fechar_horario1": "25:00", "fechar_horario2": " 8:00 "}""")
+        assertEquals("", Preferencias.carregar(arquivo).fecharHorario1)
+        assertEquals("8:00", Preferencias.carregar(arquivo).fecharHorario2)
+    }
+
+    @Test
     fun tempo_da_versao_python_acima_de_6h_vira_6h() {
         val arquivo = arquivo()
         arquivo.writeText("""{"lembrete_tempo": "08:30"}""")

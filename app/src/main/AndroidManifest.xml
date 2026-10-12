@@ -17,6 +17,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Fechar o ponto nos horários escolhidos: o alarme exato (dado na instalação; o Android 12
+         usa o SCHEDULE_EXACT_ALARM, o 13+ o USE_EXACT_ALARM). Sem ele, o alarme comum. -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -78,8 +85,13 @@
             android:name=".RedeReceiver"
             android:exported="false" />
 
-        <!-- O serviço do WorkManager que roda a abertura automática em primeiro plano no Android 11
-             ou anterior; o tipo é exigido a partir do Android 14. -->
+        <!-- O alarme de cada horário do fechamento automático (FecharAutomatico.agendar). -->
+        <receiver
+            android:name=".FecharAutomaticoReceiver"
+            android:exported="false" />
+
+        <!-- O serviço do WorkManager que roda a abertura e o fechamento automáticos em primeiro
+             plano no Android 11 ou anterior; o tipo é exigido a partir do Android 14. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

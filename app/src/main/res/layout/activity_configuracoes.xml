@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Seções na ordem: Notificações, Credenciais, uma por ação (na ordem dos botões) e Atualizações.
-     Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado. -->
+     Os detalhes da Wi-Fi, do lembrete e do fechamento automático só aparecem com o interruptor ligado. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -227,6 +227,80 @@
                 android:importantForAutofill="no"
                 android:inputType="time"
                 android:minHeight="48dp" />
+        </LinearLayout>
+
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/fechar_automatico"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/fechar_automatico"
+            android:textSize="16sp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/fechar_automatico_expl" />
+
+        <LinearLayout
+            android:id="@+id/fechar_detalhes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/fechar_horario1"
+                    android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/fechar_horario1"
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:hint="@string/hora_dica"
+                    android:importantForAutofill="no"
+                    android:inputType="time"
+                    android:minHeight="48dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/fechar_horario2"
+                    android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/fechar_horario2"
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:hint="@string/hora_dica"
+                    android:importantForAutofill="no"
+                    android:inputType="time"
+                    android:minHeight="48dp" />
+            </LinearLayout>
         </LinearLayout>
 
         <View style="@style/Ponto.Divisoria" />

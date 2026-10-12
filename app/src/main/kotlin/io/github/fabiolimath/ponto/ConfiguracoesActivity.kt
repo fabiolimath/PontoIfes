@@ -20,6 +20,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.core.app.ActivityCompat
 import io.github.fabiolimath.ponto.nucleo.Credenciais
+import io.github.fabiolimath.ponto.nucleo.FechamentoAutomatico
 import io.github.fabiolimath.ponto.nucleo.Mascara
 import io.github.fabiolimath.ponto.nucleo.Preferencias
 
@@ -43,6 +44,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
     private lateinit var wifiEstado: TextView
     private lateinit var wifiDetalhes: View
     private lateinit var lembreteDetalhes: View
+    private lateinit var fecharAutomatico: SwitchMaterial
+    private lateinit var fecharHorario1: EditText
+    private lateinit var fecharHorario2: EditText
+    private lateinit var fecharDetalhes: View
 
     private val explicacoes = intArrayOf(R.string.pit_auto_expl_0, R.string.pit_auto_expl_1, R.string.pit_auto_expl_2)
 
@@ -68,11 +73,21 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiEstado = findViewById(R.id.wifi_estado)
         wifiDetalhes = findViewById(R.id.wifi_detalhes)
         lembreteDetalhes = findViewById(R.id.lembrete_detalhes)
+        fecharAutomatico = findViewById(R.id.fechar_automatico)
+        fecharHorario1 = findViewById(R.id.fechar_horario1)
+        fecharHorario2 = findViewById(R.id.fechar_horario2)
+        fecharDetalhes = findViewById(R.id.fechar_detalhes)
+        for (campo in listOf(fecharHorario1, fecharHorario2)) {
+            campo.addTextChangedListener(MascaraDeTexto(campo, Mascara::formatarHora))
+        }
 
-        // Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado.
+        // Os detalhes da Wi-Fi, do lembrete e do fechamento automático só aparecem com o interruptor ligado.
         wifiAbrir.setOnCheckedChangeListener { _, ligado -> wifiDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE }
         lembreteFechar.setOnCheckedChangeListener { _, ligado ->
             lembreteDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE
+        }
+        fecharAutomatico.setOnCheckedChangeListener { _, ligado ->
+            fecharDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE
         }
 
         // Ao ligar (toque do usuário, não ao preencher nem ao girar a tela): o aviso da localização.
@@ -99,6 +114,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
         if (savedInstanceState == null) preencher()
         wifiDetalhes.visibility = if (wifiAbrir.isChecked) View.VISIBLE else View.GONE
         lembreteDetalhes.visibility = if (lembreteFechar.isChecked) View.VISIBLE else View.GONE
+        fecharDetalhes.visibility = if (fecharAutomatico.isChecked) View.VISIBLE else View.GONE
         val atuais = Dados.credenciais(this)
         val temCredenciais = atuais?.completas == true
         findViewById<View>(R.id.aviso).visibility = if (atuais == null) View.VISIBLE else View.GONE
@@ -128,6 +144,9 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiAbrir.isChecked = preferencias.wifiAbrir
         wifiRede.setText(preferencias.wifiRede)
         wifiEspera.setText(preferencias.wifiEspera)
+        fecharAutomatico.isChecked = preferencias.fecharAutomatico
+        fecharHorario1.setText(preferencias.fecharHorario1)
+        fecharHorario2.setText(preferencias.fecharHorario2)
     }
 
     override fun onResume() {
@@ -259,6 +278,19 @@ class ConfiguracoesActivity : AppCompatActivity() {
             )
             return
         }
+        val horarios = listOf(fecharHorario1, fecharHorario2).map { it.text.toString().trim() }
+        val horarioInvalido = horarios.firstOrNull { it.isNotEmpty() && FechamentoAutomatico.lerHorario(it) == null }
+        if (fecharAutomatico.isChecked && horarioInvalido != null) {
+            erro(
+                "Horário inválido",
+                "'$horarioInvalido' não é um horário no formato hh:mm (ex.: 18:00), entre 00:00 e 23:59.",
+            )
+            return
+        }
+        if (fecharAutomatico.isChecked && horarios.all { it.isEmpty() }) {
+            erro("Sem horário", "Preencha ao menos um horário para fechar o ponto automaticamente.")
+            return
+        }
         val padrao = Preferencias()
         val anteriores = Dados.preferencias(this)
         val preferencias = Preferencias(
@@ -272,6 +304,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
             wifiRede = wifiRede.text.toString().trim().ifEmpty { padrao.wifiRede },
             wifiEspera = if (esperaValida) espera else padrao.wifiEspera,
             avisoBateria = anteriores.avisoBateria,
+            fecharAutomatico = fecharAutomatico.isChecked,
+            // Com a opção desligada, o que está no campo fica guardado se for válido.
+            fecharHorario1 = horarios[0].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
+            fecharHorario2 = horarios[1].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
         )
         Dados.salvarCredenciais(this, novas)
         Dados.salvarPreferencias(this, preferencias)
@@ -283,6 +319,11 @@ class ConfiguracoesActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
         }
+        try {
+            FecharAutomatico.agendar(this)
+        } catch (e: Exception) {
+            Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
+        }
         if ((preferencias.notificacoes || preferencias.lembreteFechar) && PermissaoDeNotificacao.faltando(this)) {
             // Segue ao receber a resposta; fechar já levaria o diálogo do sistema junto.
             PermissaoDeNotificacao.pedir(this)
@@ -292,18 +333,19 @@ class ConfiguracoesActivity : AppCompatActivity() {
     }
 
     /**
-     * Depois de salvar com a abertura pela Wi-Fi ligada: se a bateria do app não está em Sem
+     * Depois de salvar com a abertura pela Wi-Fi ou o fechamento automático ligados: se a bateria do app não está em Sem
      * restrições (e o aviso não foi dispensado), o aviso com os três botões. Senão, fecha.
      */
     private fun avisoDeBateria() {
         val preferencias = Dados.preferencias(this)
-        if (!preferencias.wifiAbrir || !preferencias.avisoBateria || Wifi.bateriaLiberada(this)) {
+        val automatico = preferencias.wifiAbrir || preferencias.fecharAutomatico
+        if (!automatico || !preferencias.avisoBateria || Wifi.bateriaLiberada(this)) {
             finish()
             return
         }
         MaterialAlertDialogBuilder(this)
             .setTitle("Bateria")
-            .setMessage("Para abrir o ponto com o app fechado, a bateria do Ponto IFES precisa estar em Sem restrições.")
+            .setMessage("Para abrir ou fechar o ponto com o app fechado, a bateria do Ponto IFES precisa estar em Sem restrições.")
             .setPositiveButton("Liberar agora") { _, _ -> Wifi.liberarBateria(this) }
             .setNegativeButton("Não avisar mais") { _, _ ->
                 Dados.salvarPreferencias(this, Dados.preferencias(this).copy(avisoBateria = false))

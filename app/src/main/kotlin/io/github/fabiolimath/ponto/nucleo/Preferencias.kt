@@ -13,6 +13,9 @@ import java.time.Duration
  *
  * [wifiAbrir]: abrir o ponto ao conectar na Wi-Fi [wifiRede], menos nas [wifiEspera] ("hh:mm")
  * depois de fechar; [avisoBateria]: avisar ao salvar se a bateria do app não está em Sem restrições.
+ *
+ * [fecharAutomatico]: fechar o ponto, se estiver aberto, às [fecharHorario1] e [fecharHorario2]
+ * ("hh:mm"; em branco, não usado), de segunda a sexta.
  */
 data class Preferencias(
     val notificacoes: Boolean = true,
@@ -25,6 +28,9 @@ data class Preferencias(
     val wifiRede: String = GatilhoWifi.REDE_PADRAO,
     val wifiEspera: String = "01:00",
     val avisoBateria: Boolean = true,
+    val fecharAutomatico: Boolean = false,
+    val fecharHorario1: String = "",
+    val fecharHorario2: String = "",
 ) {
     /** O tempo do lembrete como [Duration], ou null se [lembreteTempo] for inválido. */
     val duracaoDoLembrete get() = tempoLembrete(lembreteTempo)
@@ -44,6 +50,9 @@ data class Preferencias(
             .put("wifi_rede", wifiRede)
             .put("wifi_espera", wifiEspera)
             .put("aviso_bateria", avisoBateria)
+            .put("fechar_automatico", fecharAutomatico)
+            .put("fechar_horario1", fecharHorario1)
+            .put("fechar_horario2", fecharHorario2)
         arquivo.parentFile?.mkdirs()
         arquivo.writeText(json.toString())
     }
@@ -77,8 +86,15 @@ data class Preferencias(
                     if (tempoLembrete(it) != null) it else padrao.wifiEspera
                 },
                 avisoBateria = json.optBoolean("aviso_bateria", padrao.avisoBateria),
+                fecharAutomatico = json.optBoolean("fechar_automatico", padrao.fecharAutomatico),
+                fecharHorario1 = horario(json.optString("fechar_horario1", "")),
+                fecharHorario2 = horario(json.optString("fechar_horario2", "")),
             )
         }
+
+        /** Um horário do fechamento automático: válido ou em branco. */
+        private fun horario(texto: String) =
+            texto.trim().takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: ""
 
         /**
          * A versão Python aceitava até 23:59: um tempo salvo acima de [MAXIMO_DO_LEMBRETE] vira 06:00,

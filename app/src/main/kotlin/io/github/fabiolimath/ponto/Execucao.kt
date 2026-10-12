@@ -8,7 +8,9 @@ import android.util.Log
 import io.github.fabiolimath.ponto.nucleo.AberturaAutomatica
 import io.github.fabiolimath.ponto.nucleo.Acao
 import io.github.fabiolimath.ponto.nucleo.Credenciais
+import io.github.fabiolimath.ponto.nucleo.DesfechoDoFechamento
 import io.github.fabiolimath.ponto.nucleo.Executor
+import io.github.fabiolimath.ponto.nucleo.FechamentoAutomatico
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
 import io.github.fabiolimath.ponto.nucleo.GatilhoWifi
 import io.github.fabiolimath.ponto.nucleo.Mascara
@@ -229,6 +231,74 @@ object Execucao {
         desfecho.baseDoLembrete?.let { abertura ->
             passo("agendar o lembrete") { Lembretes.agendarAposAbrir(app, agora, abertura) }
         }
+    }
+
+    /**
+     * O fechamento automático nos horários das Configurações, chamado pelo [FecharAutomaticoWorker]:
+     * na tela, aparece como uma execução manual, com o Cancelar. Quem diz se o ponto está aberto é
+     * o SIGRH; sem entrada aberta, fica só no log. Fechado, segue como o botão: notificação,
+     * lembrete cancelado e PIT automático (aqui mesmo, para o trabalho não terminar antes dele).
+     * Devolve false, sem executar, se outra ação está rodando.
+     * [pontoAbertoNoApp]: o app sabe que o ponto está aberto (para notificar uma falha).
+     */
+    suspend fun fecharAutomatico(contexto: Context, credenciais: Credenciais, pontoAbertoNoApp: Boolean): Boolean =
+        withContext(Dispatchers.Main) {
+            if (rodando) return@withContext false
+            val app = contexto.applicationContext
+            val resultado = rodarAutomatico(app, Acao.FECHAR_PONTO, comecar(FechamentoAutomatico.ROTULO), credenciais)
+            val codigo = resultado?.codigo ?: 1
+            status = statusFinal(codigo)
+            var pitEmSeguida = false
+            when (FechamentoAutomatico.desfecho(resultado, pontoAbertoNoApp)) {
+                DesfechoDoFechamento.FECHADO -> passo("concluir o fechamento automático") {
+                    // A notificação nova aparece de novo, em vez de substituir em silêncio a anterior.
+                    Notificador.cancelar(app, Notificacoes.ident(Acao.FECHAR_PONTO))
+                    pitEmSeguida = depoisDeExecutar(app, Acao.FECHAR_PONTO, null, codigo, saida)
+                }
+                DesfechoDoFechamento.NOTIFICAR_FALHA -> passo("mostrar a notificação") {
+                    Notificacoes.aviso(Acao.FECHAR_PONTO, status, saida, codigo, null, Dados.preferencias(app))
+                        ?.let { Notificador.mostrar(app, it) }
+                }
+                DesfechoDoFechamento.SILENCIO -> Unit
+            }
+            parar()
+            if (pitEmSeguida) {
+                val inicioDaSaida = saida.length
+                val pedido = comecar(Acao.REGISTRAR_PIT.rotulo, encadeado = true)
+                val pit = rodarAutomatico(app, Acao.REGISTRAR_PIT, pedido, credenciais, Dados.preferencias(app).observacaoPit)
+                val codigoDoPit = pit?.codigo ?: 1
+                status = statusFinal(codigoDoPit)
+                if (codigoDoPit != 130) passo("concluir o PIT") {
+                    depoisDeExecutar(app, Acao.REGISTRAR_PIT, null, codigoDoPit, saida.substring(inicioDaSaida))
+                }
+                parar()
+            }
+            true
+        }
+
+    /**
+     * Roda [acao] dentro de um trabalho automático, já marcado na tela por [comecar] ([pedido] é o
+     * seu Cancelar). Devolve null num erro inesperado. Se o sistema parar o trabalho, a tela volta ao normal.
+     * O fechamento leva "(automático)" no log; o PIT em seguida, não.
+     */
+    private suspend fun rodarAutomatico(
+        app: Context, acao: Acao, pedido: Cancelamento, credenciais: Credenciais, observacao: String = "",
+    ): Resultado? = try {
+        withContext(Dispatchers.Default) {
+            Executor(Dados.registro(app)).executar(
+                acao, credenciais.usuario, credenciais.senha, observacao = observacao,
+                aoEscrever = { texto -> principal.post { saida += texto; avisar() } },
+                cancelamento = pedido,
+                automatico = acao == Acao.FECHAR_PONTO,
+            )
+        }
+    } catch (e: CancellationException) {
+        status = "$rotulo: interrompido."
+        parar()
+        throw e
+    } catch (e: Exception) {
+        saida += "Erro inesperado: ${e.message ?: e}\n"
+        null
     }
 
     private fun passo(descricao: String, bloco: () -> Unit) {

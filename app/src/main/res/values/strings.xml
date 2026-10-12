@@ -32,6 +32,10 @@
     <string name="avisar_depois">Avisar depois de</string>
     <string name="avisar_depois_expl">Contado a partir da abertura.</string>
     <string name="hora_dica">hh:mm</string>
+    <string name="fechar_automatico">Fechar automaticamente</string>
+    <string name="fechar_automatico_expl">Se o ponto estiver aberto nestes horários, fecha automaticamente. De segunda a sexta, com o app fechado. Um dos horários pode ficar em branco.</string>
+    <string name="fechar_horario1">1º horário</string>
+    <string name="fechar_horario2">2º horário</string>
     <string name="wifi_abrir">Abrir ao conectar na Wi-Fi do campus</string>
     <string name="wifi_abrir_expl">De segunda a sexta, com o app fechado.</string>
     <string name="wifi_rede">Nome da rede</string>
