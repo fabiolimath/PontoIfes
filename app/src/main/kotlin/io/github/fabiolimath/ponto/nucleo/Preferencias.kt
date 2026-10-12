@@ -15,7 +15,7 @@ import java.time.Duration
  * depois de fechar; [avisoBateria]: avisar ao salvar se a bateria do app não está em Sem restrições.
  *
  * [fecharAutomatico]: fechar o ponto, se estiver aberto, às [fecharHorario1] e [fecharHorario2]
- * ("hh:mm"; em branco, não usado), de segunda a sexta.
+ * ("hh:mm"; em branco, não usado; padrão 12:00 e 18:00), de segunda a sexta.
  */
 data class Preferencias(
     val notificacoes: Boolean = true,
@@ -29,8 +29,8 @@ data class Preferencias(
     val wifiEspera: String = "01:00",
     val avisoBateria: Boolean = true,
     val fecharAutomatico: Boolean = false,
-    val fecharHorario1: String = "",
-    val fecharHorario2: String = "",
+    val fecharHorario1: String = "12:00",
+    val fecharHorario2: String = "18:00",
 ) {
     /** O tempo do lembrete como [Duration], ou null se [lembreteTempo] for inválido. */
     val duracaoDoLembrete get() = tempoLembrete(lembreteTempo)
@@ -87,8 +87,8 @@ data class Preferencias(
                 },
                 avisoBateria = json.optBoolean("aviso_bateria", padrao.avisoBateria),
                 fecharAutomatico = json.optBoolean("fechar_automatico", padrao.fecharAutomatico),
-                fecharHorario1 = horario(json.optString("fechar_horario1", "")),
-                fecharHorario2 = horario(json.optString("fechar_horario2", "")),
+                fecharHorario1 = horario(json.optString("fechar_horario1", padrao.fecharHorario1)),
+                fecharHorario2 = horario(json.optString("fechar_horario2", padrao.fecharHorario2)),
             )
         }
 

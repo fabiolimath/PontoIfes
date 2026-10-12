@@ -92,7 +92,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 10. **Fechar o ponto automaticamente** (2.2.0) nos horários escolhidos, se estiver aberto.
     Configurações: liga/desliga (`fechar_automatico`, padrão desligado) e dois horários
-    (`fechar_horario1`, `fechar_horario2`, hh:mm de 00:00 a 23:59; um pode ficar em branco).
+    (`fechar_horario1`, `fechar_horario2`, hh:mm de 00:00 a 23:59, padrão 12:00 e 18:00; um pode
+    ficar em branco).
     - Alarme (`FecharAutomatico.agendar`): só o próximo horário, de seg a sex, com
       `setExactAndAllowWhileIdle` (permissões `USE_EXACT_ALARM` no Android 13+ e
       `SCHEDULE_EXACT_ALARM` no 12, dadas na instalação; sem elas, `setAndAllowWhileIdle`).
