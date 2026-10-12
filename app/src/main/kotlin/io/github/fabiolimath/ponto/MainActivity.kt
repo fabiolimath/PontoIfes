@@ -75,6 +75,12 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 android.util.Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
             }
+            // O alarme do fechamento automático também some com o "Forçar parada".
+            try {
+                FecharAutomatico.agendar(this)
+            } catch (e: Exception) {
+                android.util.Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
+            }
             val acao = acaoDoIntent()
             if (acao != null) {
                 // Aberto por um botão de notificação, atalho ou Tasker: executa já.

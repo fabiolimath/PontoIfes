@@ -184,16 +184,17 @@ object Wifi {
     /**
      * A notificação exigida no Android 11 ou anterior, onde o WorkManager roda o trabalho como serviço
      * em primeiro plano: canal próprio, silencioso e recolhido. No Android 12+ não aparece.
+     * Também a do fechamento automático ([titulo] "Fechando o ponto…").
      */
-    fun emAndamento(contexto: Context): ForegroundInfo {
+    fun emAndamento(contexto: Context, titulo: String = "Abrindo o ponto…"): ForegroundInfo {
         if (Build.VERSION.SDK_INT >= 26) {
             (contexto.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
-                NotificationChannel(CANAL, "Abertura automática em andamento", NotificationManager.IMPORTANCE_MIN)
+                NotificationChannel(CANAL, "Ação automática em andamento", NotificationManager.IMPORTANCE_MIN)
             )
         }
         val notificacao = NotificationCompat.Builder(contexto, CANAL)
             .setSmallIcon(R.drawable.ic_notificacao)
-            .setContentTitle("Abrindo o ponto…")
+            .setContentTitle(titulo)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setSilent(true)
             .setOngoing(true)

@@ -13,12 +13,14 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.core.app.ActivityCompat
 import io.github.fabiolimath.ponto.nucleo.Credenciais
+import io.github.fabiolimath.ponto.nucleo.FechamentoAutomatico
 import io.github.fabiolimath.ponto.nucleo.Mascara
 import io.github.fabiolimath.ponto.nucleo.Preferencias
 
@@ -42,6 +44,21 @@ class ConfiguracoesActivity : AppCompatActivity() {
     private lateinit var wifiEstado: TextView
     private lateinit var wifiDetalhes: View
     private lateinit var lembreteDetalhes: View
+    private lateinit var fecharModo: Spinner
+    private lateinit var fecharExplicacao: TextView
+    private lateinit var fecharHorario1: EditText
+    private lateinit var fecharHorario2: EditText
+    private lateinit var fecharDetalhes: View
+    private lateinit var fecharDias: View
+
+    /** Os horários de cada dia (Avançado) em edição: vêm da tela própria e são gravados no Salvar. */
+    private var dias: List<List<String>> = Preferencias.DIAS_PADRAO
+
+    private val horariosDeCadaDia = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode == RESULT_OK) dias = HorariosActivity.ler(r.data)
+    }
+
+    private val explicacoesDoFechamento = intArrayOf(R.string.fechar_expl_0, R.string.fechar_expl_1, R.string.fechar_expl_2)
 
     private val explicacoes = intArrayOf(R.string.pit_auto_expl_0, R.string.pit_auto_expl_1, R.string.pit_auto_expl_2)
 
@@ -67,11 +84,30 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiEstado = findViewById(R.id.wifi_estado)
         wifiDetalhes = findViewById(R.id.wifi_detalhes)
         lembreteDetalhes = findViewById(R.id.lembrete_detalhes)
+        fecharModo = findViewById(R.id.fechar_modo)
+        fecharExplicacao = findViewById(R.id.fechar_explicacao)
+        fecharHorario1 = findViewById(R.id.fechar_horario1)
+        fecharHorario2 = findViewById(R.id.fechar_horario2)
+        fecharDetalhes = findViewById(R.id.fechar_detalhes)
+        fecharDias = findViewById(R.id.fechar_dias)
+        fecharDias.setOnClickListener { horariosDeCadaDia.launch(HorariosActivity.abrir(this, dias)) }
+        for (campo in listOf(fecharHorario1, fecharHorario2)) {
+            campo.addTextChangedListener(MascaraDeTexto(campo, Mascara::formatarHora))
+        }
 
-        // Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado.
+        // Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do fechamento
+        // automático, conforme a opção (os dois horários fixos ou o botão dos horários de cada dia).
         wifiAbrir.setOnCheckedChangeListener { _, ligado -> wifiDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE }
         lembreteFechar.setOnCheckedChangeListener { _, ligado ->
             lembreteDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE
+        }
+        fecharModo.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item,
+            listOf(R.string.fechar_modo_0, R.string.fechar_modo_1, R.string.fechar_modo_2).map { getString(it) },
+        )
+        fecharModo.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(pai: AdapterView<*>?, visao: View?, posicao: Int, id: Long) = mostrarFechamento()
+            override fun onNothingSelected(pai: AdapterView<*>?) = Unit
         }
 
         // Ao ligar (toque do usuário, não ao preencher nem ao girar a tela): o aviso da localização.
@@ -96,8 +132,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
 
         // Ao girar a tela o Android devolve o que foi digitado; só a 1ª vez parte dos arquivos salvos.
         if (savedInstanceState == null) preencher()
+        else dias = HorariosActivity.dividir(savedInstanceState.getStringArrayList(ESTADO_DIAS))
         wifiDetalhes.visibility = if (wifiAbrir.isChecked) View.VISIBLE else View.GONE
         lembreteDetalhes.visibility = if (lembreteFechar.isChecked) View.VISIBLE else View.GONE
+        mostrarFechamento()
         val atuais = Dados.credenciais(this)
         val temCredenciais = atuais?.completas == true
         findViewById<View>(R.id.aviso).visibility = if (atuais == null) View.VISIBLE else View.GONE
@@ -127,6 +165,23 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiAbrir.isChecked = preferencias.wifiAbrir
         wifiRede.setText(preferencias.wifiRede)
         wifiEspera.setText(preferencias.wifiEspera)
+        fecharModo.setSelection(preferencias.fecharModo)
+        dias = preferencias.fecharDias
+        fecharHorario1.setText(preferencias.fecharHorario1)
+        fecharHorario2.setText(preferencias.fecharHorario2)
+    }
+
+    /** A explicação e os detalhes da opção escolhida em Fechar automaticamente. */
+    private fun mostrarFechamento() {
+        val modo = fecharModo.selectedItemPosition.coerceIn(0, 2)
+        fecharExplicacao.setText(explicacoesDoFechamento[modo])
+        fecharDetalhes.visibility = if (modo == Preferencias.FECHAR_FIXOS) View.VISIBLE else View.GONE
+        fecharDias.visibility = if (modo == Preferencias.FECHAR_AVANCADO) View.VISIBLE else View.GONE
+    }
+
+    override fun onSaveInstanceState(estado: Bundle) {
+        super.onSaveInstanceState(estado)
+        estado.putStringArrayList(ESTADO_DIAS, ArrayList(dias.flatten()))
     }
 
     override fun onResume() {
@@ -258,6 +313,24 @@ class ConfiguracoesActivity : AppCompatActivity() {
             )
             return
         }
+        val modo = fecharModo.selectedItemPosition.coerceIn(0, 2)
+        val horarios = listOf(fecharHorario1, fecharHorario2).map { it.text.toString().trim() }
+        val horarioInvalido = horarios.firstOrNull { it.isNotEmpty() && FechamentoAutomatico.lerHorario(it) == null }
+        if (modo == Preferencias.FECHAR_FIXOS && horarioInvalido != null) {
+            erro(
+                "Horário inválido",
+                "'$horarioInvalido' não é um horário no formato hh:mm (ex.: 18:00), entre 00:00 e 23:59.",
+            )
+            return
+        }
+        if (modo == Preferencias.FECHAR_FIXOS && horarios.all { it.isEmpty() }) {
+            erro("Sem horário", "Preencha ao menos um horário para fechar o ponto automaticamente.")
+            return
+        }
+        if (modo == Preferencias.FECHAR_AVANCADO && dias.flatten().all { it.isEmpty() }) {
+            erro("Sem horário", "Preencha ao menos um horário em Horários de cada dia.")
+            return
+        }
         val padrao = Preferencias()
         val anteriores = Dados.preferencias(this)
         val preferencias = Preferencias(
@@ -271,6 +344,11 @@ class ConfiguracoesActivity : AppCompatActivity() {
             wifiRede = wifiRede.text.toString().trim().ifEmpty { padrao.wifiRede },
             wifiEspera = if (esperaValida) espera else padrao.wifiEspera,
             avisoBateria = anteriores.avisoBateria,
+            fecharModo = modo,
+            // Os horários da opção que não está em uso ficam guardados, se forem válidos.
+            fecharHorario1 = horarios[0].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
+            fecharHorario2 = horarios[1].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
+            fecharDias = dias,
         )
         Dados.salvarCredenciais(this, novas)
         Dados.salvarPreferencias(this, preferencias)
@@ -282,6 +360,11 @@ class ConfiguracoesActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
         }
+        try {
+            FecharAutomatico.agendar(this)
+        } catch (e: Exception) {
+            Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
+        }
         if ((preferencias.notificacoes || preferencias.lembreteFechar) && PermissaoDeNotificacao.faltando(this)) {
             // Segue ao receber a resposta; fechar já levaria o diálogo do sistema junto.
             PermissaoDeNotificacao.pedir(this)
@@ -291,18 +374,20 @@ class ConfiguracoesActivity : AppCompatActivity() {
     }
 
     /**
-     * Depois de salvar com a abertura pela Wi-Fi ligada: se a bateria do app não está em Sem
-     * restrições (e o aviso não foi dispensado), o aviso com os dois botões. Senão, fecha.
+     * Depois de salvar com a abertura pela Wi-Fi ou o fechamento automático ligados: se a bateria
+     * do app não está em Sem restrições (e o aviso não foi dispensado), o aviso com os dois botões.
+     * Senão, fecha.
      */
     private fun avisoDeBateria() {
         val preferencias = Dados.preferencias(this)
-        if (!preferencias.wifiAbrir || !preferencias.avisoBateria || Wifi.bateriaLiberada(this)) {
+        val automatico = preferencias.wifiAbrir || preferencias.fecharAutomatico
+        if (!automatico || !preferencias.avisoBateria || Wifi.bateriaLiberada(this)) {
             finish()
             return
         }
         MaterialAlertDialogBuilder(this)
             .setTitle("Bateria")
-            .setMessage("Para abrir o ponto com o app fechado, a bateria do Ponto IFES precisa estar em Sem restrições.")
+            .setMessage("Para abrir ou fechar o ponto com o app fechado, a bateria do Ponto IFES precisa estar em Sem restrições.")
             .setPositiveButton("Liberar agora") { _, _ -> Wifi.liberarBateria(this) }
             .setNegativeButton("Não avisar mais") { _, _ ->
                 Dados.salvarPreferencias(this, Dados.preferencias(this).copy(avisoBateria = false))
@@ -331,6 +416,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val ESTADO_DIAS = "fechar_dias"
         private const val CODIGO_LOCALIZACAO = 2
         private const val CODIGO_SEGUNDO_PLANO = 3
     }

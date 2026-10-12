@@ -48,9 +48,10 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`). O `InicioReceiver`
    reagenda o pendente ao reiniciar o celular e ao atualizar o app (se a hora já passou, esquece).
 5. **Configurações** (`configuracoes.json`), em seções (2.1.0), nesta ordem: Notificações;
-   Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (lembrete); Registrar PIT (Observação, PIT
+   Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (lembrete, fechamento automático); Registrar PIT (Observação, PIT
    automático); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
-   explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado.
+   explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do
+   fechamento automático, conforme a opção escolhida.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
@@ -88,6 +89,28 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    - Pop-ups nas Configurações: localização ao ligar (Android 11+: segundo aviso e a tela do "tempo
      todo"); bateria ao salvar, se não está em Sem restrições (Liberar agora, Não avisar mais).
 
+10. **Fechar o ponto automaticamente** (2.2.0) nos horários escolhidos, se estiver aberto.
+    Configurações: seletor **Fechar automaticamente** (`fechar_modo`: 0 Não, padrão; 1 Em horários
+    fixos; 2 Avançado), com uma explicação por opção. Horários fixos: dois campos (`fechar_horario1`,
+    `fechar_horario2`, hh:mm de 00:00 a 23:59, padrão 12:00 e 18:00; um pode ficar em branco).
+    Avançado: botão **Horários de cada dia**, que abre a `HorariosActivity` (tabela de segunda a
+    sexta, 1º e 2º horário, em branco = não usa; OK devolve às Configurações, que gravam no Salvar
+    em `fechar_dias`, lista de 5 pares). O teste antigo da 2.2.0 gravava `fechar_automatico`
+    (true vira horários fixos).
+    - Alarme (`FecharAutomatico.agendar`): só o próximo horário, de seg a sex, com
+      `setExactAndAllowWhileIdle` (permissões `USE_EXACT_ALARM` no Android 13+ e
+      `SCHEDULE_EXACT_ALARM` no 12, dadas na instalação; sem elas, `setAndAllowWhileIdle`).
+      Agendado ao salvar, ao abrir o app, ao reiniciar e ao atualizar (`InicioReceiver`); o
+      `FecharAutomaticoReceiver` agenda o seguinte a cada toque. Horário perdido (celular desligado) não volta.
+    - Execução: `FecharAutomaticoWorker` (WorkManager expedito, como o da Wi-Fi) chama
+      `Execucao.fecharAutomatico`: "Fechar ponto (automático)" na tela e no log; mais de 30 min
+      depois do horário (o sistema refez o trabalho), não fecha.
+    - Quem diz se está aberto é o SIGRH (`nucleo/FechamentoAutomatico.desfecho`): fechou segue como
+      o botão (notificação, lembrete cancelado, PIT automático em seguida no mesmo trabalho); sem
+      entrada aberta ou cancelado, só o log; envio incerto notifica; outra falha notifica só se o app
+      sabe que o ponto está aberto (`ultima_abertura.txt` de hoje depois do último fechamento).
+    - O aviso de bateria ao salvar vale também para esta opção.
+
 ## Estrutura
 
 Projeto Gradle (Kotlin DSL, Gradle Wrapper 8.14.3, AGP 8.13.0, Kotlin 2.2.21, JVM 17; minSdk 24,
@@ -103,12 +126,15 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   (JUnit 4, `app/src/test`): `Acao`, `Executor` (roda a ação e grava o log), `Registro` (log),
   `Credenciais`, `Preferencias` (`configuracoes.json`), `Mascara`, `Fechamentos`, `Lembrete`,
   `Notificacoes` (idents: sucesso 1 a 3, lembrete 4, abertura automática em andamento 5, falha
-  1000+ pelo relógio; textos e botões), `Atualizacao`, `GatilhoWifi`, `AberturaAutomatica`.
+  1000+ pelo relógio; textos e botões), `Atualizacao`, `GatilhoWifi`, `AberturaAutomatica`,
+  `FechamentoAutomatico`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/` — Android: `MainActivity`, `LogActivity`,
   `ConfiguracoesActivity` (Views, não PreferenceFragment, porque os valores ficam no JSON),
   `Execucao` (estado da ação em andamento, notificação, lembrete, PIT automático), `Notificador`,
   `Lembretes.kt` (`Lembretes`, `LembreteReceiver`, `InicioReceiver`), `AbrirAutomatico.kt` (`Wifi`,
-  `RedeReceiver`, `AbrirAutomaticoWorker`), `Atualizador` (GitHub, Sobre),
+  `RedeReceiver`, `AbrirAutomaticoWorker`), `FecharAutomatico.kt` (`FecharAutomatico`,
+  `FecharAutomaticoReceiver`, `FecharAutomaticoWorker`), `HorariosActivity` (horários de cada
+  dia do fechamento automático), `Atualizador` (GitHub, Sobre),
   `PermissaoDeNotificacao`, `MascaraDeTexto`, `Dados.kt` (arquivos em `filesDir/data/`) e
   `Legado` (apaga as pastas `chaquopy` da versão Python).
 - `app/src/main/res/` — layouts, ícone do app (`mipmap-*`), atalhos (`xml/shortcuts.xml`, ícones
@@ -177,6 +203,8 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
 - Trocar a captura `docs/img/configuracoes.jpg` pela tela em seções (2.1.0).
 - Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`.
+- Testar o fechamento automático (2.2.0) num dia útil: nos dois horários, com o ponto aberto e
+  fechado, e com o app fechado.
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
   é legado, foi substituído pelo app e saiu do repositório na 2.0.0.
 
