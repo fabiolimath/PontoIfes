@@ -143,12 +143,11 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
     extenso em duas cópias de `shortcuts.xml`: `app/src/main/res/xml` e `app/src/debug/res/xml`
     (pacote `.debug`). Mudou uma, mude a outra.
 - `icons/` — ícone do app em PNG (logo do IFES no verde #008577), origem dos `mipmap-*`.
-  `icons/antigos/` guarda os ícones no verde claro original (#7FC41C) do app, do site e dos
-  atalhos, caso se queira voltar a eles.
 - `.github/workflows/release.yml` — build e publicação automáticos.
 - `.github/workflows/pr.yml` — em cada PR: testes e APK de teste assinado no pré-release `teste`.
 - `docs/` — site de instalação para usuários leigos (GitHub Pages, branch master, pasta /docs),
-  com capturas de tela em `docs/img/` (o login nelas é fictício).
+  com capturas de tela em `docs/img/` (o login nelas é fictício; as Configurações em uma captura por seção,
+  `configuracoes-*.jpg`).
 - Dados do app (`filesDir/data/`, mesmos formatos da versão Python): `credenciais.json`,
   `configuracoes.json`, `ultimo_fechamento.txt` ("aaaa-mm-dd N hh:mm:ss" desde a 2.1.0; lê os
   formatos antigos), `lembrete.txt`, `ponto.log`; desde a 2.1.0, `ultima_abertura.txt` e
@@ -201,7 +200,6 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 - Testar num dia útil: botão Registrar PIT na notificação (o lembrete, o Fechar ponto pelo lembrete e
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
-- Trocar a captura `docs/img/configuracoes.jpg` pela tela em seções (2.1.0).
 - Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`.
 - Testar o fechamento automático (2.2.0) num dia útil: nos dois horários, com o ponto aberto e
   fechado, e com o app fechado.
