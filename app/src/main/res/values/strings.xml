@@ -65,6 +65,6 @@
     <string name="verificar_agora">Verificar agora (versão instalada: %1$s)</string>
     <string name="sobre">Sobre o Ponto IFES</string>
     <string name="descricao">Abre e fecha o ponto e registra o PIT no SIGRH do IFES.</string>
-    <string name="aviso_inicial">Abrir e Fechar o Ponto só funcionam nas redes do seu campus. As três ações podem ser configuradas para executarem automaticamente nas Configurações.</string>
+    <string name="aviso_inicial">Abrir e Fechar o Ponto só funcionam nas redes do seu campus. As três ações podem ser configuradas para executar automaticamente nas Configurações.</string>
     <string name="nao_oficial">O Ponto IFES não é um app oficial do IFES. É sua responsabilidade conferir se os registros foram feitos adequadamente.</string>
 </resources>
