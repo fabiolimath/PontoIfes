@@ -59,10 +59,10 @@ class GatilhoWifiTest {
     }
 
     @Test
-    fun nome_diferente_e_ignorado_e_anotado() {
+    fun nome_diferente_e_ignorado_sem_anotar() {
         val d = decidir(nome = "Casa")
         assertIs<Decisao.Ignorar>(d)
-        assertTrue(d.anotar)
+        assertFalse(d.anotar)
         assertEquals("rede diferente (Casa)", d.motivo)
     }
 
