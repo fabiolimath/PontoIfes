@@ -48,6 +48,7 @@ android {
         getByName("release") {
             isMinifyEnabled = false
             signingConfig = signingConfigs.findByName("ponto")
+            resValue("string", "pacote_atalho", "io.github.fabiolimath.ponto")
         }
         // APK de teste da migração: outro pacote, instala ao lado do app oficial,
         // com o nome "Ponto IFES (teste)" e os ícones de icons/antigos
@@ -58,12 +59,14 @@ android {
             applicationIdSuffix = ".teste"
             versionNameSuffix = "-teste"
             matchingFallbacks += "release"
+            resValue("string", "pacote_atalho", "io.github.fabiolimath.ponto.teste")
         }
         // Build local pelo adb: pacote próprio, para não esbarrar na assinatura
         // do app instalado.
         getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            resValue("string", "pacote_atalho", "io.github.fabiolimath.ponto.debug")
         }
     }
 

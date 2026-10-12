@@ -9,6 +9,7 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import io.github.fabiolimath.ponto.nucleo.Credenciais
@@ -71,6 +72,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
             setOnClickListener { finish() }
         }
         findViewById<View>(R.id.salvar).setOnClickListener { salvar() }
+        findViewById<MaterialButton>(R.id.verificar_agora).apply {
+            text = getString(R.string.verificar_agora, BuildConfig.VERSION_NAME)
+            setOnClickListener { Atualizador.verificar(this@ConfiguracoesActivity, avisarSemNovidade = true) }
+        }
     }
 
     private fun preencher() {

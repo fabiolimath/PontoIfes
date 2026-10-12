@@ -30,4 +30,7 @@
     <string name="avisar_depois">Avisar quanto tempo depois de abrir</string>
     <string name="hora_dica">hh:mm</string>
     <string name="verificar_ao_abrir">Verificar atualizações ao abrir o app</string>
+    <string name="verificar_agora">Verificar agora (versão instalada: %1$s)</string>
+    <string name="sobre">Sobre o Ponto IFES</string>
+    <string name="descricao">Abre e fecha o ponto e registra o PIT no SIGRH do IFES.</string>
 </resources>

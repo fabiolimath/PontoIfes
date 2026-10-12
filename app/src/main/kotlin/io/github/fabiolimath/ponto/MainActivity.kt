@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
 import android.widget.ScrollView
@@ -81,6 +83,9 @@ class MainActivity : AppCompatActivity() {
                 if ((preferencias.notificacoes || preferencias.lembreteFechar) &&
                     PermissaoDeNotificacao.faltando(this)
                 ) PermissaoDeNotificacao.pedir(this)
+                if (preferencias.verificarAtualizacoes) {
+                    Atualizador.verificar(this, avisarSemNovidade = false)
+                }
             }
         }
     }
@@ -96,6 +101,19 @@ class MainActivity : AppCompatActivity() {
             ?: intent.dataString?.removePrefix("ponto:")?.trim('/', ' ')
         intent.removeExtra(EXTRA_ACAO)
         return Acao.da(chave)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.principal, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.sobre) {
+            Atualizador.sobre(this)
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     private fun abrirConfiguracoes() = startActivity(Intent(this, ConfiguracoesActivity::class.java))
