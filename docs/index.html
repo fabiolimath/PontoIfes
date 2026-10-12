@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ponto IFES</title>
 <meta name="description" content="App Android para abrir e fechar o ponto e registrar o PIT no SIGRH com um toque.">
-<link rel="icon" href="icone.png">
+<link rel="icon" href="icone.png?v=2">
+<link rel="apple-touch-icon" href="icone.png?v=2">
 <style>
   :root {
     --verde: #2f9e41;
@@ -89,10 +90,16 @@
   .com-imagem { display: grid; grid-template-columns: 220px 1fr; column-gap: 22px; align-items: start; }
   .com-imagem h2 { grid-column: 1 / -1; }
   .com-imagem figure { margin-top: 8px; }
+  .sub { display: grid; grid-template-columns: 260px 1fr; column-gap: 22px; align-items: start; }
+  .sub + .sub { border-top: 1px solid var(--borda); margin-top: 14px; }
+  .sub h3 { grid-column: 1 / -1; }
+  .sub figure { margin-top: 8px; }
   .larga { max-width: 520px; margin: 12px auto; }
   @media (max-width: 600px) {
     .com-imagem { grid-template-columns: 1fr; }
     .com-imagem figure { max-width: 260px; margin: 8px auto 0; }
+    .sub { grid-template-columns: 1fr; }
+    .sub figure { max-width: 320px; margin: 8px auto 0; }
   }
   footer { text-align: center; color: var(--suave); font-size: .9rem; margin-top: 32px; }
   footer a { color: inherit; }
@@ -144,18 +151,63 @@
     </div>
   </section>
 
-  <section class="com-imagem">
+  <section id="configuracoes">
     <h2>Configurações</h2>
-    <figure><img src="img/configuracoes.jpg" alt="Tela de Configurações do app" loading="lazy" width="540" height="1136"></figure>
-    <div>
+    <p>As opções ficam em seções: Notificações, Credenciais, Abrir ponto, Fechar ponto, Registrar PIT e Atualizações. Toque em <strong>Salvar</strong> no fim da tela para gravar as mudanças.</p>
+
+    <div class="sub">
+      <h3>Notificações e Credenciais</h3>
+      <figure><img src="img/configuracoes-notificacoes.jpg" alt="Seções Notificações e Credenciais das Configurações" loading="lazy" width="540" height="520"></figure>
       <ul>
-        <li>As opções ficam em seções: Notificações, Credenciais, Abrir ponto, Fechar ponto, Registrar PIT e Atualizações.</li>
-        <li><strong>Notificações</strong>: liga ou desliga as notificações com o resultado.</li>
-        <li><strong>Credenciais</strong>: usuário e senha do SIGRH, usados em todos os registros.</li>
-        <li><strong>Abrir ponto</strong>: <strong>Abrir ao conectar na Wi-Fi do campus</strong> abre o ponto sozinho, mesmo com o app fechado.</li>
-        <li><strong>Fechar ponto</strong>: <strong>Lembrar de fechar o ponto</strong> avisa com uma notificação, mesmo com o app fechado, se o ponto foi aberto e não foi fechado no tempo escolhido (padrão 01:00, até 06:00). O aviso pode chegar alguns minutos depois com o celular em repouso. Se o celular for reiniciado, o lembrete continua valendo. <strong>Fechar automaticamente</strong> fecha o ponto sozinho, mesmo com o app fechado, se ele estiver aberto nos horários escolhidos, de segunda a sexta. Em <strong>Em horários fixos</strong>, são os mesmos dois horários todo dia (padrão 12:00 e 18:00; um pode ficar em branco). Em <strong>Avançado</strong>, o botão <strong>Horários de cada dia</strong> abre uma tabela com dois horários para cada dia da semana; deixe em branco o que não quiser usar. Chega a notificação de ponto fechado, como no botão; se o ponto não estava aberto, nada acontece. Funciona só na rede do campus, como os outros registros.</li>
-        <li><strong>Registrar PIT</strong>: a <strong>Observação</strong> vai no formulário do PIT (padrão <em>Conforme PIT docente.</em>). <strong>Registrar o PIT do dia automaticamente</strong> registra o PIT sozinho logo depois de fechar o ponto. Escolha <strong>No 1º fechamento do dia</strong> se você sempre fecha o ponto uma vez por dia, ou <strong>No 2º fechamento do dia</strong> se sempre fecha no almoço. Se isso varia ao longo da semana, essa opção não vai funcionar para você. Veja outra opção na última seção, que trata de automação.</li>
-        <li><strong>Atualizações</strong>: avisa ao abrir o app quando há versão nova para baixar. <strong>Verificar agora</strong> consulta na hora.</li>
+        <li><strong>Notificar o resultado</strong> liga ou desliga a notificação ao terminar cada registro, com <strong>Tentar de novo</strong> quando falha.</li>
+        <li><strong>Usuário do SIGRH</strong> e <strong>Senha do SIGRH</strong> são usados em todos os registros e ficam guardados só no seu celular.</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3>Abrir ponto</h3>
+      <figure><img src="img/configuracoes-abrir.jpg" alt="Seção Abrir ponto das Configurações, com a abertura pela Wi-Fi ligada" loading="lazy" width="540" height="424"></figure>
+      <ul>
+        <li><strong>Abrir ao conectar na Wi-Fi do campus</strong> abre o ponto sozinho, mesmo com o app fechado, de segunda a sexta.</li>
+        <li><strong>Nome da rede</strong> é a Wi-Fi do campus (padrão <code>ws_wlan</code>). Abaixo, o app diz se consegue reconhecer o nome da rede.</li>
+        <li><strong>Tempo de espera após fechar</strong>: quanto tempo esperar depois de fechar o ponto antes de tentar abrir de novo (padrão 01:00).</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3>Fechar ponto</h3>
+      <figure><img src="img/configuracoes-fechar.jpg" alt="Seção Fechar ponto das Configurações, com o lembrete e o fechamento automático em horários fixos" loading="lazy" width="540" height="608"></figure>
+      <ul>
+        <li><strong>Lembrar de fechar o ponto</strong> avisa com uma notificação, mesmo com o app fechado, se o ponto foi aberto e não foi fechado no tempo escolhido em <strong>Avisar depois de</strong> (padrão 01:00, até 06:00). O aviso pode chegar alguns minutos depois com o celular em repouso. Se o celular for reiniciado, o lembrete continua valendo.</li>
+        <li><strong>Fechar automaticamente</strong> fecha o ponto sozinho, mesmo com o app fechado, se ele estiver aberto nos horários escolhidos, de segunda a sexta. Em <strong>Em horários fixos</strong>, são os mesmos dois horários todo dia (padrão 12:00 e 18:00; um pode ficar em branco).</li>
+        <li>Chega a notificação de ponto fechado, como no botão; se o ponto não estava aberto, nada acontece. Funciona só na rede do campus, como os outros registros.</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3>Horários de cada dia</h3>
+      <figure><img src="img/configuracoes-horarios.jpg" alt="Tela Horários de cada dia, com dois horários de segunda a sexta" loading="lazy" width="540" height="670"></figure>
+      <ul>
+        <li>Em <strong>Fechar automaticamente</strong>, a opção <strong>Avançado</strong> mostra o botão <strong>Horários de cada dia</strong>, que abre esta tabela com dois horários para cada dia da semana.</li>
+        <li>Deixe em branco o horário que não quiser usar. <strong>OK</strong> volta às Configurações; os horários são gravados ao tocar em <strong>Salvar</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3>Registrar PIT</h3>
+      <figure><img src="img/configuracoes-pit.jpg" alt="Seção Registrar PIT das Configurações, com a Observação e o PIT automático" loading="lazy" width="540" height="339"></figure>
+      <ul>
+        <li>A <strong>Observação</strong> vai no formulário do PIT (padrão <em>Conforme PIT docente.</em>).</li>
+        <li><strong>Registrar o PIT do dia automaticamente</strong> registra o PIT sozinho logo depois de fechar o ponto. Escolha <strong>No 1º fechamento do dia</strong> se você sempre fecha o ponto uma vez por dia, ou <strong>No 2º fechamento do dia</strong> se sempre fecha no almoço. Se isso varia ao longo da semana, essa opção não vai funcionar para você. Veja outra opção na última seção, que trata de automação.</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3>Atualizações</h3>
+      <figure><img src="img/configuracoes-atualizacoes.jpg" alt="Seção Atualizações das Configurações e os botões Cancelar e Salvar" loading="lazy" width="540" height="355"></figure>
+      <ul>
+        <li><strong>Verificar ao abrir o app</strong> avisa quando há versão nova para baixar.</li>
+        <li><strong>Verificar agora</strong> consulta na hora e mostra a versão instalada.</li>
       </ul>
     </div>
   </section>

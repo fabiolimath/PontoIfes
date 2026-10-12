@@ -81,7 +81,6 @@ Projeto Gradle (Kotlin DSL) com dois módulos:
     atualização (`Atualizador`) e limpeza dos restos da versão Python (`Legado`).
   - `app/src/main/res/` — layouts, ícone do app (`mipmap-*`), atalhos e ícone das notificações.
 - `icons/` — os ícones do app em PNG, nos vários tamanhos (originais dos `mipmap-*`).
-  `icons/antigos/` guarda os do verde claro original.
 
 Os dados ficam em `filesDir/data/`, nos mesmos arquivos da versão Python: `credenciais.json`,
 `configuracoes.json`, `ultimo_fechamento.txt`, `lembrete.txt` e `ponto.log`.
