@@ -14,7 +14,9 @@ class NotificacoesTest {
     @Test
     fun idents_de_sucesso_e_de_falha() {
         assertEquals(listOf(1, 2, 3), Acao.entries.map { Notificacoes.ident(it) })
-        assertEquals(listOf(11, 12, 13), Acao.entries.map { Notificacoes.ident(it, falha = true) })
+        // Falhas: um ident por falha, para uma não substituir a outra.
+        assertEquals(1000 + 5, Notificacoes.identDeFalha(5_000))
+        assertTrue(Notificacoes.identDeFalha(5_000) != Notificacoes.identDeFalha(65_000))
         assertEquals(4, Notificacoes.IDENT_LEMBRETE)
     }
 
@@ -55,7 +57,9 @@ class NotificacoesTest {
     fun falha_notifica_com_tentar_de_novo() {
         val dia = LocalDate.of(2026, 10, 2)
         val aviso = Notificacoes.aviso(Acao.REGISTRAR_PIT, "t", "falhou", 1, dia, Preferencias(), terca)!!
-        assertEquals(13, aviso.ident)
+        assertEquals(Notificacoes.identDeFalha(70_000), Notificacoes.aviso(
+            Acao.REGISTRAR_PIT, "t", "falhou", 1, dia, Preferencias(), terca, 70_000)!!.ident)
+        assertTrue(aviso.ident >= 1000)
         assertEquals(BotaoDeAviso("Tentar de novo", Acao.REGISTRAR_PIT, "02/10/2026"), aviso.botao)
         // Sem data (PIT do dia) e em outras ações, o botão não leva data.
         assertNull(Notificacoes.aviso(Acao.REGISTRAR_PIT, "t", "x", 1, null, Preferencias(), terca)!!.botao!!.data)

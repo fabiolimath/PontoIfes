@@ -18,10 +18,15 @@ object Notificacoes {
     const val IDENT_LEMBRETE = 4
 
     /**
-     * Uma notificação de sucesso e uma de falha por ação: a nova substitui a anterior do mesmo tipo
-     * e o sucesso não apaga a falha. Sucesso: 1 a 3; falha: 11 a 13 (o 4 é o do lembrete).
+     * Uma notificação de sucesso por ação (1 a 3; o 4 é o do lembrete): a nova substitui a anterior.
      */
-    fun ident(acao: Acao, falha: Boolean = false) = acao.ordinal + 1 + if (falha) 10 else 0
+    fun ident(acao: Acao) = acao.ordinal + 1
+
+    /**
+     * Cada falha tem o seu ident (a partir de 1000, pelo relógio em segundos): uma falha nova, por
+     * exemplo ao tentar de novo, não substitui a anterior, e um sucesso também não a apaga.
+     */
+    fun identDeFalha(agoraMs: Long) = 1000 + (agoraMs / 1000 % 1_000_000_000L).toInt()
 
     fun diaUtil(dia: LocalDate) = dia.dayOfWeek !in setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 
@@ -50,6 +55,7 @@ object Notificacoes {
         dia: LocalDate?,
         preferencias: Preferencias,
         hoje: LocalDate = LocalDate.now(),
+        agoraMs: Long = System.currentTimeMillis(),
     ): Aviso? {
         if (!preferencias.notificacoes) return null
         val botao = when {
@@ -62,7 +68,7 @@ object Notificacoes {
             else -> null
         }
         val texto = Executor.mensagemFinal(saida).ifEmpty { titulo }
-        return Aviso(titulo, texto, ident(acao, falha = codigo != 0), botao)
+        return Aviso(titulo, texto, if (codigo != 0) identDeFalha(agoraMs) else ident(acao), botao)
     }
 
     /** Se o fechamento nº [vezes] do dia é o que registra o PIT sozinho (segunda a sexta). */
