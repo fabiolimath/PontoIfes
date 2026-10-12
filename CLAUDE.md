@@ -198,6 +198,8 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
 - Trocar a captura `docs/img/configuracoes.jpg` pela tela em seções (2.1.0).
 - Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`.
+- Testar o fechamento automático (2.2.0) num dia útil: nos dois horários, com o ponto aberto e
+  fechado, e com o app fechado.
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
   é legado, foi substituído pelo app e saiu do repositório na 2.0.0.
 
