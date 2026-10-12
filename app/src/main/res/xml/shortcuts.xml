@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Atalhos do ícone (segurar o ícone). Por serem estáticos, aparecem também
      para o Tasker e para as Rotinas. Cada um abre o app com o extra "acao".
-     O pacote vem de @string/pacote_atalho (resValue por build type, porque o APK de teste
-     tem outro applicationId). Ícones: símbolo verde (play, stop, relógio) em res/drawable*;
+     O pacote tem de ser escrito por extenso (o launcher não resolve @string): o APK de teste
+     e o debug têm cópias deste arquivo com o seu pacote em src/migracao e src/debug. Ícones: símbolo verde (play, stop, relógio) em res/drawable*;
      o emblema pequeno no canto é posto pelo launcher (o ícone do app). -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
@@ -12,7 +12,7 @@
         android:shortcutShortLabel="@string/abrir_ponto">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="@string/pacote_atalho"
+            android:targetPackage="io.github.fabiolimath.ponto"
             android:targetClass="io.github.fabiolimath.ponto.MainActivity">
             <extra android:name="acao" android:value="abrir_ponto" />
         </intent>
@@ -24,7 +24,7 @@
         android:shortcutShortLabel="@string/fechar_ponto">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="@string/pacote_atalho"
+            android:targetPackage="io.github.fabiolimath.ponto"
             android:targetClass="io.github.fabiolimath.ponto.MainActivity">
             <extra android:name="acao" android:value="fechar_ponto" />
         </intent>
@@ -36,7 +36,7 @@
         android:shortcutShortLabel="@string/registrar_pit">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="@string/pacote_atalho"
+            android:targetPackage="io.github.fabiolimath.ponto"
             android:targetClass="io.github.fabiolimath.ponto.MainActivity">
             <extra android:name="acao" android:value="registrar_pit" />
         </intent>
