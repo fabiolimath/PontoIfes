@@ -146,8 +146,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
             setOnClickListener { finish() }
         }
         findViewById<View>(R.id.salvar).setOnClickListener { salvar() }
+        findViewById<TextView>(R.id.versao_instalada).text =
+            getString(R.string.versao_instalada, BuildConfig.VERSION_NAME)
         findViewById<MaterialButton>(R.id.verificar_agora).apply {
-            text = getString(R.string.verificar_agora, BuildConfig.VERSION_NAME)
+            text = getString(R.string.verificar_agora)
             setOnClickListener { Atualizador.verificar(this@ConfiguracoesActivity, avisarSemNovidade = true) }
         }
     }
