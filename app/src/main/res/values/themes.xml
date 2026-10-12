@@ -16,5 +16,39 @@
         <item name="android:textColor">@color/botao_texto</item>
     </style>
 
+    <!-- Configurações: título de seção (verde, maiúsculas), explicação embaixo de cada opção e
+         divisória entre seções. -->
+    <style name="Ponto.Secao">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:textColor">@color/verde</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Ponto.Explicacao">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Ponto.Divisoria">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:background">?android:attr/listDivider</item>
+    </style>
+
+    <style name="Ponto.Campo" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+    </style>
+
     <style name="Theme.Ponto" parent="Theme.Ponto.Base" />
 </resources>

@@ -12,10 +12,12 @@ import android.view.View
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.textfield.TextInputLayout
 import io.github.fabiolimath.ponto.nucleo.Acao
 import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
@@ -63,8 +65,8 @@ class MainActivity : AppCompatActivity() {
             Mascara.formatarData(texto, apagando)
         })
 
-        // Só na abertura (não ao girar a tela): sem credenciais, vai direto às Configurações; com
-        // elas, pede a permissão de notificar (no Android 13+) se as notificações estão ligadas.
+        // Só na abertura (não ao girar a tela): sem credenciais, pede usuário e senha num diálogo;
+        // com elas, pede a permissão de notificar (no Android 13+) e verifica atualizações.
         if (savedInstanceState == null) {
             Legado.apagarPython(this)
             // O gatilho da Wi-Fi some com o "Forçar parada": abrir o app o refaz.
@@ -80,17 +82,65 @@ class MainActivity : AppCompatActivity() {
                 intent.removeExtra(EXTRA_DATA)
                 pedir(acao)
             } else if (Dados.credenciais(this)?.completas != true) {
-                abrirConfiguracoes()
+                pedirCredenciais(::aoAbrir)
             } else {
-                val preferencias = Dados.preferencias(this)
-                if ((preferencias.notificacoes || preferencias.lembreteFechar) &&
-                    PermissaoDeNotificacao.faltando(this)
-                ) PermissaoDeNotificacao.pedir(this)
-                if (preferencias.verificarAtualizacoes) {
-                    Atualizador.verificar(this, avisarSemNovidade = false)
-                }
+                aoAbrir()
+            }
+        } else if (Dados.credenciais(this)?.completas != true) {
+            // A tela girou com o diálogo aberto: ele volta (o Android não o recria sozinho).
+            pedirCredenciais(::aoAbrir)
+        }
+    }
+
+    /** Com as credenciais: a permissão de notificar (no Android 13+) e a verificação de atualizações. */
+    private fun aoAbrir() {
+        val preferencias = Dados.preferencias(this)
+        if ((preferencias.notificacoes || preferencias.lembreteFechar) && PermissaoDeNotificacao.faltando(this)) {
+            PermissaoDeNotificacao.pedir(this)
+        }
+        if (preferencias.verificarAtualizacoes) Atualizador.verificar(this, avisarSemNovidade = false)
+    }
+
+    private var dialogoDeCredenciais: AlertDialog? = null
+
+    /**
+     * Usuário e senha do SIGRH, a única configuração obrigatória: um diálogo sobre a tela principal,
+     * sem Cancelar, que só fecha ao salvar os dois. Depois, [depois].
+     */
+    private fun pedirCredenciais(depois: () -> Unit = {}) {
+        if (dialogoDeCredenciais?.isShowing == true) return
+        val visao = layoutInflater.inflate(R.layout.dialogo_credenciais, null)
+        val usuario = visao.findViewById<EditText>(R.id.d_usuario)
+        val senha = visao.findViewById<EditText>(R.id.d_senha)
+        val campoUsuario = visao.findViewById<TextInputLayout>(R.id.d_usuario_campo)
+        val campoSenha = visao.findViewById<TextInputLayout>(R.id.d_senha_campo)
+        val dialogo = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.entrar_sigrh)
+            .setView(visao)
+            .setCancelable(false)
+            .setPositiveButton(R.string.salvar, null)
+            .create()
+        // O botão confere os campos antes de fechar (o padrão fecharia sempre).
+        dialogo.setOnShowListener {
+            dialogo.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val novas = Credenciais(usuario.text.toString(), senha.text.toString())
+                campoUsuario.error = if (novas.usuario.isBlank()) "Informe o usuário." else null
+                campoSenha.error = if (novas.senha.isBlank()) "Informe a senha." else null
+                if (!novas.completas) return@setOnClickListener
+                Dados.salvarCredenciais(this, novas)
+                dialogo.dismiss()
+                dialogoDeCredenciais = null
+                depois()
             }
         }
+        dialogoDeCredenciais = dialogo
+        dialogo.show()
+    }
+
+    override fun onDestroy() {
+        dialogoDeCredenciais?.dismiss()
+        dialogoDeCredenciais = null
+        super.onDestroy()
     }
 
     /**
@@ -171,7 +221,7 @@ class MainActivity : AppCompatActivity() {
         if (Execucao.rodando) return
         val credenciais = Dados.credenciais(this)
         if (credenciais == null || !credenciais.completas) {
-            abrirConfiguracoes()
+            pedirCredenciais { pedir(acao) }
             return
         }
         var dia: LocalDate? = null

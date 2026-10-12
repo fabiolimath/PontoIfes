@@ -41,6 +41,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
     private lateinit var wifiRede: EditText
     private lateinit var wifiEspera: EditText
     private lateinit var wifiEstado: TextView
+    private lateinit var wifiDetalhes: View
+    private lateinit var lembreteDetalhes: View
 
     private val explicacoes = intArrayOf(R.string.pit_auto_expl_0, R.string.pit_auto_expl_1, R.string.pit_auto_expl_2)
 
@@ -64,6 +66,14 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiEspera = findViewById(R.id.wifi_espera)
         wifiEspera.addTextChangedListener(MascaraDeTexto(wifiEspera, Mascara::formatarHora))
         wifiEstado = findViewById(R.id.wifi_estado)
+        wifiDetalhes = findViewById(R.id.wifi_detalhes)
+        lembreteDetalhes = findViewById(R.id.lembrete_detalhes)
+
+        // Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado.
+        wifiAbrir.setOnCheckedChangeListener { _, ligado -> wifiDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE }
+        lembreteFechar.setOnCheckedChangeListener { _, ligado ->
+            lembreteDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE
+        }
 
         // Ao ligar (toque do usuário, não ao preencher nem ao girar a tela): o aviso da localização.
         wifiAbrir.setOnClickListener {
@@ -87,6 +97,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
 
         // Ao girar a tela o Android devolve o que foi digitado; só a 1ª vez parte dos arquivos salvos.
         if (savedInstanceState == null) preencher()
+        wifiDetalhes.visibility = if (wifiAbrir.isChecked) View.VISIBLE else View.GONE
+        lembreteDetalhes.visibility = if (lembreteFechar.isChecked) View.VISIBLE else View.GONE
         val atuais = Dados.credenciais(this)
         val temCredenciais = atuais?.completas == true
         findViewById<View>(R.id.aviso).visibility = if (atuais == null) View.VISIBLE else View.GONE

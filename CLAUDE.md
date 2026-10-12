@@ -27,8 +27,10 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    (`Cancelamento.cancelar()`, um sinal próprio e não o cancelamento da corrotina: a ação para
    antes de cada tentativa, nas esperas e logo antes do envio final, nunca depois dele; resultado
    `Cancelado`, código 130 no log, sem notificação).
-2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
-   guardadas na área privada do app e editáveis em **Configurações**. Campos de data (PIT) e de
+2. Credenciais pedidas na 1ª execução num diálogo sobre a tela principal (`MainActivity.pedirCredenciais`,
+   sem Cancelar, só fecha ao salvar os dois; também ao tocar numa ação sem elas), a única configuração
+   obrigatória (usuário/senha do SIGRH; o usuário abre o teclado numérico), guardadas na área privada
+   do app e editáveis em **Configurações**. Campos de data (PIT) e de
    hora (lembrete) com máscara (`nucleo/Mascara`, `MascaraDeTexto`) e teclado próprio.
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
@@ -45,8 +47,10 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver`; fechar o ponto com
    sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`). O `InicioReceiver`
    reagenda o pendente ao reiniciar o celular e ao atualizar o app (se a hora já passou, esquece).
-5. **Configurações** (`configuracoes.json`): credenciais, Observação do PIT, PIT automático,
-   notificações, lembrete (ligado/tempo), verificar atualizações ao abrir (+ Verificar agora).
+5. **Configurações** (`configuracoes.json`), em seções (2.1.0), nesta ordem: Notificações;
+   Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (lembrete); Registrar PIT (Observação, PIT
+   automático); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
+   explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
@@ -172,6 +176,7 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 - Testar num dia útil: botão Registrar PIT na notificação (o lembrete, o Fechar ponto pelo lembrete e
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
+- Trocar a captura `docs/img/configuracoes.jpg` pela tela em seções (2.1.0).
 - Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`; escrever o
   texto final da seção `#wifi` do site (hoje um esqueleto).
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
