@@ -18,7 +18,7 @@
 
     <!-- Configurações: título de seção (verde, maiúsculas), explicação embaixo de cada opção e
          divisória entre seções. -->
-    <style name="Ponto.Secao">
+    <style name="Ponto.Secao" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:paddingTop">16dp</item>
@@ -30,14 +30,14 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="Ponto.Explicacao">
+    <style name="Ponto.Explicacao" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">?android:attr/textColorSecondary</item>
         <item name="android:textSize">13sp</item>
     </style>
 
-    <style name="Ponto.Divisoria">
+    <style name="Ponto.Divisoria" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
         <item name="android:layout_marginTop">12dp</item>
