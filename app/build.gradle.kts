@@ -6,7 +6,7 @@ plugins {
 // Versão do app: aumentar a cada PR que muda o app (o release sai no merge).
 // O versionCode segue a fórmula do Briefcase, para continuar acima da 1.0.x:
 // X.Y.Z -> X*1000000 + Y*10000 + Z*100 (1.0.15 -> 1001500, 2.0.0 -> 2000000).
-val versao = "2.0.0"
+val versao = "2.1.0"
 val codigoDaVersao = versao.split(".").map(String::toInt).let { (x, y, z) ->
     x * 1_000_000 + y * 10_000 + z * 100
 }
@@ -81,6 +81,8 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    // A abertura automática ao conectar na Wi-Fi (trabalho expedito, com o app fechado).
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     // Testes das classes sem Android (pacote nucleo), na JVM.
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:2.2.21")

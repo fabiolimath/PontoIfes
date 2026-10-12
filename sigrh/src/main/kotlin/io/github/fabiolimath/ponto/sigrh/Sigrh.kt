@@ -29,6 +29,7 @@ internal const val DICA_WIFI = "Confira se está conectado à Wi-Fi do campus."
  * [Resultado.mensagem]. Uma ação por vez em cada instância.
  *
  * @param cancelamento o botão Cancelar (ver [Cancelamento]).
+ * @param timeout por requisição, em segundos ([TIMEOUT_AUTOMATICO] na abertura pela Wi-Fi).
  * @param base, esperas, relogio trocados só nos testes.
  */
 class Sigrh(
@@ -36,6 +37,7 @@ class Sigrh(
     private val senha: String,
     private val saida: (String) -> Unit = {},
     private val cancelamento: Cancelamento = Cancelamento(),
+    private val timeout: Long = TIMEOUT,
     private val base: String = BASE,
     private val esperas: List<Long> = ESPERAS,
     private val relogio: Clock = Clock.systemDefaultZone(),
@@ -92,7 +94,7 @@ class Sigrh(
             for (tentativa in 1..tentativas) {
                 cancelamento.conferir()
                 try {
-                    return fim(Resultado.Sucesso(acao(Sessao(base, cancelamento))))
+                    return fim(Resultado.Sucesso(acao(Sessao(base, cancelamento, timeout))))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Cancelado) {

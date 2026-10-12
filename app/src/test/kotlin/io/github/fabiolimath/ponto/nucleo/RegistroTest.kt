@@ -26,6 +26,15 @@ class RegistroTest {
     }
 
     @Test
+    fun anotacao_sem_codigo_de_saida() {
+        registro.anotar("abrir_ponto (automático)", inicio, "Ignorado: rede diferente (Casa).")
+        assertEquals(
+            "=== 2026-10-13 17:15:02 · abrir_ponto (automático) ===\nIgnorado: rede diferente (Casa).\n",
+            registro.ler(),
+        )
+    }
+
+    @Test
     fun mantem_as_ultimas_linhas() {
         for (i in 1..400) registro.gravar("abrir_ponto", inicio, "x\n", 0)
         val linhas = registro.ler().lines().dropLast(1)

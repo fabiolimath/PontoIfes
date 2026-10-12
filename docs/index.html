@@ -154,6 +154,7 @@
         <li><strong>Registrar o PIT do dia automaticamente</strong>: o app registra o PIT sozinho logo depois de fechar o ponto. Escolha <strong>No 1º fechamento do dia</strong> se você sempre fecha o ponto uma vez por dia, ou <strong>No 2º fechamento do dia</strong> se sempre fecha no almoço. Se isso varia ao longo da semana, essa opção não vai funcionar para você. Veja outra opção na última seção, que trata de automação.</li>
         <li><strong>Notificar o resultado de cada execução</strong>: liga ou desliga as notificações com o resultado.</li>
         <li><strong>Lembrar de fechar o ponto</strong>: se o ponto foi aberto e não foi fechado no tempo escolhido (padrão 01:00), o app avisa com uma notificação, mesmo fechado. O tempo vai até 06:00. O aviso pode chegar alguns minutos depois com o celular em repouso. Se o celular for reiniciado, o lembrete continua valendo.</li>
+        <li><strong>Abrir o ponto ao conectar na Wi-Fi do campus</strong>: o app abre o ponto sozinho, mesmo fechado. Veja <a href="#wifi">a seção sobre isso</a>.</li>
         <li><strong>Verificar atualizações ao abrir o app</strong>: avisa quando há versão nova para baixar. <strong>Verificar agora</strong> consulta na hora.</li>
       </ul>
     </div>
@@ -179,6 +180,25 @@
       <li><strong>Fechar ponto</strong>, no lembrete de ponto ainda aberto.</li>
       <li><strong>Registrar PIT</strong>, depois de fechar o ponto: registra o PIT do dia. Não aparece se o PIT automático estiver ligado.</li>
     </ul>
+  </section>
+
+  <section id="wifi">
+    <h2>Abrir o ponto ao conectar na Wi-Fi</h2>
+    <!-- Esqueleto: o texto final das instruções é do autor. -->
+    <p>Com a opção <strong>Abrir o ponto ao conectar na Wi-Fi do campus</strong> ligada nas Configurações, o app abre o ponto sozinho quando o celular conecta na Wi-Fi do campus (padrão <code>ws_wlan</code>), de segunda a sexta, sem abrir a tela. Chega a notificação de ponto aberto e o lembrete de fechar é agendado, como no botão.</p>
+    <ul>
+      <li>Depois de fechar o ponto, a abertura automática espera 30 minutos, para não reabrir ao sair do campus.</li>
+      <li>Se o ponto já está aberto, nada acontece.</li>
+      <li>Falhas de rede ficam só no Log. Outros erros (como senha recusada) avisam no máximo uma vez por dia.</li>
+    </ul>
+    <h3>Localização</h3>
+    <p>Para reconhecer a rede pelo nome, o Android exige acesso à localização <strong>o tempo todo</strong> e a localização ligada. O app não usa sua localização, só o nome da rede. Sem isso, ele tenta abrir o ponto em qualquer Wi-Fi, e o SIGRH recusa fora do campus, em silêncio.</p>
+    <p>Com a permissão, o Android pode avisar de vez em quando que o Ponto IFES acessou a localização em segundo plano. É esse acesso ao nome da rede.</p>
+    <h3>Bateria</h3>
+    <p>Para funcionar com o app fechado, a bateria do Ponto IFES precisa estar em <strong>Sem restrições</strong> (Configurações do Android &gt; Apps &gt; Ponto IFES &gt; Bateria). Ao salvar com a opção ligada, o app avisa se não estiver.</p>
+    <p>Alguns fabricantes têm travas próprias. Na Xiaomi, ligue também o <strong>Início automático</strong> do app.</p>
+    <h3>Forçar parada</h3>
+    <p>Usar <strong>Forçar parada</strong> nas configurações do Android desliga o gatilho até o app ser aberto de novo.</p>
   </section>
 
   <section>

@@ -35,12 +35,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rolagem: ScrollView
 
     private val relogio = Handler(Looper.getMainLooper())
-    private val tique = object : Runnable {
-        override fun run() {
-            desenhar()
-            if (Execucao.rodando) relogio.postDelayed(this, 1000)
-        }
-    }
+    /** O relógio da execução: [desenhar] o reagenda enquanto houver uma rodando. */
+    private val tique = Runnable { desenhar() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +67,12 @@ class MainActivity : AppCompatActivity() {
         // elas, pede a permissão de notificar (no Android 13+) se as notificações estão ligadas.
         if (savedInstanceState == null) {
             Legado.apagarPython(this)
+            // O gatilho da Wi-Fi some com o "Forçar parada": abrir o app o refaz.
+            try {
+                Wifi.registrar(this, forcar = false)
+            } catch (e: Exception) {
+                android.util.Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
+            }
             val acao = acaoDoIntent()
             if (acao != null) {
                 // Aberto por um botão de notificação, atalho ou Tasker: executa já.
@@ -123,7 +125,6 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         Execucao.ouvinte = ::desenhar
         desenhar()
-        if (Execucao.rodando) relogio.postDelayed(tique, 1000)
     }
 
     override fun onStop() {
@@ -132,9 +133,14 @@ class MainActivity : AppCompatActivity() {
         relogio.removeCallbacks(tique)
     }
 
-    /** Põe na tela o estado da [Execucao]. */
+    /**
+     * Põe na tela o estado da [Execucao]. Enquanto ela roda, desenha de novo a cada segundo (o tempo
+     * decorrido), também quando começa com a tela aberta (a abertura automática).
+     */
     private fun desenhar() {
         val rodando = Execucao.rodando
+        relogio.removeCallbacks(tique)
+        if (rodando) relogio.postDelayed(tique, 1000)
         // Verdes (disponíveis) fora da execução, cinza durante ela; o Cancelar é o contrário.
         for (botao in botoesDeAcao.values) botao.isEnabled = !rodando
         configuracoes.isEnabled = !rodando

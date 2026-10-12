@@ -31,6 +31,12 @@ class ExecutorTest {
     }
 
     @Test
+    fun abertura_automatica_tem_marca_no_log() = runBlocking<Unit> {
+        executor.executar(Acao.ABRIR_PONTO, "", "", automatico = true)
+        assertTrue(registro.ler().startsWith("=== 2026-10-13 17:15:02 · abrir_ponto (automático) ===\n"))
+    }
+
+    @Test
     fun cancelado_tem_codigo_130_e_nao_repete_a_mensagem() = runBlocking<Unit> {
         val cancelamento = Cancelamento().also { it.cancelar() }
         val resultado = executor.executar(Acao.FECHAR_PONTO, "123", "senha", cancelamento = cancelamento)

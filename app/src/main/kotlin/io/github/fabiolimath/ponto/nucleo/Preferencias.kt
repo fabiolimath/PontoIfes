@@ -10,6 +10,9 @@ import java.time.Duration
  *
  * [pitAutomatico]: 0 = não, 1 = no 1º fechamento do dia (quem não faz almoço),
  * 2 = no 2º (quem fecha no almoço).
+ *
+ * [wifiAbrir]: abrir o ponto ao conectar na Wi-Fi [wifiRede]; [avisoBateria]: avisar ao salvar se a
+ * bateria do app não está em Sem restrições.
  */
 data class Preferencias(
     val notificacoes: Boolean = true,
@@ -18,6 +21,9 @@ data class Preferencias(
     val verificarAtualizacoes: Boolean = true,
     val observacaoPit: String = OBSERVACAO_PADRAO,
     val pitAutomatico: Int = 0,
+    val wifiAbrir: Boolean = false,
+    val wifiRede: String = GatilhoWifi.REDE_PADRAO,
+    val avisoBateria: Boolean = true,
 ) {
     /** O tempo do lembrete como [Duration], ou null se [lembreteTempo] for inválido. */
     val duracaoDoLembrete get() = tempoLembrete(lembreteTempo)
@@ -30,6 +36,9 @@ data class Preferencias(
             .put("verificar_atualizacoes", verificarAtualizacoes)
             .put("observacao_pit", observacaoPit)
             .put("pit_automatico", pitAutomatico)
+            .put("wifi_abrir", wifiAbrir)
+            .put("wifi_rede", wifiRede)
+            .put("aviso_bateria", avisoBateria)
         arquivo.parentFile?.mkdirs()
         arquivo.writeText(json.toString())
     }
@@ -57,6 +66,9 @@ data class Preferencias(
                 verificarAtualizacoes = json.optBoolean("verificar_atualizacoes", padrao.verificarAtualizacoes),
                 observacaoPit = json.optString("observacao_pit", padrao.observacaoPit),
                 pitAutomatico = if (opcao in 0..2) opcao else 0,
+                wifiAbrir = json.optBoolean("wifi_abrir", padrao.wifiAbrir),
+                wifiRede = json.optString("wifi_rede", padrao.wifiRede).trim().ifEmpty { padrao.wifiRede },
+                avisoBateria = json.optBoolean("aviso_bateria", padrao.avisoBateria),
             )
         }
 

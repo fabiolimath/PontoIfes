@@ -37,12 +37,13 @@ object Lembretes {
     }
 
     /**
-     * Depois de abrir o ponto com sucesso: agenda o lembrete para o tempo configurado depois de [agora].
-     * Um lembrete já pendente fica como está (abrir de novo não o adia).
+     * Depois de abrir o ponto com sucesso: agenda o lembrete para o tempo configurado depois da
+     * [abertura] (padrão: [agora]; na abertura automática de um ponto já aberto, a hora de entrada).
+     * Um lembrete já pendente fica como está (abrir de novo não o adia), e um que já passou não é agendado.
      */
-    fun agendarAposAbrir(contexto: Context, agora: LocalDateTime = LocalDateTime.now()) {
-        val quando = Lembrete.quando(Dados.preferencias(contexto), arquivo(contexto), agora) ?: return
-        agendar(contexto, quando, Lembrete.texto(agora))
+    fun agendarAposAbrir(contexto: Context, agora: LocalDateTime = LocalDateTime.now(), abertura: LocalDateTime = agora) {
+        val quando = Lembrete.quando(Dados.preferencias(contexto), arquivo(contexto), agora, abertura) ?: return
+        agendar(contexto, quando, Lembrete.texto(abertura))
         Lembrete.registrar(arquivo(contexto), quando)
     }
 
@@ -69,13 +70,18 @@ object Lembretes {
 }
 
 /**
- * Reagenda o lembrete pendente depois de reiniciar o celular ou de atualizar o app; na atualização,
- * apaga também os restos da versão Python.
+ * Reagenda o lembrete pendente e refaz o gatilho da Wi-Fi depois de reiniciar o celular ou de
+ * atualizar o app (o Android perde os dois); na atualização, apaga também os restos da versão Python.
  */
 class InicioReceiver : BroadcastReceiver() {
     override fun onReceive(contexto: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             Lembretes.reagendar(contexto)
+            try {
+                Wifi.registrar(contexto, forcar = true)
+            } catch (e: Exception) {
+                android.util.Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
+            }
         }
         if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Legado.apagarPython(contexto)
     }

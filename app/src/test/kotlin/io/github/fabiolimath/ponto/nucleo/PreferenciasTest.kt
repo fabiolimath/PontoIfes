@@ -39,6 +39,20 @@ class PreferenciasTest {
     }
 
     @Test
+    fun abertura_pela_wifi() {
+        val arquivo = arquivo()
+        val padrao = Preferencias.carregar(arquivo)
+        assertEquals(false, padrao.wifiAbrir)
+        assertEquals("ws_wlan", padrao.wifiRede)
+        assertEquals(true, padrao.avisoBateria)
+        val novas = padrao.copy(wifiAbrir = true, wifiRede = "Campus", avisoBateria = false)
+        novas.salvar(arquivo)
+        assertEquals(novas, Preferencias.carregar(arquivo))
+        arquivo.writeText("""{"wifi_rede": "  "}""")
+        assertEquals("ws_wlan", Preferencias.carregar(arquivo).wifiRede)
+    }
+
+    @Test
     fun tempo_da_versao_python_acima_de_6h_vira_6h() {
         val arquivo = arquivo()
         arquivo.writeText("""{"lembrete_tempo": "08:30"}""")

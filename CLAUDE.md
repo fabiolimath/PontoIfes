@@ -7,6 +7,8 @@ App Android nativo em Kotlin que faz três ações no SIGRH:
 - **Registrar PIT** (do dia ou de uma data dd/mm/aaaa; só de segunda a sexta; o texto da
   Observação vem das Configurações, padrão "Conforme PIT docente.")
 
+E, desde a 2.1.0, abre o ponto sozinho ao conectar na Wi-Fi do campus (item 9).
+
 O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado (versão atual em
 `val versao`, `app/build.gradle.kts`).
 
@@ -60,6 +62,28 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
      marcado (sem isso, com o app aberto, ele só vem para a frente e não executa).
    - Para rodar com a tela desligada: bateria do app em **Sem restrições**.
 
+9. **Abrir o ponto ao conectar na Wi-Fi** (2.1.0; plano em `planos/abrir-ponto-wifi.md` da pasta do
+   projeto). Configurações: liga/desliga (`wifi_abrir`, padrão desligado), **Nome da rede** (`wifi_rede`,
+   padrão `ws_wlan`), linha de estado (nome reconhecido ou não) e `aviso_bateria`.
+   - Gatilho: `ConnectivityManager.registerNetworkCallback` com PendingIntent para o `RedeReceiver`
+     (guardado pelo sistema, vale com o app fechado; o sistema chama na hora se já há Wi-Fi). Feito
+     ao salvar (forçado ao ligar ou trocar a rede), ao abrir o app (só se o PendingIntent sumiu, por
+     exemplo com Forçar parada), ao reiniciar e ao atualizar (`InicioReceiver`).
+   - Filtro (`nucleo/GatilhoWifi`, sem rede): seg a sex; nome legível e diferente do configurado
+     ignora (sem localização "o tempo todo" o nome é ilegível e o app tenta assim mesmo); ponto já
+     aberto hoje (`ultima_abertura.txt` depois do último fechamento); 30 min após fechar; 5 min entre
+     tentativas (`abertura_automatica.txt`). Ignorados relevantes vão ao log como
+     "abrir_ponto (automático)".
+   - Execução: `AbrirAutomaticoWorker` (WorkManager, expedito, trabalho único KEEP; no Android 11 ou
+     anterior, serviço em primeiro plano com notificação mínima) chama `Execucao.abrirAutomatico`:
+     aparece na tela como "Abrir ponto (automático)" com Cancelar; timeout de 15 s por requisição.
+   - Resultado (`nucleo/AberturaAutomatica`): entrada registrada notifica e agenda o lembrete; já
+     aberto fica em silêncio e agenda o lembrete pela hora de entrada; erros de rede em silêncio;
+     recusa ou envio incerto notifica só com o nome da rede confirmado, uma vez por dia.
+   - Pop-ups nas Configurações: localização ao ligar (Android 11+: segundo aviso e a tela do "tempo
+     todo"); bateria ao salvar, se não está em Sem restrições (Liberar agora, Não avisar mais,
+     Instruções → site `#wifi`).
+
 ## Estrutura
 
 Projeto Gradle (Kotlin DSL, Gradle Wrapper 8.14.3, AGP 8.13.0, Kotlin 2.2.21, JVM 17; minSdk 24,
@@ -74,12 +98,13 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/nucleo/` — regras sem Android, testadas na JVM
   (JUnit 4, `app/src/test`): `Acao`, `Executor` (roda a ação e grava o log), `Registro` (log),
   `Credenciais`, `Preferencias` (`configuracoes.json`), `Mascara`, `Fechamentos`, `Lembrete`,
-  `Notificacoes` (idents: sucesso 1 a 3, falha 11 a 13, lembrete 4; textos e botões),
-  `Atualizacao`.
+  `Notificacoes` (idents: sucesso 1 a 3, lembrete 4, abertura automática em andamento 5, falha
+  1000+ pelo relógio; textos e botões), `Atualizacao`, `GatilhoWifi`, `AberturaAutomatica`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/` — Android: `MainActivity`, `LogActivity`,
   `ConfiguracoesActivity` (Views, não PreferenceFragment, porque os valores ficam no JSON),
   `Execucao` (estado da ação em andamento, notificação, lembrete, PIT automático), `Notificador`,
-  `Lembretes.kt` (`Lembretes`, `LembreteReceiver`, `InicioReceiver`), `Atualizador` (GitHub, Sobre),
+  `Lembretes.kt` (`Lembretes`, `LembreteReceiver`, `InicioReceiver`), `AbrirAutomatico.kt` (`Wifi`,
+  `RedeReceiver`, `AbrirAutomaticoWorker`), `Atualizador` (GitHub, Sobre),
   `PermissaoDeNotificacao`, `MascaraDeTexto`, `Dados.kt` (arquivos em `filesDir/data/`) e
   `Legado` (apaga as pastas `chaquopy` da versão Python).
 - `app/src/main/res/` — layouts, ícone do app (`mipmap-*`), atalhos (`xml/shortcuts.xml`, ícones
@@ -95,7 +120,9 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 - `docs/` — site de instalação para usuários leigos (GitHub Pages, branch master, pasta /docs),
   com capturas de tela em `docs/img/` (o login nelas é fictício).
 - Dados do app (`filesDir/data/`, mesmos formatos da versão Python): `credenciais.json`,
-  `configuracoes.json`, `ultimo_fechamento.txt`, `lembrete.txt`, `ponto.log`.
+  `configuracoes.json`, `ultimo_fechamento.txt` ("aaaa-mm-dd N hh:mm:ss" desde a 2.1.0; lê os
+  formatos antigos), `lembrete.txt`, `ponto.log`; desde a 2.1.0, `ultima_abertura.txt` e
+  `abertura_automatica.txt`.
 
 ## Telegram (removido)
 
@@ -144,7 +171,8 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 - Testar num dia útil: botão Registrar PIT na notificação (o lembrete, o Fechar ponto pelo lembrete e
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
-- Próximo plano, à espera do autor: abrir o ponto sozinho ao conectar na Wi-Fi do campus (2.1.0).
+- Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`; escrever o
+  texto final da seção `#wifi` do site (hoje um esqueleto).
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
   é legado, foi substituído pelo app e saiu do repositório na 2.0.0.
 

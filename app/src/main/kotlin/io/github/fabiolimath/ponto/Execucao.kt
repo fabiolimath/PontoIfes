@@ -5,10 +5,12 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import io.github.fabiolimath.ponto.nucleo.AberturaAutomatica
 import io.github.fabiolimath.ponto.nucleo.Acao
 import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.Executor
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
+import io.github.fabiolimath.ponto.nucleo.GatilhoWifi
 import io.github.fabiolimath.ponto.nucleo.Mascara
 import io.github.fabiolimath.ponto.nucleo.Notificacoes
 import io.github.fabiolimath.ponto.sigrh.Cancelamento
@@ -42,7 +44,7 @@ object Execucao {
     var cancelando = false
         private set
 
-    /** "Abrir ponto", ou "Registrar PIT (09/10/2026)". */
+    /** "Abrir ponto", "Abrir ponto (automático)" ou "Registrar PIT (09/10/2026)". */
     var rotulo = ""
         private set
 
@@ -78,16 +80,8 @@ object Execucao {
                 Log.w(TAG, "Erro ao apagar a notificação", e)
             }
         }
-        val pedido = Cancelamento()
-        cancelamento = pedido
-        rodando = true
-        cancelando = false
-        rotulo = acao.rotulo + (dia?.let { " (${Mascara.escreverData(it)})" } ?: "")
-        inicio = SystemClock.elapsedRealtime()
-        saida = if (encadeado) "$saida\n" else ""
+        val pedido = comecar(acao.rotulo + (dia?.let { " (${Mascara.escreverData(it)})" } ?: ""), encadeado)
         val inicioDaSaida = saida.length
-        status = "Executando: $rotulo…"
-        avisar()
 
         escopo.launch {
             val resultado = try {
@@ -108,16 +102,40 @@ object Execucao {
         }
     }
 
+    /** Marca o começo de uma execução com o [rotulo] na tela e devolve o seu Cancelar. */
+    private fun comecar(rotulo: String, encadeado: Boolean = false): Cancelamento {
+        val pedido = Cancelamento()
+        cancelamento = pedido
+        rodando = true
+        cancelando = false
+        this.rotulo = rotulo
+        inicio = SystemClock.elapsedRealtime()
+        saida = if (encadeado) "$saida\n" else ""
+        status = "Executando: $rotulo…"
+        avisar()
+        return pedido
+    }
+
+    /** O status final ("Abrir ponto: concluído.") pelo código de saída. */
+    private fun statusFinal(codigo: Int) = when (codigo) {
+        0 -> "$rotulo: concluído."
+        130 -> "$rotulo: cancelado."
+        else -> "$rotulo: falhou (código $codigo)."
+    }
+
+    private fun parar() {
+        rodando = false
+        cancelando = false
+        cancelamento = null
+        avisar()
+    }
+
     private fun terminar(
         app: Context, acao: Acao, dia: LocalDate?, resultado: Resultado?,
         credenciais: Credenciais, inicioDaSaida: Int,
     ) {
         val codigo = resultado?.codigo ?: 1
-        status = when (codigo) {
-            0 -> "$rotulo: concluído."
-            130 -> "$rotulo: cancelado."
-            else -> "$rotulo: falhou (código $codigo)."
-        }
+        status = statusFinal(codigo)
         var pitEmSeguida = false
         // Cancelado pelo usuário: sem notificação, lembrete nem PIT em seguida.
         if (codigo != 130) {
@@ -127,10 +145,7 @@ object Execucao {
                 Log.w(TAG, "Erro depois da execução", e)
             }
         }
-        rodando = false
-        cancelando = false
-        cancelamento = null
-        avisar()
+        parar()
         if (pitEmSeguida) iniciar(app, Acao.REGISTRAR_PIT, null, credenciais, encadeado = true)
     }
 
@@ -144,12 +159,76 @@ object Execucao {
             Notificacoes.aviso(acao, status, saidaDaAcao, codigo, dia, preferencias)?.let { Notificador.mostrar(app, it) }
         }
         if (codigo != 0) return false
-        if (acao == Acao.ABRIR_PONTO) passo("agendar o lembrete") { Lembretes.agendarAposAbrir(app, LocalDateTime.now()) }
+        if (acao == Acao.ABRIR_PONTO) {
+            val agora = LocalDateTime.now()
+            passo("anotar a abertura") { GatilhoWifi.registrarAbertura(Dados.arquivo(app, "ultima_abertura.txt"), agora) }
+            passo("agendar o lembrete") { Lembretes.agendarAposAbrir(app, agora) }
+        }
         if (acao == Acao.REGISTRAR_PIT && dia != null) pitDeOutraDataFeito = true
         if (acao != Acao.FECHAR_PONTO) return false
         val vezes = Fechamentos.registrar(Dados.arquivo(app, "ultimo_fechamento.txt"))
         passo("cancelar o lembrete") { Lembretes.cancelar(app) }
         return Notificacoes.pitAutomaticoAgora(preferencias, vezes)
+    }
+
+    /**
+     * A abertura automática (Wi-Fi), chamada pelo [AbrirAutomaticoWorker]: na tela, aparece como
+     * uma execução manual, com o Cancelar. Devolve false, sem executar, se outra ação está rodando.
+     * [redeConfirmada]: o nome da Wi-Fi foi lido e é o configurado.
+     */
+    suspend fun abrirAutomatico(contexto: Context, credenciais: Credenciais, redeConfirmada: Boolean): Boolean =
+        withContext(Dispatchers.Main) {
+            if (rodando) return@withContext false
+            val app = contexto.applicationContext
+            for (ident in Notificacoes.apagarAntes(Acao.ABRIR_PONTO, false)) passo("apagar a notificação") {
+                Notificador.cancelar(app, ident)
+            }
+            val pedido = comecar(AberturaAutomatica.ROTULO)
+            val resultado = try {
+                withContext(Dispatchers.Default) {
+                    Executor(Dados.registro(app)).executar(
+                        Acao.ABRIR_PONTO, credenciais.usuario, credenciais.senha,
+                        aoEscrever = { texto -> principal.post { saida += texto; avisar() } },
+                        cancelamento = pedido,
+                        automatico = true,
+                    )
+                }
+            } catch (e: CancellationException) {
+                // O sistema parou o trabalho (o WorkManager o refaz depois): a tela volta ao normal.
+                status = "$rotulo: interrompido."
+                parar()
+                throw e
+            } catch (e: Exception) {
+                saida += "Erro inesperado: ${e.message ?: e}\n"
+                null
+            }
+            val codigo = resultado?.codigo ?: 1
+            status = statusFinal(codigo)
+            passo("concluir a abertura automática") { depoisDoAutomatico(app, resultado, codigo, redeConfirmada) }
+            parar()
+            true
+        }
+
+    /** A tabela de [AberturaAutomatica.desfecho]: notificação, abertura anotada e lembrete. */
+    private fun depoisDoAutomatico(app: Context, resultado: Resultado?, codigo: Int, redeConfirmada: Boolean) {
+        val agora = LocalDateTime.now()
+        val estado = Dados.arquivo(app, "abertura_automatica.txt")
+        val desfecho = AberturaAutomatica.desfecho(
+            resultado, redeConfirmada, GatilhoWifi.erroNotificadoNoDia(estado, agora.toLocalDate()), agora,
+        )
+        if (desfecho.anotarAbertura) {
+            GatilhoWifi.registrarAbertura(Dados.arquivo(app, "ultima_abertura.txt"), agora)
+        }
+        if (desfecho.notificarSucesso || desfecho.notificarFalha) passo("mostrar a notificação") {
+            val aviso = Notificacoes.aviso(Acao.ABRIR_PONTO, status, saida, codigo, null, Dados.preferencias(app))
+            if (aviso != null) {
+                Notificador.mostrar(app, aviso)
+                if (desfecho.notificarFalha) GatilhoWifi.registrarErroNotificado(estado, agora.toLocalDate())
+            }
+        }
+        desfecho.baseDoLembrete?.let { abertura ->
+            passo("agendar o lembrete") { Lembretes.agendarAposAbrir(app, agora, abertura) }
+        }
     }
 
     private fun passo(descricao: String, bloco: () -> Unit) {

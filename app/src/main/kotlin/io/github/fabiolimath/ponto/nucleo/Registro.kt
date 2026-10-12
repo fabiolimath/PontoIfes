@@ -11,10 +11,20 @@ class Registro(private val arquivo: File) {
         var bloco = "=== ${inicio.format(HORA)} · $acao ===\n$saida"
         if (!bloco.endsWith("\n")) bloco += "\n"
         bloco += "saída: $codigo\n"
+        anexar(bloco)
+    }
+
+    /** Uma trava para todo o app: a abertura automática e a tela podem gravar ao mesmo tempo. */
+    private fun anexar(bloco: String) = synchronized(Registro) {
         val anterior = if (arquivo.exists()) arquivo.readText() else ""
         val linhas = (anterior + bloco).linhasComFim()
         arquivo.parentFile?.mkdirs()
         arquivo.writeText(linhas.takeLast(LINHAS_MAX).joinToString(""))
+    }
+
+    /** Uma anotação sem execução (ex.: a abertura automática ignorada), sem o código de saída. */
+    fun anotar(acao: String, quando: LocalDateTime, texto: String) {
+        anexar("=== ${quando.format(HORA)} · $acao ===\n$texto".trimEnd('\n') + "\n")
     }
 
     /** O texto do log, ou o aviso de que não há execuções. */
