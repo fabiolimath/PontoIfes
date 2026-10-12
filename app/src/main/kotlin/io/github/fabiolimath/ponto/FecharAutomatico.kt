@@ -23,7 +23,7 @@ import java.time.format.DateTimeParseException
 
 /**
  * Fechar o ponto sozinho nos horários das Configurações: um alarme exato do AlarmManager para o
- * próximo horário (segunda a sexta), que ao tocar agenda o seguinte e põe o fechamento na fila do
+ * próximo horário (segunda a sexta, fixos ou os de cada dia), que ao tocar agenda o seguinte e põe o fechamento na fila do
  * WorkManager, como a abertura pela Wi-Fi. Funciona com o app fechado.
  */
 object FecharAutomatico {
@@ -50,7 +50,7 @@ object FecharAutomatico {
     fun agendar(contexto: Context, depoisDe: LocalDateTime = LocalDateTime.now()) {
         val app = contexto.applicationContext
         val alarmes = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val quando = FechamentoAutomatico.proximo(depoisDe, FechamentoAutomatico.horarios(Dados.preferencias(app)))
+        val quando = FechamentoAutomatico.proximo(depoisDe, Dados.preferencias(app))
         if (quando == null) {
             alarmes.cancel(alarme(app))
             return

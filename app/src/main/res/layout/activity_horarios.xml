@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Os horários de cada dia do fechamento automático (modo Avançado): de segunda a sexta, dois
+     horários por dia; em branco, não usado. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:layout_marginTop="16dp"
+            android:text="@string/horarios_expl"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:text="@string/fechar_horario1"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:text="@string/fechar_horario2"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Segunda"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/horario_0_0"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+
+            <EditText
+                android:id="@+id/horario_0_1"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Terça"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/horario_1_0"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+
+            <EditText
+                android:id="@+id/horario_1_1"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Quarta"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/horario_2_0"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+
+            <EditText
+                android:id="@+id/horario_2_1"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Quinta"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/horario_3_0"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+
+            <EditText
+                android:id="@+id/horario_3_1"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sexta"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/horario_4_0"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+
+            <EditText
+                android:id="@+id/horario_4_1"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/cancelar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/cancelar" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/ok"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/ok" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

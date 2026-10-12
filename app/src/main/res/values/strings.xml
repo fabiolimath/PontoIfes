@@ -33,7 +33,16 @@
     <string name="avisar_depois_expl">Contado a partir da abertura.</string>
     <string name="hora_dica">hh:mm</string>
     <string name="fechar_automatico">Fechar automaticamente</string>
-    <string name="fechar_automatico_expl">Se o ponto estiver aberto nestes horários, fecha automaticamente. De segunda a sexta, com o app fechado. Um dos horários pode ficar em branco.</string>
+    <string name="fechar_modo_0">Não</string>
+    <string name="fechar_modo_1">Em horários fixos</string>
+    <string name="fechar_modo_2">Avançado</string>
+    <string name="fechar_expl_0">O ponto só fecha manualmente pelo botão, ou por automação por app externo.</string>
+    <string name="fechar_expl_1">Se o ponto estiver aberto nestes horários, fecha automaticamente. De segunda a sexta, com o app fechado. Um dos horários pode ficar em branco.</string>
+    <string name="fechar_expl_2">Defina no botão abaixo os horários em que o ponto deve fechar automaticamente.</string>
+    <string name="horarios_de_cada_dia">Horários de cada dia</string>
+    <string name="horarios_expl">Se o ponto estiver aberto nestes horários, fecha automaticamente.</string>
+    <string name="dia">Dia</string>
+    <string name="ok">OK</string>
     <string name="fechar_horario1">1º horário</string>
     <string name="fechar_horario2">2º horário</string>
     <string name="wifi_abrir">Abrir ao conectar na Wi-Fi do campus</string>

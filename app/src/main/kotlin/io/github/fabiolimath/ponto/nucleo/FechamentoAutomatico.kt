@@ -1,7 +1,9 @@
 package io.github.fabiolimath.ponto.nucleo
 
 import io.github.fabiolimath.ponto.sigrh.Resultado
+import java.time.DayOfWeek
 import java.time.Duration
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
@@ -18,8 +20,9 @@ enum class DesfechoDoFechamento {
 }
 
 /**
- * Fechar o ponto sozinho nos horários das Configurações (`fechar_horario1` e `fechar_horario2`),
- * de segunda a sexta, se ele estiver aberto: quem diz se está aberto é o SIGRH.
+ * Fechar o ponto sozinho nos horários das Configurações, de segunda a sexta, se ele estiver aberto:
+ * quem diz se está aberto é o SIGRH. Os horários são os mesmos todo dia (`fechar_horario1` e
+ * `fechar_horario2`) ou, no modo avançado, os de cada dia (`fechar_dias`).
  */
 object FechamentoAutomatico {
     const val ROTULO = "Fechar ponto (automático)"
@@ -41,22 +44,31 @@ object FechamentoAutomatico {
         return LocalTime.of(hora, minuto)
     }
 
-    /** Os horários válidos das Configurações, sem repetição; vazio com a opção desligada. */
-    fun horarios(preferencias: Preferencias): List<LocalTime> =
-        if (!preferencias.fecharAutomatico) emptyList()
-        else listOfNotNull(lerHorario(preferencias.fecharHorario1), lerHorario(preferencias.fecharHorario2))
-            .distinct().sorted()
-
-    /** O próximo dos [horarios] depois de [agora] (estritamente), de segunda a sexta; null se não há. */
-    fun proximo(agora: LocalDateTime, horarios: List<LocalTime>): LocalDateTime? {
-        if (horarios.isEmpty()) return null
-        var dia = agora.toLocalDate()
-        while (true) {
-            if (Notificacoes.diaUtil(dia)) {
-                horarios.sorted().map { dia.atTime(it) }.firstOrNull { it.isAfter(agora) }?.let { return it }
-            }
-            dia = dia.plusDays(1)
+    /**
+     * Os horários válidos do [dia], sem repetição e em ordem; vazio com a opção desligada e no fim de
+     * semana.
+     */
+    fun horarios(preferencias: Preferencias, dia: DayOfWeek): List<LocalTime> {
+        if (dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY) return emptyList()
+        val textos = when (preferencias.fecharModo) {
+            Preferencias.FECHAR_FIXOS -> listOf(preferencias.fecharHorario1, preferencias.fecharHorario2)
+            Preferencias.FECHAR_AVANCADO -> preferencias.fecharDias.getOrNull(dia.value - 1) ?: emptyList()
+            else -> emptyList()
         }
+        return textos.mapNotNull(::lerHorario).distinct().sorted()
+    }
+
+    /** O próximo horário depois de [agora] (estritamente), na semana seguinte; null se não há nenhum. */
+    fun proximo(agora: LocalDateTime, preferencias: Preferencias): LocalDateTime? =
+        proximo(agora) { dia -> horarios(preferencias, dia.dayOfWeek) }
+
+    fun proximo(agora: LocalDateTime, horariosDoDia: (LocalDate) -> List<LocalTime>): LocalDateTime? {
+        // Hoje e mais sete dias: o mesmo dia da semana que vem cobre um horário que já passou hoje.
+        for (n in 0L..7L) {
+            val dia = agora.toLocalDate().plusDays(n)
+            horariosDoDia(dia).map { dia.atTime(it) }.firstOrNull { it.isAfter(agora) }?.let { return it }
+        }
+        return null
     }
 
     /** Se o fechamento previsto para [previsto] já passou há mais de [ATRASO_MAXIMO]. */

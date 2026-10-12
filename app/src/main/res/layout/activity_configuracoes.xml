@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Seções na ordem: Notificações, Credenciais, uma por ação (na ordem dos botões) e Atualizações.
-     Os detalhes da Wi-Fi, do lembrete e do fechamento automático só aparecem com o interruptor ligado. -->
+     Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do fechamento
+     automático, conforme a opção escolhida. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -230,18 +231,22 @@
         </LinearLayout>
 
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/fechar_automatico"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
+            android:layout_marginTop="12dp"
             android:text="@string/fechar_automatico"
             android:textSize="16sp" />
 
+        <Spinner
+            android:id="@+id/fechar_modo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp" />
+
         <TextView
-            style="@style/Ponto.Explicacao"
-            android:text="@string/fechar_automatico_expl" />
+            android:id="@+id/fechar_explicacao"
+            style="@style/Ponto.Explicacao" />
 
         <LinearLayout
             android:id="@+id/fechar_detalhes"
@@ -302,6 +307,14 @@
                     android:minHeight="48dp" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- Avançado: os horários de cada dia, numa tela própria (HorariosActivity). -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fechar_dias"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/horarios_de_cada_dia" />
 
         <View style="@style/Ponto.Divisoria" />
 

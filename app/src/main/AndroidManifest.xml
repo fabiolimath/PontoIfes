@@ -59,6 +59,13 @@
             android:parentActivityName=".MainActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Os horários de cada dia do fechamento automático, aberta pelas Configurações. -->
+        <activity
+            android:name=".HorariosActivity"
+            android:exported="false"
+            android:parentActivityName=".ConfiguracoesActivity"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".LogActivity"
             android:exported="false"

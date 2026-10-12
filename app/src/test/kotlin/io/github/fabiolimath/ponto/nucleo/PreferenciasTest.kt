@@ -60,15 +60,40 @@ class PreferenciasTest {
     fun fechamento_automatico() {
         val arquivo = arquivo()
         val padrao = Preferencias.carregar(arquivo)
+        assertEquals(Preferencias.FECHAR_NAO, padrao.fecharModo)
         assertEquals(false, padrao.fecharAutomatico)
         assertEquals("12:00", padrao.fecharHorario1)
         assertEquals("18:00", padrao.fecharHorario2)
-        val novas = padrao.copy(fecharAutomatico = true, fecharHorario1 = "", fecharHorario2 = "18:30")
+        assertEquals(List(5) { listOf("12:00", "18:00") }, padrao.fecharDias)
+        val novas = padrao.copy(
+            fecharModo = Preferencias.FECHAR_AVANCADO, fecharHorario1 = "", fecharHorario2 = "18:30",
+            fecharDias = listOf(listOf("12:00", ""), listOf("", ""), listOf("8:00", "17:00"), listOf("12:00", "18:00"), listOf("", "16:00")),
+        )
         novas.salvar(arquivo)
         assertEquals(novas, Preferencias.carregar(arquivo))
-        arquivo.writeText("""{"fechar_automatico": true, "fechar_horario1": "25:00", "fechar_horario2": " 8:00 "}""")
-        assertEquals("", Preferencias.carregar(arquivo).fecharHorario1)
-        assertEquals("8:00", Preferencias.carregar(arquivo).fecharHorario2)
+        arquivo.writeText(
+            """{"fechar_modo": 1, "fechar_horario1": "25:00", "fechar_horario2": " 8:00 ",
+               "fechar_dias": [["12:00", "99:99"], "lixo", ["7:30"]]}"""
+        )
+        val lidas = Preferencias.carregar(arquivo)
+        assertEquals(Preferencias.FECHAR_FIXOS, lidas.fecharModo)
+        assertEquals("", lidas.fecharHorario1)
+        assertEquals("8:00", lidas.fecharHorario2)
+        assertEquals(
+            listOf(listOf("12:00", ""), listOf("12:00", "18:00"), listOf("7:30", ""), listOf("12:00", "18:00"), listOf("12:00", "18:00")),
+            lidas.fecharDias,
+        )
+    }
+
+    @Test
+    fun fechamento_automatico_do_teste_da_2_2_0_e_modo_invalido() {
+        val arquivo = arquivo()
+        arquivo.writeText("""{"fechar_automatico": true}""")
+        assertEquals(Preferencias.FECHAR_FIXOS, Preferencias.carregar(arquivo).fecharModo)
+        arquivo.writeText("""{"fechar_automatico": false}""")
+        assertEquals(Preferencias.FECHAR_NAO, Preferencias.carregar(arquivo).fecharModo)
+        arquivo.writeText("""{"fechar_modo": 5}""")
+        assertEquals(Preferencias.FECHAR_NAO, Preferencias.carregar(arquivo).fecharModo)
     }
 
     @Test

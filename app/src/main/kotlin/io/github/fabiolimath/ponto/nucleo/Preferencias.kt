@@ -1,5 +1,6 @@
 package io.github.fabiolimath.ponto.nucleo
 
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
@@ -14,8 +15,9 @@ import java.time.Duration
  * [wifiAbrir]: abrir o ponto ao conectar na Wi-Fi [wifiRede], menos nas [wifiEspera] ("hh:mm")
  * depois de fechar; [avisoBateria]: avisar ao salvar se a bateria do app não está em Sem restrições.
  *
- * [fecharAutomatico]: fechar o ponto, se estiver aberto, às [fecharHorario1] e [fecharHorario2]
- * ("hh:mm"; em branco, não usado; padrão 12:00 e 18:00), de segunda a sexta.
+ * [fecharModo]: fechar o ponto sozinho, se estiver aberto, de segunda a sexta: 0 = não, 1 = em
+ * horários fixos ([fecharHorario1] e [fecharHorario2]), 2 = avançado (os dois horários de cada dia,
+ * [fecharDias], de segunda a sexta). Horários "hh:mm"; em branco, não usado; padrão 12:00 e 18:00.
  */
 data class Preferencias(
     val notificacoes: Boolean = true,
@@ -28,10 +30,14 @@ data class Preferencias(
     val wifiRede: String = GatilhoWifi.REDE_PADRAO,
     val wifiEspera: String = "01:00",
     val avisoBateria: Boolean = true,
-    val fecharAutomatico: Boolean = false,
+    val fecharModo: Int = FECHAR_NAO,
     val fecharHorario1: String = "12:00",
     val fecharHorario2: String = "18:00",
+    val fecharDias: List<List<String>> = DIAS_PADRAO,
 ) {
+    /** Se o fechamento automático está ligado (horários fixos ou avançado). */
+    val fecharAutomatico get() = fecharModo != FECHAR_NAO
+
     /** O tempo do lembrete como [Duration], ou null se [lembreteTempo] for inválido. */
     val duracaoDoLembrete get() = tempoLembrete(lembreteTempo)
 
@@ -50,9 +56,10 @@ data class Preferencias(
             .put("wifi_rede", wifiRede)
             .put("wifi_espera", wifiEspera)
             .put("aviso_bateria", avisoBateria)
-            .put("fechar_automatico", fecharAutomatico)
+            .put("fechar_modo", fecharModo)
             .put("fechar_horario1", fecharHorario1)
             .put("fechar_horario2", fecharHorario2)
+            .put("fechar_dias", JSONArray(fecharDias.map { JSONArray(it) }))
         arquivo.parentFile?.mkdirs()
         arquivo.writeText(json.toString())
     }
@@ -86,10 +93,34 @@ data class Preferencias(
                     if (tempoLembrete(it) != null) it else padrao.wifiEspera
                 },
                 avisoBateria = json.optBoolean("aviso_bateria", padrao.avisoBateria),
-                fecharAutomatico = json.optBoolean("fechar_automatico", padrao.fecharAutomatico),
+                fecharModo = modo(json),
                 fecharHorario1 = horario(json.optString("fechar_horario1", padrao.fecharHorario1)),
                 fecharHorario2 = horario(json.optString("fechar_horario2", padrao.fecharHorario2)),
+                fecharDias = dias(json.optJSONArray("fechar_dias")),
             )
+        }
+
+        const val FECHAR_NAO = 0
+        const val FECHAR_FIXOS = 1
+        const val FECHAR_AVANCADO = 2
+
+        /** Os dois horários de cada dia, de segunda a sexta, no modo avançado. */
+        val DIAS_PADRAO: List<List<String>> = List(5) { listOf("12:00", "18:00") }
+
+        /** O modo do fechamento; o teste da 2.2.0 gravava só um liga/desliga (`fechar_automatico`). */
+        private fun modo(json: JSONObject): Int {
+            if (!json.has("fechar_modo")) {
+                return if (json.optBoolean("fechar_automatico", false)) FECHAR_FIXOS else FECHAR_NAO
+            }
+            val modo = json.optInt("fechar_modo", FECHAR_NAO)
+            return if (modo in FECHAR_NAO..FECHAR_AVANCADO) modo else FECHAR_NAO
+        }
+
+        /** Os horários de cada dia; um dia ausente ou ilegível fica no padrão. */
+        private fun dias(lista: JSONArray?): List<List<String>> = List(5) { i ->
+            val dia = lista?.optJSONArray(i)
+            if (dia == null) DIAS_PADRAO[i]
+            else List(2) { j -> horario(dia.optString(j, "")) }
         }
 
         /** Um horário do fechamento automático: válido ou em branco. */

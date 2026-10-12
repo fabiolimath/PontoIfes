@@ -50,8 +50,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 5. **Configurações** (`configuracoes.json`), em seções (2.1.0), nesta ordem: Notificações;
    Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (lembrete, fechamento automático); Registrar PIT (Observação, PIT
    automático); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
-   explicação; os detalhes da Wi-Fi, do lembrete e do fechamento automático só aparecem com o
-   interruptor ligado.
+   explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do
+   fechamento automático, conforme a opção escolhida.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
@@ -90,9 +90,13 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
      todo"); bateria ao salvar, se não está em Sem restrições (Liberar agora, Não avisar mais).
 
 10. **Fechar o ponto automaticamente** (2.2.0) nos horários escolhidos, se estiver aberto.
-    Configurações: liga/desliga (`fechar_automatico`, padrão desligado) e dois horários
-    (`fechar_horario1`, `fechar_horario2`, hh:mm de 00:00 a 23:59, padrão 12:00 e 18:00; um pode
-    ficar em branco).
+    Configurações: seletor **Fechar automaticamente** (`fechar_modo`: 0 Não, padrão; 1 Em horários
+    fixos; 2 Avançado), com uma explicação por opção. Horários fixos: dois campos (`fechar_horario1`,
+    `fechar_horario2`, hh:mm de 00:00 a 23:59, padrão 12:00 e 18:00; um pode ficar em branco).
+    Avançado: botão **Horários de cada dia**, que abre a `HorariosActivity` (tabela de segunda a
+    sexta, 1º e 2º horário, em branco = não usa; OK devolve às Configurações, que gravam no Salvar
+    em `fechar_dias`, lista de 5 pares). O teste antigo da 2.2.0 gravava `fechar_automatico`
+    (true vira horários fixos).
     - Alarme (`FecharAutomatico.agendar`): só o próximo horário, de seg a sex, com
       `setExactAndAllowWhileIdle` (permissões `USE_EXACT_ALARM` no Android 13+ e
       `SCHEDULE_EXACT_ALARM` no 12, dadas na instalação; sem elas, `setAndAllowWhileIdle`).
@@ -129,7 +133,8 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   `Execucao` (estado da ação em andamento, notificação, lembrete, PIT automático), `Notificador`,
   `Lembretes.kt` (`Lembretes`, `LembreteReceiver`, `InicioReceiver`), `AbrirAutomatico.kt` (`Wifi`,
   `RedeReceiver`, `AbrirAutomaticoWorker`), `FecharAutomatico.kt` (`FecharAutomatico`,
-  `FecharAutomaticoReceiver`, `FecharAutomaticoWorker`), `Atualizador` (GitHub, Sobre),
+  `FecharAutomaticoReceiver`, `FecharAutomaticoWorker`), `HorariosActivity` (horários de cada
+  dia do fechamento automático), `Atualizador` (GitHub, Sobre),
   `PermissaoDeNotificacao`, `MascaraDeTexto`, `Dados.kt` (arquivos em `filesDir/data/`) e
   `Legado` (apaga as pastas `chaquopy` da versão Python).
 - `app/src/main/res/` — layouts, ícone do app (`mipmap-*`), atalhos (`xml/shortcuts.xml`, ícones
