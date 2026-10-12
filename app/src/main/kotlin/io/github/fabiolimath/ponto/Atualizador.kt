@@ -58,7 +58,8 @@ object Atualizador {
     fun sobre(tela: AppCompatActivity) {
         val nome = tela.getString(R.string.app_name)
         val texto = "$nome ${BuildConfig.VERSION_NAME}\nAutor: Fabio Lima\n\n" +
-            "${tela.getString(R.string.descricao)}\n\nSite: ${Atualizacao.URL_SITE}"
+            "${tela.getString(R.string.descricao)}\n\n${tela.getString(R.string.nao_oficial)}\n\n" +
+            "Site: ${Atualizacao.URL_SITE}"
         MaterialAlertDialogBuilder(tela)
             .setTitle(tela.getString(R.string.sobre))
             .setMessage(texto)

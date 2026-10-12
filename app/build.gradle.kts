@@ -6,7 +6,7 @@ plugins {
 // Versão do app: aumentar a cada PR que muda o app (o release sai no merge).
 // O versionCode segue a fórmula do Briefcase, para continuar acima da 1.0.x:
 // X.Y.Z -> X*1000000 + Y*10000 + Z*100 (1.0.15 -> 1001500, 2.0.0 -> 2000000).
-val versao = "2.2.0"
+val versao = "2.2.1"
 val codigoDaVersao = versao.split(".").map(String::toInt).let { (x, y, z) ->
     x * 1_000_000 + y * 10_000 + z * 100
 }

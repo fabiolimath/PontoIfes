@@ -90,7 +90,7 @@ object GatilhoWifi {
         if (!Notificacoes.diaUtil(agora.toLocalDate())) return Decisao.Ignorar("fim de semana", anotar = false)
         val confirmada = nomeDaRede != null
         if (confirmada && !nomeDaRede.equals(redeConfigurada.trim(), ignoreCase = true)) {
-            return Decisao.Ignorar("rede diferente ($nomeDaRede)", anotar = true)
+            return Decisao.Ignorar("rede diferente ($nomeDaRede)", anotar = false)
         }
         if (pontoAberto(agora, estado)) return Decisao.Ignorar("o ponto já está aberto", anotar = true)
         if (dentroDe(estado.ultimoFechamento, agora, espera)) {

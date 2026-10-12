@@ -19,7 +19,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 ## O que o app faz
 
-1. Tela principal com três botões, um por função, e campo de data para o PIT. Durante a execução,
+1. Tela principal com um aviso no topo (Abrir e Fechar só nas redes do campus; as três ações
+   podem ser automáticas nas Configurações) e três botões, um por função, e campo de data para o PIT. Durante a execução,
    barra animada, tempo decorrido ("Executando: Abrir ponto… 0:42") e botão **Cancelar** embaixo.
    Botões disponíveis ficam verdes (#008577, o da barra do topo, texto branco) e os
    indisponíveis, cinza; os das Configurações e do Log também são verdes. Na tela principal:
@@ -52,7 +53,9 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    automático); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
    explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do
    fechamento automático, conforme a opção escolhida.
-   Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
+   **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
+   Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, aviso de que não é app oficial do
+   IFES, botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
 7. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis; ícone de
@@ -69,7 +72,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 9. **Abrir o ponto ao conectar na Wi-Fi** (2.1.0; plano em `planos/abrir-ponto-wifi.md` da pasta do
    projeto). Configurações: liga/desliga (`wifi_abrir`, padrão desligado), **Nome da rede** (`wifi_rede`,
-   padrão `ws_wlan`), espera depois de fechar (`wifi_espera`, hh:mm, padrão 01:00, de 00:01 a 06:00),
+   padrão `ws_wlan`; botão **Definir rede atual como padrão** preenche com a Wi-Fi conectada, pedindo a
+   localização "o tempo todo" se falta; com o app aberto basta a precisa), espera depois de fechar (`wifi_espera`, hh:mm, padrão 01:00, de 00:01 a 06:00),
    linha de estado (nome reconhecido ou não) e `aviso_bateria`.
    - Gatilho: `ConnectivityManager.registerNetworkCallback` com PendingIntent para o `RedeReceiver`
      (guardado pelo sistema, vale com o app fechado; o sistema chama na hora se já há Wi-Fi). Feito
@@ -78,7 +82,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    - Filtro (`nucleo/GatilhoWifi`, sem rede): seg a sex; nome legível e diferente do configurado
      ignora (sem localização "o tempo todo" o nome é ilegível e o app tenta assim mesmo); ponto já
      aberto hoje (`ultima_abertura.txt` depois do último fechamento); a espera configurada após fechar; 5 min entre
-     tentativas (`abertura_automatica.txt`). Ignorados relevantes vão ao log como
+     tentativas (`abertura_automatica.txt`). Ignorados relevantes (não os de rede diferente) vão ao log como
      "abrir_ponto (automático)".
    - Execução: `AbrirAutomaticoWorker` (WorkManager, expedito, trabalho único KEEP; no Android 11 ou
      anterior, serviço em primeiro plano com notificação mínima) chama `Execucao.abrirAutomatico`:
