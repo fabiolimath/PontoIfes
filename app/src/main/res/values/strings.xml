@@ -49,6 +49,7 @@
     <string name="wifi_abrir_expl">De segunda a sexta, com o app fechado.</string>
     <string name="wifi_rede">Nome da rede</string>
     <string name="wifi_rede_atual">Definir rede atual como padrão</string>
+    <string name="wifi_rede_atual_expl">Abrir o ponto só funciona nas redes do seu campus.</string>
     <string name="wifi_espera">Tempo de espera após fechar</string>
     <string name="wifi_espera_expl">Quanto tempo esperar após fechar o ponto, antes de tentar abrir de novo.</string>
     <string name="wifi_reconhecido">Nome da rede: reconhecido.</string>

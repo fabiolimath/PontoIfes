@@ -52,6 +52,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    automático); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
    explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do
    fechamento automático, conforme a opção escolhida.
+   **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
