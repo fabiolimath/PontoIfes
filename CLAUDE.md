@@ -19,7 +19,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 ## O que o app faz
 
-1. Tela principal com três botões, um por função, e campo de data para o PIT. Durante a execução,
+1. Tela principal com um aviso no topo (Abrir e Fechar só nas redes do campus; as três ações
+   podem ser automáticas nas Configurações) e três botões, um por função, e campo de data para o PIT. Durante a execução,
    barra animada, tempo decorrido ("Executando: Abrir ponto… 0:42") e botão **Cancelar** embaixo.
    Botões disponíveis ficam verdes (#008577, o da barra do topo, texto branco) e os
    indisponíveis, cinza; os das Configurações e do Log também são verdes. Na tela principal:
@@ -53,7 +54,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do
    fechamento automático, conforme a opção escolhida.
    **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
-   Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
+   Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, aviso de que não é app oficial do
+   IFES, botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
 7. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis; ícone de
