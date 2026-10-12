@@ -31,6 +31,7 @@
     <string name="hora_dica">hh:mm</string>
     <string name="wifi_abrir">Abrir o ponto ao conectar na Wi-Fi do campus</string>
     <string name="wifi_rede">Nome da rede</string>
+    <string name="wifi_espera">Não abrir por quanto tempo depois de fechar</string>
     <string name="wifi_reconhecido">Nome da rede: reconhecido.</string>
     <string name="wifi_sem_permissao">Nome da rede: não reconhecido (sem acesso à localização o tempo todo). O app tenta em qualquer Wi-Fi, e o SIGRH recusa fora do campus. Toque aqui para permitir.</string>
     <string name="wifi_localizacao_desligada">Nome da rede: não reconhecido (localização do celular desligada). O app tenta em qualquer Wi-Fi, e o SIGRH recusa fora do campus. Toque aqui para ligar.</string>

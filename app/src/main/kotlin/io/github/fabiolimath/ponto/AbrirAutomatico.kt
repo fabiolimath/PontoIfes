@@ -233,6 +233,7 @@ class RedeReceiver : BroadcastReceiver() {
             val agora = LocalDateTime.now()
             val decisao = GatilhoWifi.deveExecutar(
                 agora, Wifi.nomeDaRede(app), Wifi.estado(app), preferencias.wifiAbrir, preferencias.wifiRede,
+                preferencias.duracaoDaEsperaWifi,
             )
             when (decisao) {
                 is Decisao.Ignorar -> if (decisao.anotar) Wifi.anotar(app, "Ignorado: ${decisao.motivo}.", agora)

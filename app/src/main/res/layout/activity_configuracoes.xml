@@ -150,6 +150,29 @@
                 android:minHeight="48dp" />
         </LinearLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/wifi_espera" />
+
+            <EditText
+                android:id="@+id/wifi_espera"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/wifi_estado"
             android:layout_width="match_parent"

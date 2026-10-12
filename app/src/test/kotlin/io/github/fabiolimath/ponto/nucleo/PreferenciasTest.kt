@@ -44,12 +44,16 @@ class PreferenciasTest {
         val padrao = Preferencias.carregar(arquivo)
         assertEquals(false, padrao.wifiAbrir)
         assertEquals("ws_wlan", padrao.wifiRede)
+        assertEquals("01:00", padrao.wifiEspera)
+        assertEquals(Duration.ofHours(1), padrao.duracaoDaEsperaWifi)
         assertEquals(true, padrao.avisoBateria)
-        val novas = padrao.copy(wifiAbrir = true, wifiRede = "Campus", avisoBateria = false)
+        val novas = padrao.copy(wifiAbrir = true, wifiRede = "Campus", wifiEspera = "00:30", avisoBateria = false)
         novas.salvar(arquivo)
         assertEquals(novas, Preferencias.carregar(arquivo))
-        arquivo.writeText("""{"wifi_rede": "  "}""")
+        assertEquals(Duration.ofMinutes(30), novas.duracaoDaEsperaWifi)
+        arquivo.writeText("""{"wifi_rede": "  ", "wifi_espera": "9:99"}""")
         assertEquals("ws_wlan", Preferencias.carregar(arquivo).wifiRede)
+        assertEquals("01:00", Preferencias.carregar(arquivo).wifiEspera)
     }
 
     @Test

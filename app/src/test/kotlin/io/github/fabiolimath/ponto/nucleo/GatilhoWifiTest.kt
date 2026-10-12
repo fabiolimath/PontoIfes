@@ -1,6 +1,7 @@
 package io.github.fabiolimath.ponto.nucleo
 
 import java.io.File
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.io.path.createTempDirectory
@@ -22,7 +23,8 @@ class GatilhoWifiTest {
         quando: LocalDateTime = agora,
         ligado: Boolean = true,
         rede: String = "ws_wlan",
-    ) = GatilhoWifi.deveExecutar(quando, nome, estado, ligado, rede)
+        espera: Duration = Duration.ofHours(1),
+    ) = GatilhoWifi.deveExecutar(quando, nome, estado, ligado, rede, espera)
 
     @Test
     fun nome_da_rede_sem_aspas_e_ilegivel_vira_null() {
@@ -73,8 +75,8 @@ class GatilhoWifiTest {
     fun ponto_ja_aberto_hoje_nao_executa() {
         val aberto = EstadoDoPonto(ultimaAbertura = agora.minusHours(1))
         assertIs<Decisao.Ignorar>(decidir(estado = aberto))
-        // Aberto e depois fechado (há mais de 30 min): abre de novo (volta do almoço).
-        val fechado = aberto.copy(ultimoFechamento = agora.minusMinutes(31))
+        // Aberto e depois fechado (há mais de 1 h, a espera): abre de novo (volta do almoço).
+        val fechado = aberto.copy(ultimaAbertura = agora.minusHours(3), ultimoFechamento = agora.minusMinutes(61))
         assertEquals(Decisao.Executar(true), decidir(estado = fechado))
         // Fechado e aberto de novo.
         val reaberto = EstadoDoPonto(ultimaAbertura = agora.minusMinutes(10), ultimoFechamento = agora.minusHours(1))
@@ -89,15 +91,28 @@ class GatilhoWifiTest {
     }
 
     @Test
-    fun espera_de_30_min_depois_de_fechar() {
-        val fechou = EstadoDoPonto(ultimoFechamento = agora.minusMinutes(29))
+    fun espera_configuravel_depois_de_fechar() {
+        val fechou = EstadoDoPonto(ultimoFechamento = agora.minusMinutes(59))
         val d = decidir(estado = fechou)
         assertIs<Decisao.Ignorar>(d)
         assertTrue(d.anotar)
-        assertEquals(Decisao.Executar(true), decidir(estado = EstadoDoPonto(ultimoFechamento = agora.minusMinutes(30))))
+        assertEquals("o ponto foi fechado há menos de 1 h", d.motivo)
+        assertEquals(Decisao.Executar(true), decidir(estado = EstadoDoPonto(ultimoFechamento = agora.minusMinutes(60))))
+        // Outra espera.
+        assertEquals(Decisao.Executar(true), decidir(estado = fechou, espera = Duration.ofMinutes(30)))
+        val longa = decidir(estado = EstadoDoPonto(ultimoFechamento = agora.minusMinutes(80)), espera = Duration.ofMinutes(90))
+        assertIs<Decisao.Ignorar>(longa)
+        assertEquals("o ponto foi fechado há menos de 1 h 30 min", longa.motivo)
         // Fechamento de ontem à noite, perto da meia-noite: a espera vale na virada.
         val noite = EstadoDoPonto(ultimoFechamento = LocalDateTime.of(2026, 10, 12, 23, 50))
         assertIs<Decisao.Ignorar>(decidir(estado = noite, quando = LocalDateTime.of(2026, 10, 13, 0, 10)))
+    }
+
+    @Test
+    fun escrever_o_tempo() {
+        assertEquals("45 min", GatilhoWifi.escrever(Duration.ofMinutes(45)))
+        assertEquals("2 h", GatilhoWifi.escrever(Duration.ofHours(2)))
+        assertEquals("1 h 5 min", GatilhoWifi.escrever(Duration.ofMinutes(65)))
     }
 
     @Test

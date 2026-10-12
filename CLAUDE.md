@@ -64,14 +64,15 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 9. **Abrir o ponto ao conectar na Wi-Fi** (2.1.0; plano em `planos/abrir-ponto-wifi.md` da pasta do
    projeto). Configurações: liga/desliga (`wifi_abrir`, padrão desligado), **Nome da rede** (`wifi_rede`,
-   padrão `ws_wlan`), linha de estado (nome reconhecido ou não) e `aviso_bateria`.
+   padrão `ws_wlan`), espera depois de fechar (`wifi_espera`, hh:mm, padrão 01:00, de 00:01 a 06:00),
+   linha de estado (nome reconhecido ou não) e `aviso_bateria`.
    - Gatilho: `ConnectivityManager.registerNetworkCallback` com PendingIntent para o `RedeReceiver`
      (guardado pelo sistema, vale com o app fechado; o sistema chama na hora se já há Wi-Fi). Feito
      ao salvar (forçado ao ligar ou trocar a rede), ao abrir o app (só se o PendingIntent sumiu, por
      exemplo com Forçar parada), ao reiniciar e ao atualizar (`InicioReceiver`).
    - Filtro (`nucleo/GatilhoWifi`, sem rede): seg a sex; nome legível e diferente do configurado
      ignora (sem localização "o tempo todo" o nome é ilegível e o app tenta assim mesmo); ponto já
-     aberto hoje (`ultima_abertura.txt` depois do último fechamento); 30 min após fechar; 5 min entre
+     aberto hoje (`ultima_abertura.txt` depois do último fechamento); a espera configurada após fechar; 5 min entre
      tentativas (`abertura_automatica.txt`). Ignorados relevantes vão ao log como
      "abrir_ponto (automático)".
    - Execução: `AbrirAutomaticoWorker` (WorkManager, expedito, trabalho único KEEP; no Android 11 ou

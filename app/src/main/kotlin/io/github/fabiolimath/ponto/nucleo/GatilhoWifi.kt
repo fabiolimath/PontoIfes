@@ -33,8 +33,11 @@ sealed interface Decisao {
 object GatilhoWifi {
     const val REDE_PADRAO = "ws_wlan"
 
-    /** Depois de fechar o ponto, a abertura automática espera isto (sair do campus não reabre). */
-    val ESPERA_APOS_FECHAR: Duration = Duration.ofMinutes(30)
+    /**
+     * Depois de fechar o ponto, a abertura automática espera isto (sair do campus não reabre).
+     * Nas Configurações (`wifi_espera`), padrão 01:00.
+     */
+    val ESPERA_PADRAO: Duration = Duration.ofHours(1)
 
     /** Entre duas tentativas automáticas (a conexão cai e volta ao trocar de ponto de acesso). */
     val TRAVA: Duration = Duration.ofMinutes(5)
@@ -60,9 +63,20 @@ object GatilhoWifi {
     private fun dentroDe(desde: LocalDateTime?, agora: LocalDateTime, prazo: Duration): Boolean =
         desde != null && !desde.isAfter(agora) && Duration.between(desde, agora) < prazo
 
+    /** "1 h", "1 h 30 min", "45 min". */
+    fun escrever(tempo: Duration): String {
+        val horas = tempo.toHours()
+        val minutos = tempo.toMinutes() % 60
+        return when {
+            horas == 0L -> "$minutos min"
+            minutos == 0L -> "$horas h"
+            else -> "$horas h $minutos min"
+        }
+    }
+
     /**
      * Se a Wi-Fi [nomeDaRede] (null = ilegível) que acabou de conectar às [agora] deve abrir o ponto.
-     * [ligado] e [redeConfigurada] vêm das Configurações.
+     * [ligado], [redeConfigurada] e [espera] (depois de fechar) vêm das Configurações.
      */
     fun deveExecutar(
         agora: LocalDateTime,
@@ -70,6 +84,7 @@ object GatilhoWifi {
         estado: EstadoDoPonto,
         ligado: Boolean = true,
         redeConfigurada: String = REDE_PADRAO,
+        espera: Duration = ESPERA_PADRAO,
     ): Decisao {
         if (!ligado) return Decisao.Ignorar("opção desligada", anotar = false)
         if (!Notificacoes.diaUtil(agora.toLocalDate())) return Decisao.Ignorar("fim de semana", anotar = false)
@@ -78,8 +93,8 @@ object GatilhoWifi {
             return Decisao.Ignorar("rede diferente ($nomeDaRede)", anotar = true)
         }
         if (pontoAberto(agora, estado)) return Decisao.Ignorar("o ponto já está aberto", anotar = true)
-        if (dentroDe(estado.ultimoFechamento, agora, ESPERA_APOS_FECHAR)) {
-            return Decisao.Ignorar("o ponto foi fechado há menos de 30 min", anotar = true)
+        if (dentroDe(estado.ultimoFechamento, agora, espera)) {
+            return Decisao.Ignorar("o ponto foi fechado há menos de ${escrever(espera)}", anotar = true)
         }
         if (dentroDe(estado.ultimaTentativa, agora, TRAVA)) {
             return Decisao.Ignorar("houve uma tentativa há menos de 5 min", anotar = false)

@@ -39,6 +39,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
     private lateinit var verificarAtualizacoes: SwitchMaterial
     private lateinit var wifiAbrir: SwitchMaterial
     private lateinit var wifiRede: EditText
+    private lateinit var wifiEspera: EditText
     private lateinit var wifiEstado: TextView
 
     private val explicacoes = intArrayOf(R.string.pit_auto_expl_0, R.string.pit_auto_expl_1, R.string.pit_auto_expl_2)
@@ -60,6 +61,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
         verificarAtualizacoes = findViewById(R.id.verificar_atualizacoes)
         wifiAbrir = findViewById(R.id.wifi_abrir)
         wifiRede = findViewById(R.id.wifi_rede)
+        wifiEspera = findViewById(R.id.wifi_espera)
+        wifiEspera.addTextChangedListener(MascaraDeTexto(wifiEspera, Mascara::formatarHora))
         wifiEstado = findViewById(R.id.wifi_estado)
 
         // Ao ligar (toque do usuário, não ao preencher nem ao girar a tela): o aviso da localização.
@@ -112,6 +115,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
         verificarAtualizacoes.isChecked = preferencias.verificarAtualizacoes
         wifiAbrir.isChecked = preferencias.wifiAbrir
         wifiRede.setText(preferencias.wifiRede)
+        wifiEspera.setText(preferencias.wifiEspera)
     }
 
     override fun onResume() {
@@ -234,6 +238,15 @@ class ConfiguracoesActivity : AppCompatActivity() {
             )
             return
         }
+        val espera = wifiEspera.text.toString().trim()
+        val esperaValida = Preferencias.tempoLembrete(espera) != null
+        if (wifiAbrir.isChecked && !esperaValida) {
+            erro(
+                "Tempo inválido",
+                "'$espera' não é um tempo de espera no formato hh:mm (ex.: 01:00), entre 00:01 e 06:00.",
+            )
+            return
+        }
         val padrao = Preferencias()
         val anteriores = Dados.preferencias(this)
         val preferencias = Preferencias(
@@ -245,6 +258,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
             pitAutomatico = pitAutomatico.selectedItemPosition,
             wifiAbrir = wifiAbrir.isChecked,
             wifiRede = wifiRede.text.toString().trim().ifEmpty { padrao.wifiRede },
+            wifiEspera = if (esperaValida) espera else padrao.wifiEspera,
             avisoBateria = anteriores.avisoBateria,
         )
         Dados.salvarCredenciais(this, novas)
