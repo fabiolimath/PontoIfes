@@ -389,6 +389,11 @@
             style="@style/Ponto.Explicacao"
             android:text="@string/verificar_ao_abrir_expl" />
 
+        <TextView
+            android:id="@+id/versao_instalada"
+            style="@style/Ponto.Explicacao"
+            android:layout_marginTop="8dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/verificar_agora"
             android:layout_width="match_parent"

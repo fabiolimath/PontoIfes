@@ -62,7 +62,8 @@
     <string name="secao_atualizacoes">Atualizações</string>
     <string name="entrar_sigrh">Entrar no SIGRH</string>
     <string name="entrar_sigrh_texto">Informe seu usuário e senha do SIGRH. Eles ficam guardados só neste aparelho e podem ser mudados depois em Configurações.</string>
-    <string name="verificar_agora">Verificar agora (versão instalada: %1$s)</string>
+    <string name="versao_instalada">Versão instalada: %1$s</string>
+    <string name="verificar_agora">Verificar agora</string>
     <string name="sobre">Sobre o Ponto IFES</string>
     <string name="descricao">Abre e fecha o ponto e registra o PIT no SIGRH do IFES.</string>
     <string name="aviso_inicial">Abrir e Fechar o Ponto só funcionam nas redes do seu campus. As três ações podem ser configuradas para executar automaticamente nas Configurações.</string>
