@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Ponto">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true" />
+
+        <!-- A entrada do launcher tem o nome da atividade da versão Python (Briefcase): o ícone na
+             tela inicial, os atalhos fixados, as notificações já mostradas e o Tasker/Rotinas que
+             apontam para org.beeware.android.MainActivity continuam valendo depois da atualização. -->
+        <activity-alias
+            android:name="org.beeware.android.MainActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Atalhos de launcher (segurar o ícone): abrir ponto, fechar ponto, registrar PIT. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity
+            android:name=".ConfiguracoesActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".LogActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <!-- O alarme do lembrete (o mesmo nome da versão Python: o alarme agendado por ela continua valendo). -->
+        <receiver
+            android:name=".LembreteReceiver"
+            android:exported="false" />
+
+        <!-- Reagenda o lembrete pendente (o Android o perde ao reiniciar o celular e ao atualizar o app)
+             e, na atualização, apaga os restos da versão Python. -->
+        <receiver
+            android:name=".InicioReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

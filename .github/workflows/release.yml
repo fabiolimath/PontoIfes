@@ -1,7 +1,7 @@
-# Gera o APK assinado e publica o release vX.Y.Z, com X.Y.Z vindo do version do
-# pyproject.toml. Dispara sozinho a cada merge no master que aumente o version
-# (sem versão nova, termina sem publicar nada), pelo botão "Run workflow" na aba
-# Actions ou ao enviar a tag vX.Y.Z pelo git.
+# Gera o APK assinado e publica o release vX.Y.Z, com X.Y.Z vindo de
+# val versao em app/build.gradle.kts. Dispara sozinho a cada merge no master
+# que aumente a versão (sem versão nova, termina sem publicar nada), pelo
+# botão "Run workflow" na aba Actions ou ao enviar a tag vX.Y.Z pelo git.
 # Segredos do repositório usados:
 #   ANDROID_KEYSTORE_BASE64    chave de assinatura (ponto-release.jks) em base64
 #   ANDROID_KEYSTORE_PASSWORD  senha da chave
@@ -23,27 +23,17 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    env:
-      # O runner já traz um Android SDK e um JDK; esvaziar estas variáveis faz o
-      # Briefcase baixar os dele, como no PC.
-      ANDROID_HOME: ""
-      ANDROID_SDK_ROOT: ""
-      JAVA_HOME: ""
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
 
       - name: Conferir a versão
         id: versao
         run: |
-          versao=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
+          versao=$(sed -n 's/^val versao = "\(.*\)"/\1/p' app/build.gradle.kts | head -1)
           tag="v$versao"
           if [ "$GITHUB_REF_TYPE" = tag ]; then
             if [ "$tag" != "$GITHUB_REF_NAME" ]; then
-              echo "::error::A tag $GITHUB_REF_NAME não bate com version = \"$versao\" no pyproject.toml"
+              echo "::error::A tag $GITHUB_REF_NAME não bate com val versao = \"$versao\" em app/build.gradle.kts"
               exit 1
             fi
           elif git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
@@ -53,7 +43,7 @@ jobs:
               echo "publicar=nao" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "::error::A versão $versao já foi publicada. Aumente o version no pyproject.toml."
+            echo "::error::A versão $versao já foi publicada. Aumente val versao em app/build.gradle.kts."
             exit 1
           fi
           echo "TAG=$tag" >> "$GITHUB_ENV"
@@ -67,20 +57,26 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ponto-release.jks"
 
       - if: steps.versao.outputs.publicar == 'sim'
-        name: Instalar o Briefcase
-        run: pip install briefcase==0.4.5
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
       - if: steps.versao.outputs.publicar == 'sim'
-        name: Criar o projeto Android
-        # "yes" aceita as licenças do Android SDK.
-        run: yes | briefcase create android --no-input
+        uses: gradle/actions/setup-gradle@v4
 
       - if: steps.versao.outputs.publicar == 'sim'
         name: Gerar e assinar o APK
         env:
           PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
           PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        run: android/release.sh
+        # Nome fixo, para o link .../releases/latest/download/ponto-ifes.apk do site.
+        run: |
+          ./gradlew --no-daemon test assembleRelease
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/ponto-ifes.apk
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" \
+            verify --print-certs dist/ponto-ifes.apk | grep -i 'SHA-256'
 
       - if: steps.versao.outputs.publicar == 'sim'
         name: Publicar o release

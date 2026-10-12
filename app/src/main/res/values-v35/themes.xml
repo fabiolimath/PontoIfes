@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 15+: mantém a barra de status verde, sem desenhar a tela por baixo dela. -->
+    <style name="Theme.Ponto" parent="Theme.Ponto.Base">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>

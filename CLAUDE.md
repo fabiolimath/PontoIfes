@@ -1,15 +1,19 @@
 # Projeto: App Android "Ponto IFES"
 
-App Android (BeeWare: Briefcase + Toga, com Chaquopy) que empacota três scripts Python e os executa
-sem Termux:
+App Android nativo em Kotlin que faz três ações no SIGRH:
 
-- **Abrir ponto** → `abrir_ponto.py`
-- **Fechar ponto** → `fechar_ponto.py`
-- **Registrar PIT** → `registrar_pit.py [dd/mm/aaaa] [--obs TEXTO]` (sem data, hoje; só de segunda a sexta;
-  o texto da Observação vem das Configurações, padrão "Conforme PIT docente.")
+- **Abrir ponto**
+- **Fechar ponto**
+- **Registrar PIT** (do dia ou de uma data dd/mm/aaaa; só de segunda a sexta; o texto da
+  Observação vem das Configurações, padrão "Conforme PIT docente.")
 
 O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado (versão atual em
-`pyproject.toml`).
+`val versao`, `app/build.gradle.kts`).
+
+Até a 1.0.15 era um app Python (Briefcase + Toga, com Chaquopy). A 2.0.0 é a migração para
+Kotlin com o mesmo comportamento, instalada por cima da 1.0.x (mesmo pacote
+`io.github.fabiolimath.ponto`, mesma chave, mesmos arquivos de dados). O código Python saiu do
+repositório e fica no histórico do Git (tag `v1.0.15`).
 
 ## O que o app faz
 
@@ -18,11 +22,12 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
    Botões disponíveis ficam verdes (#008577, o da barra do topo, texto branco) e os
    indisponíveis, cinza; os das Configurações e do Log também são verdes. Na tela principal:
    os de ação, Configurações e Log verdes fora da execução, o Cancelar verde só durante ela
-   (o executor define `PONTO_CANCELAR`; o script para antes de cada tentativa, nas esperas e logo
-   antes do envio final, nunca depois dele; sai com código 130, sem notificação).
+   (`Cancelamento.cancelar()`, um sinal próprio e não o cancelamento da corrotina: a ação para
+   antes de cada tentativa, nas esperas e logo antes do envio final, nunca depois dele; resultado
+   `Cancelado`, código 130 no log, sem notificação).
 2. Credenciais pedidas na 1ª execução (usuário/senha do SIGRH; o usuário abre o teclado numérico),
    guardadas na área privada do app e editáveis em **Configurações**. Campos de data (PIT) e de
-   hora (lembrete) com máscara (`mascara.py`) e teclado próprio.
+   hora (lembrete) com máscara (`nucleo/Mascara`, `MascaraDeTexto`) e teclado próprio.
 3. **Notificação do sistema** com o resultado de cada execução (título com o status, texto com a
    última linha da saída), ativável nas Configurações; no Android 13+ pede a permissão ao abrir o app
    e ao salvar as Configurações. Na falha, botão **Tentar de novo** (reabre o app com os extras
@@ -33,47 +38,64 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
      nº N do dia (seg a sex), registra o PIT do dia em seguida; aí a notificação não tem o botão.
      Os fechamentos do dia ficam em `ultimo_fechamento.txt` ("aaaa-mm-dd N").
 4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
-   (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze; perde-se ao
-   reiniciar o celular) uma notificação para o tempo configurado depois (padrão 01:00, editável nas
-   Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver` em Java; fechar o
-   ponto com sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`).
+   (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze) uma
+   notificação para o tempo configurado depois (padrão 01:00, de 00:01 a 06:00, editável nas
+   Configurações), com botão **Fechar ponto**. Mostrada pelo `LembreteReceiver`; fechar o ponto com
+   sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`). O `InicioReceiver`
+   reagenda o pendente ao reiniciar o celular e ao atualizar o app (se a hora já passou, esquece).
 5. **Configurações** (`configuracoes.json`): credenciais, Observação do PIT, PIT automático,
    notificações, lembrete (ligado/tempo), verificar atualizações ao abrir (+ Verificar agora).
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, botão para o site).
-6. **Log** das execuções (saída de cada script + data/hora + código de saída), com botão **Copiar**.
+6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
+   últimas 1000 linhas), com botões **Copiar** e **Limpar**.
 7. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis; ícone de
    cada um com o símbolo verde (play, stop, relógio). O emblema pequeno do canto é posto pelo
    launcher (o ícone do app) e não dá para mudar.
 8. Execução automática ao abrir via atalho/intent: extra `acao=abrir_ponto` (ou `fechar_ponto`,
-   `registrar_pit`), ou o mesmo valor no dado (URI) do intent. Usado por Rotinas da Samsung e Tasker.
+   `registrar_pit`), ou o mesmo valor no dado (URI) do intent (`abrir_ponto` ou `ponto://abrir_ponto`);
+   reabrir pela tela de recentes não repete. Usado por Rotinas da Samsung e Tasker. A entrada do
+   launcher é o `activity-alias` `org.beeware.android.MainActivity` (nome da versão Python), alvo
+   da `MainActivity`: ícone, atalhos fixados e automações antigas continuam valendo.
    - Tasker: ação **Executar app**, campo **Dado** = `abrir_ponto`, com **Sempre Iniciar Nova Cópia**
      marcado (sem isso, com o app aberto, ele só vem para a frente e não executa).
    - Para rodar com a tela desligada: bateria do app em **Sem restrições**.
 
 ## Estrutura
 
-- `src/ponto/app.py` — interface Toga (botões, configurações, log, notificações).
-- `src/ponto/executor.py` — roda os scripts como módulos (`runpy`, pacote `ponto.scripts`), definindo
-  `os.environ` com as credenciais e capturando stdout/stderr para o log; um script por vez.
-- `src/ponto/credenciais.py` — leitura/gravação das credenciais (JSON na área privada).
-- `src/ponto/configuracoes.py` — preferências, contagem de fechamentos do dia e lembrete agendado.
-- `src/ponto/atualizacao.py` — consulta do último release no GitHub e `URL_SITE`.
-- `src/ponto/mascara.py` — máscaras dd/mm/aaaa e hh:mm.
-- `src/ponto/plataforma.py` — código específico do Android (intent, área de transferência,
-  notificações, teclados); no PC devolve valores neutros.
-- `src/ponto/scripts/` — os três scripts (leem `SIGRH_USER` e `SIGRH_PASS` do ambiente).
-- `android/java/` — `LembreteReceiver.java`, que mostra a notificação do lembrete (incluído no
-  Gradle por `build_gradle_extra_content` e no manifesto pelo `pyproject.toml`).
-- `android/res/` — atalhos de launcher (`xml/shortcuts.xml`, `values/atalhos.xml`, ícones
+Projeto Gradle (Kotlin DSL, Gradle Wrapper 8.14.3, AGP 8.13.0, Kotlin 2.2.21, JVM 17; minSdk 24,
+compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
+
+- `sigrh/` — cliente do SIGRH em Kotlin puro (JVM): `Sigrh` (`abrirPonto()`, `fecharPonto()`,
+  `registrarPit(dia, observacao)`, todas `suspend`, devolvem `Resultado`), `AbrirPonto`,
+  `FecharPonto`, `RegistrarPit`, `Sessao` (OkHttp, cookies, ISO-8859-1, `retryOnConnectionFailure`
+  desligado no envio final), `Cancelamento`. `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
+  Recusado, EnvioIncerto, Cancelado. Tentativas com esperas de 10/20/30/60 s.
+  Testes (JUnit 5) contra o `SigrhFalso` (MockWebServer) em `sigrh/src/test`.
+- `app/src/main/kotlin/io/github/fabiolimath/ponto/nucleo/` — regras sem Android, testadas na JVM
+  (JUnit 4, `app/src/test`): `Acao`, `Executor` (roda a ação e grava o log), `Registro` (log),
+  `Credenciais`, `Preferencias` (`configuracoes.json`), `Mascara`, `Fechamentos`, `Lembrete`,
+  `Notificacoes` (idents: sucesso 1 a 3, falha 11 a 13, lembrete 4; textos e botões),
+  `Atualizacao`.
+- `app/src/main/kotlin/io/github/fabiolimath/ponto/` — Android: `MainActivity`, `LogActivity`,
+  `ConfiguracoesActivity` (Views, não PreferenceFragment, porque os valores ficam no JSON),
+  `Execucao` (estado da ação em andamento, notificação, lembrete, PIT automático), `Notificador`,
+  `Lembretes.kt` (`Lembretes`, `LembreteReceiver`, `InicioReceiver`), `Atualizador` (GitHub, Sobre),
+  `PermissaoDeNotificacao`, `MascaraDeTexto`, `Dados.kt` (arquivos em `filesDir/data/`) e
+  `Legado` (apaga as pastas `chaquopy` da versão Python).
+- `app/src/main/res/` — layouts, ícone do app (`mipmap-*`), atalhos (`xml/shortcuts.xml`, ícones
   `drawable*/atalho_*.xml`) e ícone das notificações (`drawable/ic_notificacao.xml`).
-- `icons/` — ícone do app (logo do IFES no verde #008577). `icons/antigos/` guarda os ícones no
-  verde claro original (#7FC41C) do app, do site e dos atalhos, caso se queira voltar a eles.
-- `android/release.sh` — empacota, alinha e assina o APK release → `dist/ponto-ifes.apk`.
+  - O launcher não resolve `@string` no `targetPackage` dos atalhos, então o pacote vai por
+    extenso em duas cópias de `shortcuts.xml`: `app/src/main/res/xml` e `app/src/debug/res/xml`
+    (pacote `.debug`). Mudou uma, mude a outra.
+- `icons/` — ícone do app em PNG (logo do IFES no verde #008577), origem dos `mipmap-*`.
+  `icons/antigos/` guarda os ícones no verde claro original (#7FC41C) do app, do site e dos
+  atalhos, caso se queira voltar a eles.
 - `.github/workflows/release.yml` — build e publicação automáticos.
 - `.github/workflows/pr.yml` — em cada PR: testes e APK de teste assinado no pré-release `teste`.
 - `docs/` — site de instalação para usuários leigos (GitHub Pages, branch master, pasta /docs),
   com capturas de tela em `docs/img/` (o login nelas é fictício).
-- `tests/` — pytest: `PYTHONPATH=src python -m pytest -q tests`.
+- Dados do app (`filesDir/data/`, mesmos formatos da versão Python): `credenciais.json`,
+  `configuracoes.json`, `ultimo_fechamento.txt`, `lembrete.txt`, `ponto.log`.
 
 ## Telegram (removido)
 
@@ -82,19 +104,29 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 
 ## Release
 
-- Automático no merge: cada push no master roda `release.yml`; se o `version` do `pyproject.toml`
-  ainda não tem tag, gera o APK assinado e cria o release `vX.Y.Z` com `ponto-ifes.apk`; se já
+- Automático no merge: cada push no master roda `release.yml`; se a `val versao` de
+  `app/build.gradle.kts` ainda não tem tag, gera o APK assinado e cria o release `vX.Y.Z` com `ponto-ifes.apk`; se já
   tem, termina sem publicar. O botão **Run workflow** e o push de tag `vX.Y.Z` continuam valendo.
-- Por isso, **todo PR que muda o app deve aumentar `version` no `pyproject.toml`** (é também o
-  versionCode do Android); o `pr.yml` falha se `src/`, `android/` ou o `pyproject.toml` mudarem sem isso. Várias mudanças
-  no mesmo PR aberto ficam na mesma versão.
+- Por isso, **todo PR que muda o app deve aumentar `val versao` em `app/build.gradle.kts`** (o
+  versionCode sai dela: X.Y.Z → X·1000000 + Y·10000 + Z·100, a fórmula do Briefcase); o `pr.yml`
+  falha se `app/`, `sigrh/`, `gradle/` ou os arquivos Gradle da raiz mudarem sem isso. Várias
+  mudanças no mesmo PR aberto ficam na mesma versão.
 - Segredos do repositório: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`.
 - Chave de assinatura: `~/.config/ponto/ponto-release.jks` (alias `ponto`) no PC do autor, com
-  cópia de segurança. Nunca entra no repositório (`*.jks` no `.gitignore`); sem a mesma chave, quem
+  cópia de segurança. O Gradle a lê de `PONTO_KEYSTORE` (padrão, esse caminho) com a senha em
+  `PONTO_KEYSTORE_PASS`; sem a senha, o release sai sem assinatura. Nunca entra no repositório (`*.jks` no `.gitignore`); sem a mesma chave, quem
   já instalou não consegue atualizar.
 - O nome fixo do arquivo mantém válido o link do site:
   `https://github.com/fabiolimath/PontoIfes/releases/latest/download/ponto-ifes.apk`.
-- O SDK Android não baixa no ambiente de nuvem do Claude; não tentar compilar o APK lá.
+- O SDK Android e o AGP não baixam no ambiente de nuvem do Claude (dl.google.com bloqueado); não
+  tentar compilar o módulo `app` lá: os erros dele aparecem no CI.
+  - Lá dá para compilar e testar o `sigrh` com um settings temporário que inclui só esse módulo,
+    usando repo1.maven.org e, como reserva (o Maven Central dá 429),
+    maven-central.storage-download.googleapis.com/maven2 e plugins.gradle.org/m2.
+  - As classes de `nucleo/` testam do mesmo jeito, num módulo JVM temporário cujo srcDir aponta
+    para `nucleo/`, `sigrh/src/main/kotlin` e `app/src/test`, com `org.json:json`.
+  - Nomes de teste só em ASCII (acentos quebram o compilador lá) e `runBlocking<Unit>` (sem o
+    `<Unit>`, um teste que termina em `assertIs` é ignorado pelo JUnit).
 
 ## Fluxo de trabalho
 
@@ -103,7 +135,8 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
   `https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk`. O pré-release
   `teste` é sempre o do último PR que rodou e não conta como "latest".
 - A cópia local do autor (fora da pasta do Mega) ainda serve para builds debug via adb
-  (`briefcase run android -u -d SERIAL`), mas não é mais necessária para testar.
+  (`./gradlew installDebug`, pacote `.debug` que instala ao lado do oficial), mas não é mais
+  necessária para testar.
 
 ## Pendências
 
@@ -111,8 +144,9 @@ O app está pronto, em uso pelo autor e distribuído a colegas por APK assinado 
 - Testar num dia útil: botão Registrar PIT na notificação (o lembrete, o Fechar ponto pelo lembrete e
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
+- Próximo plano, à espera do autor: abrir o ponto sozinho ao conectar na Wi-Fi do campus (2.1.0).
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
-  é legado e foi substituído pelo app.
+  é legado, foi substituído pelo app e saiu do repositório na 2.0.0.
 
 ## Regras
 

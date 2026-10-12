@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Atalhos do ícone (segurar o ícone). Por serem estáticos, aparecem também
+     para o Tasker e para as Rotinas. Cada um abre o app com o extra "acao".
+     O pacote tem de ser escrito por extenso (o launcher não resolve @string): o build debug
+     tem uma cópia deste arquivo com o seu pacote em src/debug. A classe é o nome da atividade
+     da versão Python (o activity-alias do manifesto), o mesmo dos atalhos já fixados.
+     Ícones: símbolo verde (play, stop, relógio) em res/drawable*;
+     o emblema pequeno no canto é posto pelo launcher (o ícone do app). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="abrir_ponto"
+        android:enabled="true"
+        android:icon="@drawable/atalho_abrir"
+        android:shortcutShortLabel="@string/abrir_ponto">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.fabiolimath.ponto.debug"
+            android:targetClass="org.beeware.android.MainActivity">
+            <extra android:name="acao" android:value="abrir_ponto" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="fechar_ponto"
+        android:enabled="true"
+        android:icon="@drawable/atalho_fechar"
+        android:shortcutShortLabel="@string/fechar_ponto">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.fabiolimath.ponto.debug"
+            android:targetClass="org.beeware.android.MainActivity">
+            <extra android:name="acao" android:value="fechar_ponto" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="registrar_pit"
+        android:enabled="true"
+        android:icon="@drawable/atalho_pit"
+        android:shortcutShortLabel="@string/registrar_pit">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.fabiolimath.ponto.debug"
+            android:targetClass="org.beeware.android.MainActivity">
+            <extra android:name="acao" android:value="registrar_pit" />
+        </intent>
+    </shortcut>
+</shortcuts>
