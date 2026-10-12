@@ -87,8 +87,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
      aberto fica em silêncio e agenda o lembrete pela hora de entrada; erros de rede em silêncio;
      recusa ou envio incerto notifica só com o nome da rede confirmado, uma vez por dia.
    - Pop-ups nas Configurações: localização ao ligar (Android 11+: segundo aviso e a tela do "tempo
-     todo"); bateria ao salvar, se não está em Sem restrições (Liberar agora, Não avisar mais,
-     Instruções → site `#wifi`).
+     todo"); bateria ao salvar, se não está em Sem restrições (Liberar agora, Não avisar mais).
 
 10. **Fechar o ponto automaticamente** (2.2.0) nos horários escolhidos, se estiver aberto.
     Configurações: liga/desliga (`fechar_automatico`, padrão desligado) e dois horários
@@ -198,8 +197,7 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
 - Trocar a captura `docs/img/configuracoes.jpg` pela tela em seções (2.1.0).
-- Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`; escrever o
-  texto final da seção `#wifi` do site (hoje um esqueleto).
+- Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`.
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)
   é legado, foi substituído pelo app e saiu do repositório na 2.0.0.
 
