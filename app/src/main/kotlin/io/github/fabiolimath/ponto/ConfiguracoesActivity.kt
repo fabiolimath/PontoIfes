@@ -2,7 +2,6 @@ package io.github.fabiolimath.ponto
 
 import android.Manifest
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -293,7 +292,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
 
     /**
      * Depois de salvar com a abertura pela Wi-Fi ligada: se a bateria do app não está em Sem
-     * restrições (e o aviso não foi dispensado), o aviso com os três botões. Senão, fecha.
+     * restrições (e o aviso não foi dispensado), o aviso com os dois botões. Senão, fecha.
      */
     private fun avisoDeBateria() {
         val preferencias = Dados.preferencias(this)
@@ -307,9 +306,6 @@ class ConfiguracoesActivity : AppCompatActivity() {
             .setPositiveButton("Liberar agora") { _, _ -> Wifi.liberarBateria(this) }
             .setNegativeButton("Não avisar mais") { _, _ ->
                 Dados.salvarPreferencias(this, Dados.preferencias(this).copy(avisoBateria = false))
-            }
-            .setNeutralButton("Instruções") { _, _ ->
-                abrirTela(Intent(Intent.ACTION_VIEW, Uri.parse(Wifi.URL_INSTRUCOES)))
             }
             .setOnDismissListener { finish() }
             .show()

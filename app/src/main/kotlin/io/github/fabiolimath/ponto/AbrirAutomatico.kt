@@ -48,7 +48,6 @@ object Wifi {
     private const val TRABALHO = "abrir_automatico"
     const val EXTRA_REDE_CONFIRMADA = "rede_confirmada"
     private const val CANAL = "automatico"
-    const val URL_INSTRUCOES = "https://fabiolimath.github.io/PontoIfes/#wifi"
 
     /** Mutável: o sistema põe no intent a rede que conectou. */
     private val MUTAVEL = if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
