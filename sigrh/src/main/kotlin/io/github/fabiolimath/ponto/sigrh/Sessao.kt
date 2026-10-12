@@ -25,7 +25,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-internal const val TIMEOUT = 30L
+/** O timeout por requisição, em segundos. */
+const val TIMEOUT = 30L
+/** O timeout por requisição na abertura automática (Wi-Fi): o tempo de um job expedito é limitado. */
+const val TIMEOUT_AUTOMATICO = 15L
 /** O envio final do fechamento e do PIT espera mais (como o `timeout=60` dos scripts). */
 internal const val TIMEOUT_ENVIO = 60L
 
@@ -92,10 +95,21 @@ internal fun multipart(build: MultipartBody.Builder.() -> Unit): RequestBody =
 
 /**
  * Uma sessão no SIGRH (o `requests.Session` dos scripts): cookies próprios, um login.
- * Cada tentativa usa uma sessão nova.
+ * Cada tentativa usa uma sessão nova. [timeout] vale para cada requisição, menos o envio final
+ * que pede outro.
  */
-internal class Sessao(private val base: String, private val cancelamento: Cancelamento) {
-    private val http = clienteBase.newBuilder().cookieJar(Biscoitos()).build()
+internal class Sessao(
+    private val base: String,
+    private val cancelamento: Cancelamento,
+    private val timeout: Long = TIMEOUT,
+) {
+    private val http = clienteBase.newBuilder().cookieJar(Biscoitos()).apply {
+        if (timeout != TIMEOUT) {
+            connectTimeout(timeout, TimeUnit.SECONDS)
+            readTimeout(timeout, TimeUnit.SECONDS)
+            writeTimeout(timeout, TimeUnit.SECONDS)
+        }
+    }.build()
 
     suspend fun get(caminho: String): Pagina =
         chamar(http, Request.Builder().url(base + caminho).build(), cancelavel = true).pagina
@@ -108,12 +122,12 @@ internal class Sessao(private val base: String, private val cancelamento: Cancel
      * Sem a repetição automática do OkHttp numa queda de conexão: ele reenviaria o POST, e o
      * registro poderia sair duas vezes (o `requests` dos scripts não repete).
      */
-    suspend fun enviar(caminho: String, corpo: RequestBody, timeout: Long = TIMEOUT): Resposta {
+    suspend fun enviar(caminho: String, corpo: RequestBody, timeoutDoEnvio: Long = timeout): Resposta {
         val cliente = http.newBuilder()
             .retryOnConnectionFailure(false)
-            .connectTimeout(timeout, TimeUnit.SECONDS)
-            .readTimeout(timeout, TimeUnit.SECONDS)
-            .writeTimeout(timeout, TimeUnit.SECONDS)
+            .connectTimeout(timeoutDoEnvio, TimeUnit.SECONDS)
+            .readTimeout(timeoutDoEnvio, TimeUnit.SECONDS)
+            .writeTimeout(timeoutDoEnvio, TimeUnit.SECONDS)
             .build()
         return chamar(cliente, Request.Builder().url(base + caminho).post(corpo).build(), cancelavel = false)
     }

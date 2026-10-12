@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Seções na ordem: Notificações, Credenciais, uma por ação (na ordem dos botões) e Atualizações.
+     Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -8,135 +11,292 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp">
 
         <TextView
             android:id="@+id/aviso"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginTop="12dp"
             android:text="@string/aviso_credenciais"
             android:visibility="gone" />
 
+        <!-- ================= Notificações ================= -->
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/usuario_sigrh" />
-
-        <!-- Teclado numérico; o valor segue texto, então zeros à esquerda não se perdem. -->
-        <EditText
-            android:id="@+id/usuario"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:autofillHints="username"
-            android:importantForAutofill="yes"
-            android:inputType="number"
-            android:minHeight="48dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/senha_sigrh" />
-
-        <EditText
-            android:id="@+id/senha"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:autofillHints="password"
-            android:importantForAutofill="yes"
-            android:inputType="textPassword"
-            android:minHeight="48dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/observacao_pit" />
-
-        <!-- Sem preenchimento automático: o gerenciador de senhas não deve escrever aqui. -->
-        <EditText
-            android:id="@+id/observacao_pit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:importantForAutofill="no"
-            android:inputType="text"
-            android:minHeight="48dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/pit_automatico" />
-
-        <Spinner
-            android:id="@+id/pit_automatico"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:minHeight="48dp" />
-
-        <TextView
-            android:id="@+id/explicacao_pit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:textSize="12sp" />
+            style="@style/Ponto.Secao"
+            android:text="@string/secao_notificacoes" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/notificacoes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="8dp"
-            android:text="@string/notificar_resultado" />
+            android:minHeight="48dp"
+            android:text="@string/notificar_resultado"
+            android:textSize="16sp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/notificar_resultado_expl" />
+
+        <View style="@style/Ponto.Divisoria" />
+
+        <!-- ================= Credenciais ================= -->
+        <TextView
+            style="@style/Ponto.Secao"
+            android:text="@string/secao_credenciais" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Ponto.Campo"
+            android:hint="@string/usuario_sigrh">
+
+            <!-- Teclado numérico; o valor segue texto, então zeros à esquerda não se perdem. -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/usuario"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:autofillHints="username"
+                android:importantForAutofill="yes"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Ponto.Campo"
+            android:hint="@string/senha_sigrh"
+            app:endIconMode="password_toggle">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/senha"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:autofillHints="password"
+                android:importantForAutofill="yes"
+                android:inputType="textPassword" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <View style="@style/Ponto.Divisoria" />
+
+        <!-- ================= Abrir ponto ================= -->
+        <TextView
+            style="@style/Ponto.Secao"
+            android:text="@string/abrir_ponto" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/wifi_abrir"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/wifi_abrir"
+            android:textSize="16sp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/wifi_abrir_expl" />
+
+        <LinearLayout
+            android:id="@+id/wifi_detalhes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/wifi_rede"
+                    android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/wifi_rede"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:importantForAutofill="no"
+                    android:inputType="text"
+                    android:minHeight="48dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wifi_espera"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        style="@style/Ponto.Explicacao"
+                        android:text="@string/wifi_espera_expl" />
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/wifi_espera"
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:hint="@string/hora_dica"
+                    android:importantForAutofill="no"
+                    android:inputType="time"
+                    android:minHeight="48dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/wifi_estado"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="?attr/selectableItemBackground"
+                android:minHeight="48dp"
+                android:paddingVertical="4dp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <View style="@style/Ponto.Divisoria" />
+
+        <!-- ================= Fechar ponto ================= -->
+        <TextView
+            style="@style/Ponto.Secao"
+            android:text="@string/fechar_ponto" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/lembrete_fechar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="8dp"
-            android:text="@string/lembrar_fechar" />
+            android:minHeight="48dp"
+            android:text="@string/lembrar_fechar"
+            android:textSize="16sp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/lembrar_fechar_expl" />
 
         <LinearLayout
+            android:id="@+id/lembrete_detalhes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:minHeight="56dp"
+            android:orientation="horizontal"
+            android:paddingTop="4dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:text="@string/avisar_depois" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/avisar_depois"
+                    android:textSize="16sp" />
+
+                <TextView
+                    style="@style/Ponto.Explicacao"
+                    android:text="@string/avisar_depois_expl" />
+            </LinearLayout>
 
             <EditText
                 android:id="@+id/lembrete_tempo"
                 android:layout_width="88dp"
                 android:layout_height="wrap_content"
+                android:gravity="center"
                 android:hint="@string/hora_dica"
                 android:importantForAutofill="no"
                 android:inputType="time"
                 android:minHeight="48dp" />
         </LinearLayout>
 
+        <View style="@style/Ponto.Divisoria" />
+
+        <!-- ================= Registrar PIT ================= -->
+        <TextView
+            style="@style/Ponto.Secao"
+            android:text="@string/registrar_pit" />
+
+        <!-- Sem preenchimento automático: o gerenciador de senhas não deve escrever aqui. -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Ponto.Campo"
+            android:hint="@string/observacao_pit">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/observacao_pit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/pit_automatico"
+            android:textSize="16sp" />
+
+        <Spinner
+            android:id="@+id/pit_automatico"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp" />
+
+        <TextView
+            android:id="@+id/explicacao_pit"
+            style="@style/Ponto.Explicacao" />
+
+        <View style="@style/Ponto.Divisoria" />
+
+        <!-- ================= Atualizações ================= -->
+        <TextView
+            style="@style/Ponto.Secao"
+            android:text="@string/secao_atualizacoes" />
+
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/verificar_atualizacoes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="8dp"
-            android:text="@string/verificar_ao_abrir" />
+            android:minHeight="48dp"
+            android:text="@string/verificar_ao_abrir"
+            android:textSize="16sp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/verificar_ao_abrir_expl" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/verificar_agora"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
+
+        <View style="@style/Ponto.Divisoria" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton

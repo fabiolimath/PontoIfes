@@ -37,13 +37,19 @@ object Lembrete {
     }
 
     /**
-     * Quando agendar o lembrete depois de abrir o ponto às [agora], ou null se não há o que agendar:
-     * lembrete desligado, tempo inválido, ou já há um pendente (abrir de novo não o adia).
+     * Quando agendar o lembrete depois de abrir o ponto às [abertura] (padrão: [agora]), ou null se
+     * não há o que agendar: lembrete desligado, tempo inválido, já há um pendente (abrir de novo não
+     * o adia) ou a hora já passou (abertura automática de um ponto aberto bem antes).
      */
-    fun quando(preferencias: Preferencias, arquivo: File, agora: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
+    fun quando(
+        preferencias: Preferencias,
+        arquivo: File,
+        agora: LocalDateTime = LocalDateTime.now(),
+        abertura: LocalDateTime = agora,
+    ): LocalDateTime? {
         val tempo = preferencias.duracaoDoLembrete
         if (!preferencias.lembreteFechar || tempo == null) return null
         if (pendente(arquivo, agora) != null) return null
-        return agora.plus(tempo)
+        return abertura.plus(tempo).takeIf { it.isAfter(agora) }
     }
 }

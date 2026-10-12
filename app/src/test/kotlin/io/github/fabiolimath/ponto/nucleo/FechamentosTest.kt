@@ -2,10 +2,13 @@ package io.github.fabiolimath.ponto.nucleo
 
 import java.io.File
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FechamentosTest {
@@ -29,7 +32,18 @@ class FechamentosTest {
         // Arquivo das versões anteriores: só a data.
         arquivo.writeText("2026-10-06")
         assertEquals(1, Fechamentos.noDia(arquivo, LocalDate.of(2026, 10, 6)))
-        assertEquals(2, Fechamentos.registrar(arquivo, LocalDate.of(2026, 10, 6)))
-        assertEquals("2026-10-06 2", arquivo.readText())
+        assertEquals(2, Fechamentos.registrar(arquivo, LocalDate.of(2026, 10, 6), LocalTime.of(17, 30, 5)))
+        assertEquals("2026-10-06 2 17:30:05", arquivo.readText())
+    }
+
+    @Test
+    fun guarda_a_hora_do_ultimo_fechamento() {
+        assertNull(Fechamentos.ultimo(arquivo))
+        Fechamentos.registrar(arquivo, LocalDate.of(2026, 10, 13), LocalTime.of(12, 0, 1))
+        assertEquals(LocalDateTime.of(2026, 10, 13, 12, 0, 1), Fechamentos.ultimo(arquivo))
+        // Formatos anteriores, sem a hora.
+        arquivo.writeText("2026-10-13 1")
+        assertNull(Fechamentos.ultimo(arquivo))
+        assertEquals(1, Fechamentos.noDia(arquivo, LocalDate.of(2026, 10, 13)))
     }
 }

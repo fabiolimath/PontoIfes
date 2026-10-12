@@ -10,6 +10,9 @@ import java.time.Duration
  *
  * [pitAutomatico]: 0 = não, 1 = no 1º fechamento do dia (quem não faz almoço),
  * 2 = no 2º (quem fecha no almoço).
+ *
+ * [wifiAbrir]: abrir o ponto ao conectar na Wi-Fi [wifiRede], menos nas [wifiEspera] ("hh:mm")
+ * depois de fechar; [avisoBateria]: avisar ao salvar se a bateria do app não está em Sem restrições.
  */
 data class Preferencias(
     val notificacoes: Boolean = true,
@@ -18,9 +21,16 @@ data class Preferencias(
     val verificarAtualizacoes: Boolean = true,
     val observacaoPit: String = OBSERVACAO_PADRAO,
     val pitAutomatico: Int = 0,
+    val wifiAbrir: Boolean = false,
+    val wifiRede: String = GatilhoWifi.REDE_PADRAO,
+    val wifiEspera: String = "01:00",
+    val avisoBateria: Boolean = true,
 ) {
     /** O tempo do lembrete como [Duration], ou null se [lembreteTempo] for inválido. */
     val duracaoDoLembrete get() = tempoLembrete(lembreteTempo)
+
+    /** A espera da abertura automática depois de fechar; inválida vira o padrão (01:00). */
+    val duracaoDaEsperaWifi get() = tempoLembrete(wifiEspera) ?: GatilhoWifi.ESPERA_PADRAO
 
     fun salvar(arquivo: File) {
         val json = JSONObject()
@@ -30,6 +40,10 @@ data class Preferencias(
             .put("verificar_atualizacoes", verificarAtualizacoes)
             .put("observacao_pit", observacaoPit)
             .put("pit_automatico", pitAutomatico)
+            .put("wifi_abrir", wifiAbrir)
+            .put("wifi_rede", wifiRede)
+            .put("wifi_espera", wifiEspera)
+            .put("aviso_bateria", avisoBateria)
         arquivo.parentFile?.mkdirs()
         arquivo.writeText(json.toString())
     }
@@ -57,6 +71,12 @@ data class Preferencias(
                 verificarAtualizacoes = json.optBoolean("verificar_atualizacoes", padrao.verificarAtualizacoes),
                 observacaoPit = json.optString("observacao_pit", padrao.observacaoPit),
                 pitAutomatico = if (opcao in 0..2) opcao else 0,
+                wifiAbrir = json.optBoolean("wifi_abrir", padrao.wifiAbrir),
+                wifiRede = json.optString("wifi_rede", padrao.wifiRede).trim().ifEmpty { padrao.wifiRede },
+                wifiEspera = json.optString("wifi_espera", padrao.wifiEspera).let {
+                    if (tempoLembrete(it) != null) it else padrao.wifiEspera
+                },
+                avisoBateria = json.optBoolean("aviso_bateria", padrao.avisoBateria),
             )
         }
 
@@ -73,7 +93,10 @@ data class Preferencias(
             return if (total > MAXIMO_DO_LEMBRETE) "06:00" else texto
         }
 
-        /** "hh:mm" (ex.: "01:40", "6:00") como [Duration]; null se inválido, zero ou acima de 06:00. */
+        /**
+         * "hh:mm" (ex.: "01:40", "6:00") como [Duration]; null se inválido, zero ou acima de 06:00.
+         * Vale para o lembrete e para a espera da Wi-Fi depois de fechar.
+         */
         fun tempoLembrete(texto: String): Duration? {
             val partes = texto.trim().split(":")
             if (partes.size != 2) return null
