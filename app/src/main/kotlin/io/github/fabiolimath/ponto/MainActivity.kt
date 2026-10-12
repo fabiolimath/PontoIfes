@@ -70,6 +70,7 @@ class MainActivity : AppCompatActivity() {
         // Só na abertura (não ao girar a tela): sem credenciais, vai direto às Configurações; com
         // elas, pede a permissão de notificar (no Android 13+) se as notificações estão ligadas.
         if (savedInstanceState == null) {
+            Legado.apagarPython(this)
             val acao = acaoDoIntent()
             if (acao != null) {
                 // Aberto por um botão de notificação, atalho ou Tasker: executa já.

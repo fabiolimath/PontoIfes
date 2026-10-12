@@ -15,7 +15,15 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true" />
+
+        <!-- A entrada do launcher tem o nome da atividade da versão Python (Briefcase): o ícone na
+             tela inicial, os atalhos fixados, as notificações já mostradas e o Tasker/Rotinas que
+             apontam para org.beeware.android.MainActivity continuam valendo depois da atualização. -->
+        <activity-alias
+            android:name="org.beeware.android.MainActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -24,7 +32,7 @@
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
-        </activity>
+        </activity-alias>
 
         <activity
             android:name=".ConfiguracoesActivity"
@@ -42,7 +50,8 @@
             android:name=".LembreteReceiver"
             android:exported="false" />
 
-        <!-- Reagenda o lembrete pendente: o Android o perde ao reiniciar o celular e ao atualizar o app. -->
+        <!-- Reagenda o lembrete pendente (o Android o perde ao reiniciar o celular e ao atualizar o app)
+             e, na atualização, apaga os restos da versão Python. -->
         <receiver
             android:name=".InicioReceiver"
             android:exported="false">

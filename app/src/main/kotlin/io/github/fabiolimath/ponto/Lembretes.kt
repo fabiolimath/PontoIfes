@@ -68,11 +68,15 @@ object Lembretes {
     }
 }
 
-/** Reagenda o lembrete pendente depois de reiniciar o celular ou de atualizar o app. */
+/**
+ * Reagenda o lembrete pendente depois de reiniciar o celular ou de atualizar o app; na atualização,
+ * apaga também os restos da versão Python.
+ */
 class InicioReceiver : BroadcastReceiver() {
     override fun onReceive(contexto: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             Lembretes.reagendar(contexto)
         }
+        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Legado.apagarPython(contexto)
     }
 }

@@ -53,11 +53,24 @@ data class Preferencias(
             return Preferencias(
                 notificacoes = json.optBoolean("notificacoes", padrao.notificacoes),
                 lembreteFechar = json.optBoolean("lembrete_fechar", padrao.lembreteFechar),
-                lembreteTempo = json.optString("lembrete_tempo", padrao.lembreteTempo),
+                lembreteTempo = limitarTempo(json.optString("lembrete_tempo", padrao.lembreteTempo)),
                 verificarAtualizacoes = json.optBoolean("verificar_atualizacoes", padrao.verificarAtualizacoes),
                 observacaoPit = json.optString("observacao_pit", padrao.observacaoPit),
                 pitAutomatico = if (opcao in 0..2) opcao else 0,
             )
+        }
+
+        /**
+         * A versão Python aceitava até 23:59: um tempo salvo acima de [MAXIMO_DO_LEMBRETE] vira 06:00,
+         * em vez de deixar o lembrete parar de funcionar sem aviso. O resto fica como está.
+         */
+        private fun limitarTempo(texto: String): String {
+            val partes = texto.trim().split(":")
+            val horas = partes.getOrNull(0)?.toIntOrNull()
+            val minutos = partes.getOrNull(1)?.toIntOrNull()
+            if (partes.size != 2 || horas == null || minutos == null || minutos !in 0..59) return texto
+            val total = Duration.ofHours(horas.toLong()).plusMinutes(minutos.toLong())
+            return if (total > MAXIMO_DO_LEMBRETE) "06:00" else texto
         }
 
         /** "hh:mm" (ex.: "01:40", "6:00") como [Duration]; null se inválido, zero ou acima de 06:00. */

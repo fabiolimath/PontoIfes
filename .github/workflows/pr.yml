@@ -1,9 +1,7 @@
 # Em cada PR: roda os testes e, se passarem, gera o APK assinado com a chave do
 # app e o publica no pré-release "teste", sempre no mesmo endereço:
 #   https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk
-# Durante a migração para Kotlin, esse APK é o de teste: outro pacote
-# (io.github.fabiolimath.ponto.teste, "Ponto IFES (teste)"), que instala ao
-# lado do app oficial em vez de por cima (build type "migracao").
+# É o mesmo APK do release (mesmo pacote e chave): instala por cima do app.
 # O pré-release não conta como "latest": o site e o aviso de atualização do app
 # continuam apontando para o último release oficial.
 name: PR
@@ -98,9 +96,9 @@ jobs:
           PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
           PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          ./gradlew --no-daemon assembleMigracao
+          ./gradlew --no-daemon assembleRelease
           mkdir -p dist
-          cp app/build/outputs/apk/migracao/app-migracao.apk dist/ponto-ifes.apk
+          cp app/build/outputs/apk/release/app-release.apk dist/ponto-ifes.apk
           "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" \
             verify --print-certs dist/ponto-ifes.apk | grep -i 'SHA-256'
           ls -l dist/ponto-ifes.apk
@@ -118,6 +116,6 @@ jobs:
           gh release delete teste --cleanup-tag --yes || true
           gh release create teste dist/ponto-ifes.apk --prerelease --target "$COMMIT" \
             --title "Teste ${versao} (${origem})" \
-            --notes "APK de teste de ${origem}, commit ${COMMIT::7}. Não é uma versão oficial. Instala ao lado do app oficial, como \"Ponto IFES (teste)\"."
+            --notes "APK de teste de ${origem}, commit ${COMMIT::7}. Não é uma versão oficial. Instala por cima do app."
           url="https://github.com/${GITHUB_REPOSITORY}/releases/download/teste/ponto-ifes.apk"
           echo "APK de teste (${origem}): $url" >> "$GITHUB_STEP_SUMMARY"

@@ -39,6 +39,17 @@ class PreferenciasTest {
     }
 
     @Test
+    fun tempo_da_versao_python_acima_de_6h_vira_6h() {
+        val arquivo = arquivo()
+        arquivo.writeText("""{"lembrete_tempo": "08:30"}""")
+        assertEquals("06:00", Preferencias.carregar(arquivo).lembreteTempo)
+        arquivo.writeText("""{"lembrete_tempo": "06:00"}""")
+        assertEquals("06:00", Preferencias.carregar(arquivo).lembreteTempo)
+        arquivo.writeText("""{"lembrete_tempo": "1h40"}""")
+        assertEquals("1h40", Preferencias.carregar(arquivo).lembreteTempo)
+    }
+
+    @Test
     fun chaves_que_faltam_ficam_no_padrao() {
         val arquivo = arquivo()
         arquivo.writeText("""{"lembrete_tempo": "02:00"}""")

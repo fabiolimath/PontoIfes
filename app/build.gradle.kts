@@ -49,16 +49,6 @@ android {
             isMinifyEnabled = false
             signingConfig = signingConfigs.findByName("ponto")
         }
-        // APK de teste da migração: outro pacote, instala ao lado do app oficial,
-        // com o nome "Ponto IFES (teste)" e os ícones de icons/antigos
-        // (recursos em src/migracao/res, que sobrepõem os de src/main/res).
-        // O nome não pode ser "teste": o AGP recusa build types começados por "test".
-        create("migracao") {
-            initWith(getByName("release"))
-            applicationIdSuffix = ".teste"
-            versionNameSuffix = "-teste"
-            matchingFallbacks += "release"
-        }
         // Build local pelo adb: pacote próprio, para não esbarrar na assinatura
         // do app instalado.
         getByName("debug") {
