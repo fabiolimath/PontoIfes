@@ -13,6 +13,7 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
@@ -116,6 +117,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
             mostrarEstadoDaWifi()
         }
         wifiEstado.setOnClickListener { avisoDeLocalizacao() }
+        findViewById<MaterialButton>(R.id.wifi_rede_atual).setOnClickListener { definirRedeAtual() }
 
         pitAutomatico.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item,
@@ -206,6 +208,40 @@ class ConfiguracoesActivity : AppCompatActivity() {
         )
     }
 
+    // ---------------- rede atual ----------------
+
+    /** Se o botão "Definir rede atual como padrão" espera o pedido de localização terminar. */
+    private var redeAtualPendente = false
+
+    /** Sem a localização, pede "o tempo todo" (a mesma da abertura automática) e depois preenche. */
+    private fun definirRedeAtual() {
+        if (Wifi.leitura(this) == Wifi.Leitura.SEM_PERMISSAO) {
+            redeAtualPendente = true
+            avisoDeLocalizacao()
+        } else {
+            preencherRedeAtual()
+        }
+    }
+
+    /** Com o app aberto basta a localização precisa: o "tempo todo" é para o app fechado. */
+    private fun preencherRedeAtual() {
+        redeAtualPendente = false
+        when {
+            !Wifi.temLocalizacaoPrecisa(this) ->
+                erro("Rede atual", "Sem acesso à localização, o Android não mostra o nome da rede.")
+            !Wifi.localizacaoLigada(this) -> avisoDeLocalizacaoDesligada()
+            else -> {
+                val nome = Wifi.nomeDaRede(this)
+                if (nome == null) {
+                    erro("Rede atual", "O celular não está conectado a uma Wi-Fi.")
+                } else {
+                    wifiRede.setText(nome)
+                    Toast.makeText(this, "Rede \"$nome\". Toque em Salvar para guardar.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     // ---------------- localização (para ler o nome da rede) ----------------
 
     /**
@@ -225,7 +261,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
                         "campus, em silêncio."
                 )
                 .setPositiveButton("Permitir") { _, _ -> pedirLocalizacao() }
-                .setNegativeButton("Agora não", null)
+                .setNegativeButton("Agora não") { _, _ -> if (redeAtualPendente) preencherRedeAtual() }
                 .show()
         }
     }
@@ -266,13 +302,18 @@ class ConfiguracoesActivity : AppCompatActivity() {
                     this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), CODIGO_SEGUNDO_PLANO,
                 )
             }
-            .setNegativeButton("Agora não") { _, _ -> mostrarEstadoDaWifi() }
+            .setNegativeButton("Agora não") { _, _ ->
+                if (redeAtualPendente) preencherRedeAtual() else mostrarEstadoDaWifi()
+            }
             .show()
     }
 
     private fun depoisDaLocalizacao() {
         mostrarEstadoDaWifi()
-        if (Wifi.leitura(this) == Wifi.Leitura.LOCALIZACAO_DESLIGADA) avisoDeLocalizacaoDesligada()
+        when {
+            redeAtualPendente -> preencherRedeAtual()
+            Wifi.leitura(this) == Wifi.Leitura.LOCALIZACAO_DESLIGADA -> avisoDeLocalizacaoDesligada()
+        }
     }
 
     private fun abrirTela(intent: Intent) {

@@ -69,7 +69,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 9. **Abrir o ponto ao conectar na Wi-Fi** (2.1.0; plano em `planos/abrir-ponto-wifi.md` da pasta do
    projeto). Configurações: liga/desliga (`wifi_abrir`, padrão desligado), **Nome da rede** (`wifi_rede`,
-   padrão `ws_wlan`), espera depois de fechar (`wifi_espera`, hh:mm, padrão 01:00, de 00:01 a 06:00),
+   padrão `ws_wlan`; botão **Definir rede atual como padrão** preenche com a Wi-Fi conectada, pedindo a
+   localização "o tempo todo" se falta; com o app aberto basta a precisa), espera depois de fechar (`wifi_espera`, hh:mm, padrão 01:00, de 00:01 a 06:00),
    linha de estado (nome reconhecido ou não) e `aviso_bateria`.
    - Gatilho: `ConnectivityManager.registerNetworkCallback` com PendingIntent para o `RedeReceiver`
      (guardado pelo sistema, vale com o app fechado; o sistema chama na hora se já há Wi-Fi). Feito
