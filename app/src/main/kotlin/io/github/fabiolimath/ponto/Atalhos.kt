@@ -1,10 +1,12 @@
 package io.github.fabiolimath.ponto
 
 import android.content.Intent
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.github.fabiolimath.ponto.nucleo.Acao
 
@@ -23,7 +25,7 @@ object Atalhos {
         Acao.REGISTRAR_PIT -> R.drawable.atalho_pit
     }
 
-    /** A lista das três ações; tocar numa pede ao launcher para fixar o seu atalho. */
+    /** Um botão por ação; tocar num pede ao launcher para fixar o seu atalho. */
     fun escolher(tela: AppCompatActivity) {
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(tela)) {
             MaterialAlertDialogBuilder(tela)
@@ -33,12 +35,30 @@ object Atalhos {
                 .show()
             return
         }
-        val acoes = Acao.entries
-        MaterialAlertDialogBuilder(tela)
+        // Um botão verde por ação (uma lista de itens parecia só texto).
+        val margem = (24 * tela.resources.displayMetrics.density).toInt()
+        val botoes = LinearLayout(tela).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(margem, margem / 2, margem, 0)
+        }
+        val dialogo = MaterialAlertDialogBuilder(tela)
             .setTitle(R.string.atalho_adicionar)
-            .setItems(acoes.map { it.rotulo }.toTypedArray()) { _, i -> fixar(tela, acoes[i]) }
+            .setView(botoes)
             .setNegativeButton(R.string.cancelar, null)
-            .show()
+            .create()
+        for (acao in Acao.entries) {
+            botoes.addView(
+                MaterialButton(tela).apply {
+                    text = acao.rotulo
+                    setOnClickListener {
+                        dialogo.dismiss()
+                        fixar(tela, acao)
+                    }
+                },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT),
+            )
+        }
+        dialogo.show()
     }
 
     private fun fixar(tela: AppCompatActivity, acao: Acao) {
