@@ -120,6 +120,17 @@ class ConfiguracoesActivity : AppCompatActivity() {
             mostrarEstadoDaWifi()
         }
         wifiEstado.setOnClickListener { avisoDeLocalizacao() }
+        // Ao ligar o lembrete com o fechamento automático escolhido: confirma; "Não" deixa desligado.
+        lembreteFechar.setOnClickListener {
+            if (lembreteFechar.isChecked && fecharModo.selectedItemPosition != Preferencias.FECHAR_NAO) {
+                MaterialAlertDialogBuilder(this)
+                    .setMessage("O ponto está programado para fechar automaticamente. Habilitar o lembrete mesmo assim?")
+                    .setPositiveButton("Sim", null)
+                    .setNegativeButton("Não") { _, _ -> lembreteFechar.isChecked = false }
+                    .setOnCancelListener { lembreteFechar.isChecked = false }
+                    .show()
+            }
+        }
         findViewById<MaterialButton>(R.id.wifi_rede_atual).setOnClickListener { definirRedeAtual() }
 
         lembreteTempo.addTextChangedListener(MascaraDeTexto(lembreteTempo, Mascara::formatarHora))

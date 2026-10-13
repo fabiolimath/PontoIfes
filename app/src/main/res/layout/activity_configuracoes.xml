@@ -197,61 +197,9 @@
             style="@style/Ponto.Secao"
             android:text="@string/fechar_ponto" />
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/lembrete_fechar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/lembrar_fechar"
-            android:textSize="16sp" />
-
-        <TextView
-            style="@style/Ponto.Explicacao"
-            android:text="@string/lembrar_fechar_expl" />
-
-        <LinearLayout
-            android:id="@+id/lembrete_detalhes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:minHeight="56dp"
-            android:orientation="horizontal"
-            android:paddingTop="4dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/avisar_depois"
-                    android:textSize="16sp" />
-
-                <TextView
-                    style="@style/Ponto.Explicacao"
-                    android:text="@string/avisar_depois_expl" />
-            </LinearLayout>
-
-            <EditText
-                android:id="@+id/lembrete_tempo"
-                android:layout_width="88dp"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:hint="@string/hora_dica"
-                android:importantForAutofill="no"
-                android:inputType="time"
-                android:minHeight="48dp" />
-        </LinearLayout>
-
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:text="@string/fechar_automatico"
             android:textSize="16sp" />
 
@@ -332,6 +280,57 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/horarios_de_cada_dia" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/lembrete_fechar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="48dp"
+            android:text="@string/lembrar_fechar"
+            android:textSize="16sp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/lembrar_fechar_expl" />
+
+        <LinearLayout
+            android:id="@+id/lembrete_detalhes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal"
+            android:paddingTop="4dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/avisar_depois"
+                    android:textSize="16sp" />
+
+                <TextView
+                    style="@style/Ponto.Explicacao"
+                    android:text="@string/avisar_depois_expl" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/lembrete_tempo"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
 
         <View style="@style/Ponto.Divisoria" />
 
