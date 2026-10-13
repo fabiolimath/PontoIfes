@@ -15,6 +15,7 @@ import io.github.fabiolimath.ponto.nucleo.Fechamentos
 import io.github.fabiolimath.ponto.nucleo.GatilhoWifi
 import io.github.fabiolimath.ponto.nucleo.Mascara
 import io.github.fabiolimath.ponto.nucleo.Notificacoes
+import io.github.fabiolimath.ponto.nucleo.PitAutomatico
 import io.github.fabiolimath.ponto.sigrh.Cancelamento
 import io.github.fabiolimath.ponto.sigrh.Resultado
 import io.github.fabiolimath.ponto.sigrh.codigo
@@ -65,24 +66,21 @@ object Execucao {
     /** O PIT de outra data deu certo: a tela limpa o campo da data e zera isto. */
     var pitDeOutraDataFeito = false
 
-    /**
-     * Executa [acao]. [encadeado]: o PIT automático logo depois de fechar o ponto, sempre do dia e
-     * sem apagar a saída do fechamento.
-     */
-    fun iniciar(contexto: Context, acao: Acao, dia: LocalDate?, credenciais: Credenciais, encadeado: Boolean = false) {
+    /** Executa [acao] (pelo botão, atalho ou notificação). */
+    fun iniciar(contexto: Context, acao: Acao, dia: LocalDate?, credenciais: Credenciais) {
         if (rodando) return
         val app = contexto.applicationContext
         val observacao = Dados.preferencias(app).observacaoPit
         // Some a notificação de sucesso anterior (a do resultado novo aparece de novo, em vez de
         // substituir em silêncio a que ainda estava na tela); a de falha fica, com o registro do erro.
-        for (ident in Notificacoes.apagarAntes(acao, encadeado)) {
+        for (ident in Notificacoes.apagarAntes(acao)) {
             try {
                 Notificador.cancelar(app, ident)
             } catch (e: Exception) {
                 Log.w(TAG, "Erro ao apagar a notificação", e)
             }
         }
-        val pedido = comecar(acao.rotulo + (dia?.let { " (${Mascara.escreverData(it)})" } ?: ""), encadeado)
+        val pedido = comecar(acao.rotulo + comData(dia))
         val inicioDaSaida = saida.length
 
         escopo.launch {
@@ -100,19 +98,22 @@ object Execucao {
                 saida += "Erro inesperado: ${e.message ?: e}\n"
                 null
             }
-            terminar(app, acao, dia, resultado, credenciais, inicioDaSaida)
+            terminar(app, acao, dia, resultado, inicioDaSaida)
         }
     }
 
+    /** " (09/10/2026)" no rótulo do PIT de outra data. */
+    private fun comData(dia: LocalDate?) = dia?.let { " (${Mascara.escreverData(it)})" } ?: ""
+
     /** Marca o começo de uma execução com o [rotulo] na tela e devolve o seu Cancelar. */
-    private fun comecar(rotulo: String, encadeado: Boolean = false): Cancelamento {
+    private fun comecar(rotulo: String): Cancelamento {
         val pedido = Cancelamento()
         cancelamento = pedido
         rodando = true
         cancelando = false
         this.rotulo = rotulo
         inicio = SystemClock.elapsedRealtime()
-        saida = if (encadeado) "$saida\n" else ""
+        saida = ""
         status = "Executando: $rotulo…"
         avisar()
         return pedido
@@ -132,45 +133,39 @@ object Execucao {
         avisar()
     }
 
-    private fun terminar(
-        app: Context, acao: Acao, dia: LocalDate?, resultado: Resultado?,
-        credenciais: Credenciais, inicioDaSaida: Int,
-    ) {
+    private fun terminar(app: Context, acao: Acao, dia: LocalDate?, resultado: Resultado?, inicioDaSaida: Int) {
         val codigo = resultado?.codigo ?: 1
         status = statusFinal(codigo)
-        var pitEmSeguida = false
-        // Cancelado pelo usuário: sem notificação, lembrete nem PIT em seguida.
+        // Cancelado pelo usuário: sem notificação nem lembrete.
         if (codigo != 130) {
             try {
-                pitEmSeguida = depoisDeExecutar(app, acao, dia, codigo, saida.substring(inicioDaSaida))
+                depoisDeExecutar(app, acao, dia, codigo, saida.substring(inicioDaSaida))
             } catch (e: Exception) {
                 Log.w(TAG, "Erro depois da execução", e)
             }
+            if (codigo == 0 && acao == Acao.REGISTRAR_PIT && dia != null) pitDeOutraDataFeito = true
         }
         parar()
-        if (pitEmSeguida) iniciar(app, Acao.REGISTRAR_PIT, null, credenciais, encadeado = true)
     }
 
     /**
-     * Notificação, lembrete e contagem de fechamentos. Devolve true se é a hora do PIT automático.
-     * Cada passo falha sozinho (sem permissão de notificar, por exemplo), sem atrapalhar os outros.
+     * Notificação, lembrete e contagem de fechamentos. Cada passo falha sozinho (sem permissão de
+     * notificar, por exemplo), sem atrapalhar os outros.
      */
-    private fun depoisDeExecutar(app: Context, acao: Acao, dia: LocalDate?, codigo: Int, saidaDaAcao: String): Boolean {
+    private fun depoisDeExecutar(app: Context, acao: Acao, dia: LocalDate?, codigo: Int, saidaDaAcao: String) {
         val preferencias = Dados.preferencias(app)
         passo("mostrar a notificação") {
             Notificacoes.aviso(acao, status, saidaDaAcao, codigo, dia, preferencias)?.let { Notificador.mostrar(app, it) }
         }
-        if (codigo != 0) return false
+        if (codigo != 0) return
         if (acao == Acao.ABRIR_PONTO) {
             val agora = LocalDateTime.now()
             passo("anotar a abertura") { GatilhoWifi.registrarAbertura(Dados.arquivo(app, "ultima_abertura.txt"), agora) }
             passo("agendar o lembrete") { Lembretes.agendarAposAbrir(app, agora) }
         }
-        if (acao == Acao.REGISTRAR_PIT && dia != null) pitDeOutraDataFeito = true
-        if (acao != Acao.FECHAR_PONTO) return false
-        val vezes = Fechamentos.registrar(Dados.arquivo(app, "ultimo_fechamento.txt"))
+        if (acao != Acao.FECHAR_PONTO) return
+        Fechamentos.registrar(Dados.arquivo(app, "ultimo_fechamento.txt"))
         passo("cancelar o lembrete") { Lembretes.cancelar(app) }
-        return Notificacoes.pitAutomaticoAgora(preferencias, vezes)
     }
 
     /**
@@ -182,7 +177,7 @@ object Execucao {
         withContext(Dispatchers.Main) {
             if (rodando) return@withContext false
             val app = contexto.applicationContext
-            for (ident in Notificacoes.apagarAntes(Acao.ABRIR_PONTO, false)) passo("apagar a notificação") {
+            for (ident in Notificacoes.apagarAntes(Acao.ABRIR_PONTO)) passo("apagar a notificação") {
                 Notificador.cancelar(app, ident)
             }
             val pedido = comecar(AberturaAutomatica.ROTULO)
@@ -236,8 +231,8 @@ object Execucao {
     /**
      * O fechamento automático nos horários das Configurações, chamado pelo [FecharAutomaticoWorker]:
      * na tela, aparece como uma execução manual, com o Cancelar. Quem diz se o ponto está aberto é
-     * o SIGRH; sem entrada aberta, fica só no log. Fechado, segue como o botão: notificação,
-     * lembrete cancelado e PIT automático (aqui mesmo, para o trabalho não terminar antes dele).
+     * o SIGRH; sem entrada aberta, fica só no log. Fechado, segue como o botão: notificação e
+     * lembrete cancelado.
      * Devolve false, sem executar, se outra ação está rodando.
      * [pontoAbertoNoApp]: o app sabe que o ponto está aberto (para notificar uma falha).
      */
@@ -248,12 +243,11 @@ object Execucao {
             val resultado = rodarAutomatico(app, Acao.FECHAR_PONTO, comecar(FechamentoAutomatico.ROTULO), credenciais)
             val codigo = resultado?.codigo ?: 1
             status = statusFinal(codigo)
-            var pitEmSeguida = false
             when (FechamentoAutomatico.desfecho(resultado, pontoAbertoNoApp)) {
                 DesfechoDoFechamento.FECHADO -> passo("concluir o fechamento automático") {
                     // A notificação nova aparece de novo, em vez de substituir em silêncio a anterior.
                     Notificador.cancelar(app, Notificacoes.ident(Acao.FECHAR_PONTO))
-                    pitEmSeguida = depoisDeExecutar(app, Acao.FECHAR_PONTO, null, codigo, saida)
+                    depoisDeExecutar(app, Acao.FECHAR_PONTO, null, codigo, saida)
                 }
                 DesfechoDoFechamento.NOTIFICAR_FALHA -> passo("mostrar a notificação") {
                     Notificacoes.aviso(Acao.FECHAR_PONTO, status, saida, codigo, null, Dados.preferencias(app))
@@ -262,34 +256,49 @@ object Execucao {
                 DesfechoDoFechamento.SILENCIO -> Unit
             }
             parar()
-            if (pitEmSeguida) {
-                val inicioDaSaida = saida.length
-                val pedido = comecar(Acao.REGISTRAR_PIT.rotulo, encadeado = true)
-                val pit = rodarAutomatico(app, Acao.REGISTRAR_PIT, pedido, credenciais, Dados.preferencias(app).observacaoPit)
-                val codigoDoPit = pit?.codigo ?: 1
-                status = statusFinal(codigoDoPit)
-                if (codigoDoPit != 130) passo("concluir o PIT") {
-                    depoisDeExecutar(app, Acao.REGISTRAR_PIT, null, codigoDoPit, saida.substring(inicioDaSaida))
-                }
-                parar()
+            true
+        }
+
+    /**
+     * O PIT automático no horário das Configurações, chamado pelo [PitAutomaticoWorker]: na tela,
+     * aparece como uma execução manual, com o Cancelar, e notifica como o botão. [dia]: null para o
+     * PIT do dia. Devolve false, sem executar, se outra ação está rodando.
+     */
+    suspend fun pitAutomatico(contexto: Context, credenciais: Credenciais, dia: LocalDate?): Boolean =
+        withContext(Dispatchers.Main) {
+            if (rodando) return@withContext false
+            val app = contexto.applicationContext
+            for (ident in Notificacoes.apagarAntes(Acao.REGISTRAR_PIT)) passo("apagar a notificação") {
+                Notificador.cancelar(app, ident)
             }
+            val pedido = comecar(PitAutomatico.ROTULO + comData(dia))
+            val observacao = Dados.preferencias(app).observacaoPit
+            val resultado = rodarAutomatico(app, Acao.REGISTRAR_PIT, pedido, credenciais, observacao, dia)
+            val codigo = resultado?.codigo ?: 1
+            status = statusFinal(codigo)
+            // Na falha, o Tentar de novo leva a data: tocado no dia seguinte, ainda registra este dia.
+            if (codigo != 130) passo("concluir o PIT automático") {
+                depoisDeExecutar(app, Acao.REGISTRAR_PIT, dia ?: LocalDate.now(), codigo, saida)
+            }
+            parar()
             true
         }
 
     /**
      * Roda [acao] dentro de um trabalho automático, já marcado na tela por [comecar] ([pedido] é o
      * seu Cancelar). Devolve null num erro inesperado. Se o sistema parar o trabalho, a tela volta ao normal.
-     * O fechamento leva "(automático)" no log; o PIT em seguida, não.
+     * Leva "(automático)" no log.
      */
     private suspend fun rodarAutomatico(
-        app: Context, acao: Acao, pedido: Cancelamento, credenciais: Credenciais, observacao: String = "",
+        app: Context, acao: Acao, pedido: Cancelamento, credenciais: Credenciais,
+        observacao: String = "", dia: LocalDate? = null,
     ): Resultado? = try {
         withContext(Dispatchers.Default) {
             Executor(Dados.registro(app)).executar(
-                acao, credenciais.usuario, credenciais.senha, observacao = observacao,
+                acao, credenciais.usuario, credenciais.senha, dia, observacao,
                 aoEscrever = { texto -> principal.post { saida += texto; avisar() } },
                 cancelamento = pedido,
-                automatico = acao == Acao.FECHAR_PONTO,
+                automatico = true,
             )
         }
     } catch (e: CancellationException) {

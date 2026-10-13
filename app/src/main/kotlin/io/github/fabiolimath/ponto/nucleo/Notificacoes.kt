@@ -34,13 +34,11 @@ object Notificacoes {
     fun diaUtil(dia: LocalDate) = dia.dayOfWeek !in setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 
     /**
-     * As notificações de sucesso a apagar antes de executar [acao]: a da própria ação e, no PIT pelo
-     * botão, a do fechamento (que tem o botão "Registrar PIT"). O PIT automático ([encadeado]) mantém
-     * a do fechamento. A de falha fica, para não sumir o registro do erro.
+     * As notificações de sucesso a apagar antes de executar [acao]: a da própria ação e, no PIT, a do
+     * fechamento (que tem o botão "Registrar PIT"). A de falha fica, para não sumir o registro do erro.
      */
-    fun apagarAntes(acao: Acao, encadeado: Boolean): List<Int> =
-        listOf(ident(acao)) +
-            if (acao == Acao.REGISTRAR_PIT && !encadeado) listOf(ident(Acao.FECHAR_PONTO)) else emptyList()
+    fun apagarAntes(acao: Acao): List<Int> =
+        listOf(ident(acao)) + if (acao == Acao.REGISTRAR_PIT) listOf(ident(Acao.FECHAR_PONTO)) else emptyList()
 
     /**
      * A notificação do resultado de [acao], ou null se as notificações estão desligadas.
@@ -66,15 +64,11 @@ object Notificacoes {
                 "Tentar de novo", acao,
                 if (acao == Acao.REGISTRAR_PIT && dia != null) Mascara.escreverData(dia) else null,
             )
-            acao == Acao.FECHAR_PONTO && diaUtil(hoje) && preferencias.pitAutomatico == 0 ->
+            acao == Acao.FECHAR_PONTO && diaUtil(hoje) && !preferencias.pitAutomatico ->
                 BotaoDeAviso(Acao.REGISTRAR_PIT.rotulo, Acao.REGISTRAR_PIT)
             else -> null
         }
         val texto = Executor.mensagemFinal(saida).ifEmpty { titulo }
         return Aviso(titulo, texto, if (codigo != 0) identDeFalha(agoraMs) else ident(acao), botao)
     }
-
-    /** Se o fechamento nº [vezes] do dia é o que registra o PIT sozinho (segunda a sexta). */
-    fun pitAutomaticoAgora(preferencias: Preferencias, vezes: Int, hoje: LocalDate = LocalDate.now()) =
-        preferencias.pitAutomatico in 1..2 && vezes == preferencias.pitAutomatico && diaUtil(hoje)
 }

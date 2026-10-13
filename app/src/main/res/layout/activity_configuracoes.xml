@@ -353,22 +353,46 @@
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/pit_automatico"
-            android:textSize="16sp" />
-
-        <Spinner
+        <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/pit_automatico"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="48dp" />
+            android:layout_marginTop="12dp"
+            android:minHeight="48dp"
+            android:text="@string/pit_automatico"
+            android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/explicacao_pit"
-            style="@style/Ponto.Explicacao" />
+            style="@style/Ponto.Explicacao"
+            android:text="@string/pit_automatico_expl" />
+
+        <LinearLayout
+            android:id="@+id/pit_detalhes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal"
+            android:paddingTop="4dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/pit_horario"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/pit_horario"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
 
         <View style="@style/Ponto.Divisoria" />
 

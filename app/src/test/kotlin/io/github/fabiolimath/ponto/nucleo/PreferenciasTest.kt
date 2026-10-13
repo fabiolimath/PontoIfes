@@ -17,12 +17,14 @@ class PreferenciasTest {
         assertEquals(
             Preferencias(
                 notificacoes = true, lembreteFechar = true, lembreteTempo = "01:00",
-                verificarAtualizacoes = true, observacaoPit = "Conforme PIT docente.", pitAutomatico = 0,
+                verificarAtualizacoes = true, observacaoPit = "Conforme PIT docente.", pitAutomatico = false,
             ),
             Preferencias.carregar(arquivo),
         )
-        padrao.copy(verificarAtualizacoes = false, pitAutomatico = 2).salvar(arquivo)
-        assertEquals(padrao.copy(verificarAtualizacoes = false, pitAutomatico = 2), Preferencias.carregar(arquivo))
+        assertEquals("18:30", padrao.pitHorario)
+        val novas = padrao.copy(verificarAtualizacoes = false, pitAutomatico = true, pitHorario = "8:30")
+        novas.salvar(arquivo)
+        assertEquals(novas, Preferencias.carregar(arquivo))
     }
 
     @Test
@@ -33,7 +35,7 @@ class PreferenciasTest {
                "verificar_atualizacoes": false, "observacao_pit": "Outra obs.", "pit_automatico": 1}"""
         )
         assertEquals(
-            Preferencias(false, true, "01:40", false, "Outra obs.", 1),
+            Preferencias(false, true, "01:40", false, "Outra obs.", true),
             Preferencias.carregar(arquivo),
         )
     }
@@ -120,7 +122,22 @@ class PreferenciasTest {
         arquivo.writeText("lixo")
         assertEquals(Preferencias(), Preferencias.carregar(arquivo))
         arquivo.writeText("""{"pit_automatico": 7}""")
-        assertEquals(0, Preferencias.carregar(arquivo).pitAutomatico)
+        assertEquals(false, Preferencias.carregar(arquivo).pitAutomatico)
+        arquivo.writeText("""{"pit_diario": true, "pit_horario": "25:00"}""")
+        assertEquals(Preferencias(pitAutomatico = true), Preferencias.carregar(arquivo))
+    }
+
+    @Test
+    fun pit_automatico_apos_fechar_da_2_2_vira_o_do_horario() {
+        val arquivo = arquivo()
+        for ((antigo, ligado) in listOf(0 to false, 1 to true, 2 to true)) {
+            arquivo.writeText("""{"pit_automatico": $antigo}""")
+            assertEquals(Preferencias(pitAutomatico = ligado), Preferencias.carregar(arquivo))
+        }
+        // Gravado de novo, a chave antiga sai e a nova vale.
+        Preferencias(pitAutomatico = false).salvar(arquivo)
+        assertEquals(false, Preferencias.carregar(arquivo).pitAutomatico)
+        assertEquals(false, arquivo.readText().contains("\"pit_automatico\""))
     }
 
     @Test
