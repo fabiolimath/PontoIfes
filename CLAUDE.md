@@ -48,7 +48,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    sucesso cancela. Abrir de novo não adia um lembrete pendente (`lembrete.txt`). O `InicioReceiver`
    reagenda o pendente ao reiniciar o celular e ao atualizar o app (se a hora já passou, esquece).
 5. **Configurações** (`configuracoes.json`), em seções (2.1.0), nesta ordem: Notificações;
-   Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (lembrete, fechamento automático); Registrar PIT (Observação, PIT
+   Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (fechamento automático, lembrete; ligar o lembrete com o fechamento automático escolhido pede confirmação); Registrar PIT (Observação, PIT
    automático e o seu horário); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
    explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; o horário do
    PIT automático, com ele ligado; os do fechamento automático, conforme a opção escolhida.
