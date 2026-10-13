@@ -70,8 +70,8 @@ object Lembretes {
 }
 
 /**
- * Reagenda o lembrete pendente e o fechamento automático e refaz o gatilho da Wi-Fi depois de
- * reiniciar o celular ou de atualizar o app (o Android perde os três); na atualização, apaga também
+ * Reagenda o lembrete pendente, o fechamento e o PIT automáticos e refaz o gatilho da Wi-Fi depois de
+ * reiniciar o celular ou de atualizar o app (o Android perde todos); na atualização, apaga também
  * os restos da versão Python.
  */
 class InicioReceiver : BroadcastReceiver() {
@@ -82,6 +82,11 @@ class InicioReceiver : BroadcastReceiver() {
                 FecharAutomatico.agendar(contexto)
             } catch (e: Exception) {
                 android.util.Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
+            }
+            try {
+                RegistrarPitAutomatico.agendar(contexto)
+            } catch (e: Exception) {
+                android.util.Log.w("Ponto", "Erro ao agendar o PIT automático", e)
             }
             try {
                 Wifi.registrar(contexto, forcar = true)

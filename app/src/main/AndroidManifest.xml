@@ -97,7 +97,12 @@
             android:name=".FecharAutomaticoReceiver"
             android:exported="false" />
 
-        <!-- O serviço do WorkManager que roda a abertura e o fechamento automáticos em primeiro
+        <!-- O alarme do horário do PIT automático (RegistrarPitAutomatico.agendar). -->
+        <receiver
+            android:name=".PitAutomaticoReceiver"
+            android:exported="false" />
+
+        <!-- O serviço do WorkManager que roda a abertura, o fechamento e o PIT automáticos em primeiro
              plano no Android 11 ou anterior; o tipo é exigido a partir do Android 14. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

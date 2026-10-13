@@ -9,8 +9,9 @@ import java.time.Duration
 /**
  * As preferências do app (`configuracoes.json`, o mesmo formato da versão Python).
  *
- * [pitAutomatico]: 0 = não, 1 = no 1º fechamento do dia (quem não faz almoço),
- * 2 = no 2º (quem fecha no almoço).
+ * [pitAutomatico]: registrar o PIT do dia sozinho, de segunda a sexta, no [pitHorario] ("hh:mm",
+ * padrão 18:30, depois do 2º fechamento automático padrão), com ou sem ponto no dia. Até a 2.2.x a opção era um número (`pit_automatico`: 1 ou 2,
+ * no 1º ou no 2º fechamento do dia), que vira ligada no horário padrão.
  *
  * [wifiAbrir]: abrir o ponto ao conectar na Wi-Fi [wifiRede], menos nas [wifiEspera] ("hh:mm")
  * depois de fechar; [avisoBateria]: avisar ao salvar se a bateria do app não está em Sem restrições.
@@ -25,7 +26,7 @@ data class Preferencias(
     val lembreteTempo: String = "01:00",
     val verificarAtualizacoes: Boolean = true,
     val observacaoPit: String = OBSERVACAO_PADRAO,
-    val pitAutomatico: Int = 0,
+    val pitAutomatico: Boolean = false,
     val wifiAbrir: Boolean = false,
     val wifiRede: String = GatilhoWifi.REDE_PADRAO,
     val wifiEspera: String = "01:00",
@@ -34,6 +35,7 @@ data class Preferencias(
     val fecharHorario1: String = "12:00",
     val fecharHorario2: String = "18:00",
     val fecharDias: List<List<String>> = DIAS_PADRAO,
+    val pitHorario: String = PIT_HORARIO_PADRAO,
 ) {
     /** Se o fechamento automático está ligado (horários fixos ou avançado). */
     val fecharAutomatico get() = fecharModo != FECHAR_NAO
@@ -51,7 +53,8 @@ data class Preferencias(
             .put("lembrete_tempo", lembreteTempo)
             .put("verificar_atualizacoes", verificarAtualizacoes)
             .put("observacao_pit", observacaoPit)
-            .put("pit_automatico", pitAutomatico)
+            .put("pit_diario", pitAutomatico)
+            .put("pit_horario", pitHorario)
             .put("wifi_abrir", wifiAbrir)
             .put("wifi_rede", wifiRede)
             .put("wifi_espera", wifiEspera)
@@ -79,14 +82,13 @@ data class Preferencias(
             } catch (e: JSONException) {
                 return padrao
             }
-            val opcao = json.optInt("pit_automatico", 0)
             return Preferencias(
                 notificacoes = json.optBoolean("notificacoes", padrao.notificacoes),
                 lembreteFechar = json.optBoolean("lembrete_fechar", padrao.lembreteFechar),
                 lembreteTempo = limitarTempo(json.optString("lembrete_tempo", padrao.lembreteTempo)),
                 verificarAtualizacoes = json.optBoolean("verificar_atualizacoes", padrao.verificarAtualizacoes),
                 observacaoPit = json.optString("observacao_pit", padrao.observacaoPit),
-                pitAutomatico = if (opcao in 0..2) opcao else 0,
+                pitAutomatico = pitAutomatico(json),
                 wifiAbrir = json.optBoolean("wifi_abrir", padrao.wifiAbrir),
                 wifiRede = json.optString("wifi_rede", padrao.wifiRede).trim().ifEmpty { padrao.wifiRede },
                 wifiEspera = json.optString("wifi_espera", padrao.wifiEspera).let {
@@ -97,8 +99,16 @@ data class Preferencias(
                 fecharHorario1 = horario(json.optString("fechar_horario1", padrao.fecharHorario1)),
                 fecharHorario2 = horario(json.optString("fechar_horario2", padrao.fecharHorario2)),
                 fecharDias = dias(json.optJSONArray("fechar_dias")),
+                pitHorario = horario(json.optString("pit_horario", padrao.pitHorario)).ifEmpty { padrao.pitHorario },
             )
         }
+
+        const val PIT_HORARIO_PADRAO = "18:30"
+
+        /** O PIT automático; o antigo (`pit_automatico`, 1 ou 2, após fechar o ponto) vira ligado. */
+        private fun pitAutomatico(json: JSONObject): Boolean =
+            if (json.has("pit_diario")) json.optBoolean("pit_diario", false)
+            else json.optInt("pit_automatico", 0) in 1..2
 
         const val FECHAR_NAO = 0
         const val FECHAR_FIXOS = 1

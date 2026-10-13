@@ -9,7 +9,7 @@ import java.time.LocalTime
 
 /** O que fazer depois de um fechamento automático. */
 enum class DesfechoDoFechamento {
-    /** Fechou: segue como o botão (notificação, lembrete cancelado, PIT automático). */
+    /** Fechou: segue como o botão (notificação, lembrete cancelado). */
     FECHADO,
 
     /** Notifica a falha, com Tentar de novo. */

@@ -39,9 +39,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    `acao` e, no PIT, `data`, com NEW_TASK|CLEAR_TASK). A notificação de falha fica na tela mesmo
    depois de um sucesso da mesma ação (idents próprios). Ao fechar o ponto com sucesso (seg a sex),
    botão **Registrar PIT** do dia; o PIT apaga essa notificação.
-   - **PIT automático** (Configurações: Não / No 1º / No 2º fechamento do dia): após o fechamento
-     nº N do dia (seg a sex), registra o PIT do dia em seguida; aí a notificação não tem o botão.
-     Os fechamentos do dia ficam em `ultimo_fechamento.txt` ("aaaa-mm-dd N").
+   - **PIT automático** (2.3.0, item 11): com ele ligado, a notificação do fechamento não tem o
+     botão. Os fechamentos do dia ficam em `ultimo_fechamento.txt` ("aaaa-mm-dd N").
 4. **Lembrete de fechar o ponto**: ao abrir o ponto com sucesso, agenda pelo AlarmManager
    (`setAndAllowWhileIdle`, funciona com o app fechado; pode atrasar minutos no Doze) uma
    notificação para o tempo configurado depois (padrão 01:00, de 00:01 a 06:00, editável nas
@@ -50,9 +49,9 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    reagenda o pendente ao reiniciar o celular e ao atualizar o app (se a hora já passou, esquece).
 5. **Configurações** (`configuracoes.json`), em seções (2.1.0), nesta ordem: Notificações;
    Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (lembrete, fechamento automático); Registrar PIT (Observação, PIT
-   automático); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
-   explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do
-   fechamento automático, conforme a opção escolhida.
+   automático e o seu horário); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
+   explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; o horário do
+   PIT automático, com ele ligado; os do fechamento automático, conforme a opção escolhida.
    **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, aviso de que não é app oficial do
    IFES, botão para o site).
@@ -110,9 +109,24 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
       `Execucao.fecharAutomatico`: "Fechar ponto (automático)" na tela e no log; mais de 30 min
       depois do horário (o sistema refez o trabalho), não fecha.
     - Quem diz se está aberto é o SIGRH (`nucleo/FechamentoAutomatico.desfecho`): fechou segue como
-      o botão (notificação, lembrete cancelado, PIT automático em seguida no mesmo trabalho); sem
+      o botão (notificação, lembrete cancelado); sem
       entrada aberta ou cancelado, só o log; envio incerto notifica; outra falha notifica só se o app
       sabe que o ponto está aberto (`ultima_abertura.txt` de hoje depois do último fechamento).
+    - O aviso de bateria ao salvar vale também para esta opção.
+
+11. **Registrar o PIT automaticamente** (2.3.0) todo dia, de segunda a sexta, num horário, também
+    nos dias sem ponto (trabalho remoto). Substituiu o PIT logo após o 1º ou 2º fechamento do dia
+    (até a 2.2.x, `pit_automatico` 1 ou 2, que agora vira ligado no horário padrão).
+    Configurações: interruptor (`pit_diario`, padrão desligado) e **Horário** (`pit_horario`, hh:mm,
+    padrão 18:30, depois do 2º fechamento automático padrão; o SIGRH pede o ponto do dia fechado).
+    Com o fechamento automático ligado, o Salvar recusa um horário do PIT que não venha depois de
+    todos os horários dele (`PitAutomatico.fechamentoDepoisDoPit`; no Avançado, o maior da semana).
+    - Alarme (`RegistrarPitAutomatico.agendar`, `nucleo/PitAutomatico.proximo`): como o do
+      fechamento automático (exato, agendado nos mesmos momentos), com o `PitAutomaticoReceiver`.
+    - Execução: `PitAutomaticoWorker` (WorkManager expedito) chama `Execucao.pitAutomatico`:
+      "Registrar PIT (automático)" na tela e no log; com outra ação em andamento, `Result.retry()`.
+      Notifica como o botão; o Tentar de novo da falha leva a data do dia. Se o sistema só roda o
+      trabalho num dia seguinte, registra o PIT do dia previsto.
     - O aviso de bateria ao salvar vale também para esta opção.
 
 ## Estrutura
@@ -131,13 +145,14 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   `Credenciais`, `Preferencias` (`configuracoes.json`), `Mascara`, `Fechamentos`, `Lembrete`,
   `Notificacoes` (idents: sucesso 1 a 3, lembrete 4, abertura automática em andamento 5, falha
   1000+ pelo relógio; textos e botões), `Atualizacao`, `GatilhoWifi`, `AberturaAutomatica`,
-  `FechamentoAutomatico`.
+  `FechamentoAutomatico`, `PitAutomatico`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/` — Android: `MainActivity`, `LogActivity`,
   `ConfiguracoesActivity` (Views, não PreferenceFragment, porque os valores ficam no JSON),
-  `Execucao` (estado da ação em andamento, notificação, lembrete, PIT automático), `Notificador`,
+  `Execucao` (estado da ação em andamento, notificação, lembrete, ações automáticas), `Notificador`,
   `Lembretes.kt` (`Lembretes`, `LembreteReceiver`, `InicioReceiver`), `AbrirAutomatico.kt` (`Wifi`,
   `RedeReceiver`, `AbrirAutomaticoWorker`), `FecharAutomatico.kt` (`FecharAutomatico`,
-  `FecharAutomaticoReceiver`, `FecharAutomaticoWorker`), `HorariosActivity` (horários de cada
+  `FecharAutomaticoReceiver`, `FecharAutomaticoWorker`), `RegistrarPitAutomatico.kt`
+  (`RegistrarPitAutomatico`, `PitAutomaticoReceiver`, `PitAutomaticoWorker`), `HorariosActivity` (horários de cada
   dia do fechamento automático), `Atualizador` (GitHub, Sobre),
   `PermissaoDeNotificacao`, `MascaraDeTexto`, `Dados.kt` (arquivos em `filesDir/data/`) e
   `Legado` (apaga as pastas `chaquopy` da versão Python).
@@ -205,6 +220,8 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
   o PIT automático já foram testados em 07/10). Da 1.0.13: tentativas longas no gatilho do Tasker ao
   chegar no campus (notificação de falha, mensagens curtas e Cancelar já testados em 08/10).
 - Testar a abertura pela Wi-Fi (2.1.0) pelo roteiro de `planos/abrir-ponto-wifi.md`.
+- Testar o PIT automático no horário (2.3.0) num dia útil, com o app fechado. A captura
+  `docs/img/configuracoes-pit.jpg` ainda mostra o seletor antigo (No 1º / No 2º fechamento).
 - Testar o fechamento automático (2.2.0) num dia útil: nos dois horários, com o ponto aberto e
   fechado, e com o app fechado.
 - O esquema antigo via Termux (wrappers do `setup.sh`, credenciais em `~/.config/ponto/credenciais.env`)

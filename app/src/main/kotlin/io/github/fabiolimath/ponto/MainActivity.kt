@@ -75,11 +75,16 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 android.util.Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
             }
-            // O alarme do fechamento automático também some com o "Forçar parada".
+            // Os alarmes do fechamento e do PIT automáticos também somem com o "Forçar parada".
             try {
                 FecharAutomatico.agendar(this)
             } catch (e: Exception) {
                 android.util.Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
+            }
+            try {
+                RegistrarPitAutomatico.agendar(this)
+            } catch (e: Exception) {
+                android.util.Log.w("Ponto", "Erro ao agendar o PIT automático", e)
             }
             val acao = acaoDoIntent()
             if (acao != null) {

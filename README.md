@@ -25,8 +25,9 @@ configurações, log, ícone, atalhos fixados nem o lembrete pendente.
 - Ao terminar cada execução, o app mostra uma notificação do sistema com o resultado
   (pode ser desligada em **Configurações**; no Android 13+ o app pede a permissão).
   Na falha, ela traz o botão **Tentar de novo**; ao fechar o ponto, o botão **Registrar PIT**.
-- O PIT do dia pode ser registrado sozinho ao fechar o ponto (**Configurações > Registrar o PIT
-  do dia automaticamente**): no 1º fechamento do dia, ou no 2º, para quem fecha no almoço.
+- O PIT do dia pode ser registrado sozinho (**Configurações > Registrar o PIT do dia
+  automaticamente**): todo dia, de segunda a sexta, no horário escolhido (padrão 18:30), também
+  nos dias sem ponto. O horário deve vir depois do último fechamento do dia.
 - Lembrete de fechar o ponto: se o ponto foi aberto e não foi fechado depois de um tempo
   (padrão 01:00, no máximo 06:00, em **Configurações**), o app avisa com uma notificação com o
   botão **Fechar ponto**, mesmo fechado (alarme do Android). Se o celular reiniciar, o lembrete

@@ -3,7 +3,6 @@ package io.github.fabiolimath.ponto.nucleo
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -49,7 +48,7 @@ class NotificacoesTest {
 
     @Test
     fun pit_automatico_tira_o_botao_da_notificacao() {
-        val preferencias = Preferencias(pitAutomatico = 2)
+        val preferencias = Preferencias(pitAutomatico = true)
         assertNull(Notificacoes.aviso(Acao.FECHAR_PONTO, "t", "ok", 0, null, preferencias, terca)!!.botao)
     }
 
@@ -77,20 +76,8 @@ class NotificacoesTest {
 
     @Test
     fun apaga_so_as_de_sucesso() {
-        assertEquals(listOf(1), Notificacoes.apagarAntes(Acao.ABRIR_PONTO, false))
-        // O PIT pelo botão apaga também a do fechamento; o automático a mantém.
-        assertEquals(listOf(3, 2), Notificacoes.apagarAntes(Acao.REGISTRAR_PIT, false))
-        assertEquals(listOf(3), Notificacoes.apagarAntes(Acao.REGISTRAR_PIT, true))
-    }
-
-    @Test
-    fun pit_automatico_no_fechamento_certo_de_segunda_a_sexta() {
-        val no2 = Preferencias(pitAutomatico = 2)
-        assertFalse(Notificacoes.pitAutomaticoAgora(no2, 1, terca))
-        assertTrue(Notificacoes.pitAutomaticoAgora(no2, 2, terca))
-        assertFalse(Notificacoes.pitAutomaticoAgora(no2, 3, terca))
-        assertTrue(Notificacoes.pitAutomaticoAgora(Preferencias(pitAutomatico = 1), 1, terca))
-        assertFalse(Notificacoes.pitAutomaticoAgora(Preferencias(pitAutomatico = 0), 1, terca))
-        assertFalse(Notificacoes.pitAutomaticoAgora(Preferencias(pitAutomatico = 1), 1, sabado))
+        assertEquals(listOf(1), Notificacoes.apagarAntes(Acao.ABRIR_PONTO))
+        // O PIT apaga também a do fechamento (a que tem o botão Registrar PIT).
+        assertEquals(listOf(3, 2), Notificacoes.apagarAntes(Acao.REGISTRAR_PIT))
     }
 }

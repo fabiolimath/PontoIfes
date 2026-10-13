@@ -23,6 +23,7 @@ import androidx.core.app.ActivityCompat
 import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.FechamentoAutomatico
 import io.github.fabiolimath.ponto.nucleo.Mascara
+import io.github.fabiolimath.ponto.nucleo.PitAutomatico
 import io.github.fabiolimath.ponto.nucleo.Preferencias
 
 /**
@@ -33,8 +34,9 @@ class ConfiguracoesActivity : AppCompatActivity() {
     private lateinit var usuario: EditText
     private lateinit var senha: EditText
     private lateinit var observacaoPit: EditText
-    private lateinit var pitAutomatico: Spinner
-    private lateinit var explicacaoPit: TextView
+    private lateinit var pitAutomatico: SwitchMaterial
+    private lateinit var pitHorario: EditText
+    private lateinit var pitDetalhes: View
     private lateinit var notificacoes: SwitchMaterial
     private lateinit var lembreteFechar: SwitchMaterial
     private lateinit var lembreteTempo: EditText
@@ -61,8 +63,6 @@ class ConfiguracoesActivity : AppCompatActivity() {
 
     private val explicacoesDoFechamento = intArrayOf(R.string.fechar_expl_0, R.string.fechar_expl_1, R.string.fechar_expl_2)
 
-    private val explicacoes = intArrayOf(R.string.pit_auto_expl_0, R.string.pit_auto_expl_1, R.string.pit_auto_expl_2)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_configuracoes)
@@ -73,7 +73,9 @@ class ConfiguracoesActivity : AppCompatActivity() {
         senha = findViewById(R.id.senha)
         observacaoPit = findViewById(R.id.observacao_pit)
         pitAutomatico = findViewById(R.id.pit_automatico)
-        explicacaoPit = findViewById(R.id.explicacao_pit)
+        pitHorario = findViewById(R.id.pit_horario)
+        pitHorario.addTextChangedListener(MascaraDeTexto(pitHorario, Mascara::formatarHora))
+        pitDetalhes = findViewById(R.id.pit_detalhes)
         notificacoes = findViewById(R.id.notificacoes)
         lembreteFechar = findViewById(R.id.lembrete_fechar)
         lembreteTempo = findViewById(R.id.lembrete_tempo)
@@ -96,12 +98,13 @@ class ConfiguracoesActivity : AppCompatActivity() {
             campo.addTextChangedListener(MascaraDeTexto(campo, Mascara::formatarHora))
         }
 
-        // Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do fechamento
+        // Os detalhes da Wi-Fi, do lembrete e do PIT automático só aparecem com o interruptor ligado; os do fechamento
         // automático, conforme a opção (os dois horários fixos ou o botão dos horários de cada dia).
         wifiAbrir.setOnCheckedChangeListener { _, ligado -> wifiDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE }
         lembreteFechar.setOnCheckedChangeListener { _, ligado ->
             lembreteDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE
         }
+        pitAutomatico.setOnCheckedChangeListener { _, ligado -> pitDetalhes.visibility = if (ligado) View.VISIBLE else View.GONE }
         fecharModo.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item,
             listOf(R.string.fechar_modo_0, R.string.fechar_modo_1, R.string.fechar_modo_2).map { getString(it) },
@@ -119,17 +122,6 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiEstado.setOnClickListener { avisoDeLocalizacao() }
         findViewById<MaterialButton>(R.id.wifi_rede_atual).setOnClickListener { definirRedeAtual() }
 
-        pitAutomatico.adapter = ArrayAdapter(
-            this, android.R.layout.simple_spinner_dropdown_item,
-            listOf(R.string.pit_auto_0, R.string.pit_auto_1, R.string.pit_auto_2).map { getString(it) },
-        )
-        pitAutomatico.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(pai: AdapterView<*>?, visao: View?, posicao: Int, id: Long) {
-                explicacaoPit.setText(explicacoes[posicao])
-            }
-
-            override fun onNothingSelected(pai: AdapterView<*>?) = Unit
-        }
         lembreteTempo.addTextChangedListener(MascaraDeTexto(lembreteTempo, Mascara::formatarHora))
 
         // Ao girar a tela o Android devolve o que foi digitado; só a 1ª vez parte dos arquivos salvos.
@@ -137,6 +129,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
         else dias = HorariosActivity.dividir(savedInstanceState.getStringArrayList(ESTADO_DIAS))
         wifiDetalhes.visibility = if (wifiAbrir.isChecked) View.VISIBLE else View.GONE
         lembreteDetalhes.visibility = if (lembreteFechar.isChecked) View.VISIBLE else View.GONE
+        pitDetalhes.visibility = if (pitAutomatico.isChecked) View.VISIBLE else View.GONE
         mostrarFechamento()
         val atuais = Dados.credenciais(this)
         val temCredenciais = atuais?.completas == true
@@ -160,8 +153,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
         senha.setText(credenciais?.senha ?: "")
         val preferencias = Dados.preferencias(this)
         observacaoPit.setText(preferencias.observacaoPit)
-        pitAutomatico.setSelection(preferencias.pitAutomatico)
-        explicacaoPit.setText(explicacoes[preferencias.pitAutomatico])
+        pitAutomatico.isChecked = preferencias.pitAutomatico
+        pitHorario.setText(preferencias.pitHorario)
         notificacoes.isChecked = preferencias.notificacoes
         lembreteFechar.isChecked = preferencias.lembreteFechar
         lembreteTempo.setText(preferencias.lembreteTempo)
@@ -374,6 +367,15 @@ class ConfiguracoesActivity : AppCompatActivity() {
             erro("Sem horário", "Preencha ao menos um horário em Horários de cada dia.")
             return
         }
+        val horarioDoPit = pitHorario.text.toString().trim()
+        val horarioDoPitValido = FechamentoAutomatico.lerHorario(horarioDoPit) != null
+        if (pitAutomatico.isChecked && !horarioDoPitValido) {
+            erro(
+                "Horário inválido",
+                "'$horarioDoPit' não é um horário no formato hh:mm (ex.: 18:30), entre 00:00 e 23:59.",
+            )
+            return
+        }
         val padrao = Preferencias()
         val anteriores = Dados.preferencias(this)
         val preferencias = Preferencias(
@@ -382,7 +384,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
             lembreteTempo = if (tempoValido) tempo else padrao.lembreteTempo,
             verificarAtualizacoes = verificarAtualizacoes.isChecked,
             observacaoPit = observacaoPit.text.toString().trim().ifEmpty { padrao.observacaoPit },
-            pitAutomatico = pitAutomatico.selectedItemPosition,
+            pitAutomatico = pitAutomatico.isChecked,
+            pitHorario = if (horarioDoPitValido) horarioDoPit else padrao.pitHorario,
             wifiAbrir = wifiAbrir.isChecked,
             wifiRede = wifiRede.text.toString().trim().ifEmpty { padrao.wifiRede },
             wifiEspera = if (esperaValida) espera else padrao.wifiEspera,
@@ -393,6 +396,19 @@ class ConfiguracoesActivity : AppCompatActivity() {
             fecharHorario2 = horarios[1].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
             fecharDias = dias,
         )
+        // Com o fechamento automático ligado, o PIT vem depois de todos os seus horários.
+        val horaDoPit = FechamentoAutomatico.lerHorario(preferencias.pitHorario)
+        val fechamento = if (preferencias.pitAutomatico && horaDoPit != null) {
+            PitAutomatico.fechamentoDepoisDoPit(preferencias, horaDoPit)
+        } else null
+        if (fechamento != null) {
+            erro(
+                "Horário do PIT",
+                "O PIT automático precisa ser depois de todos os horários do fechamento automático. " +
+                    "Escolha um horário depois das $fechamento.",
+            )
+            return
+        }
         Dados.salvarCredenciais(this, novas)
         Dados.salvarPreferencias(this, preferencias)
         if (!preferencias.lembreteFechar) Lembretes.cancelar(this)
@@ -408,6 +424,11 @@ class ConfiguracoesActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
         }
+        try {
+            RegistrarPitAutomatico.agendar(this)
+        } catch (e: Exception) {
+            Log.w("Ponto", "Erro ao agendar o PIT automático", e)
+        }
         if ((preferencias.notificacoes || preferencias.lembreteFechar) && PermissaoDeNotificacao.faltando(this)) {
             // Segue ao receber a resposta; fechar já levaria o diálogo do sistema junto.
             PermissaoDeNotificacao.pedir(this)
@@ -417,20 +438,20 @@ class ConfiguracoesActivity : AppCompatActivity() {
     }
 
     /**
-     * Depois de salvar com a abertura pela Wi-Fi ou o fechamento automático ligados: se a bateria
+     * Depois de salvar com a abertura pela Wi-Fi, o fechamento ou o PIT automáticos ligados: se a bateria
      * do app não está em Sem restrições (e o aviso não foi dispensado), o aviso com os dois botões.
      * Senão, fecha.
      */
     private fun avisoDeBateria() {
         val preferencias = Dados.preferencias(this)
-        val automatico = preferencias.wifiAbrir || preferencias.fecharAutomatico
+        val automatico = preferencias.wifiAbrir || preferencias.fecharAutomatico || preferencias.pitAutomatico
         if (!automatico || !preferencias.avisoBateria || Wifi.bateriaLiberada(this)) {
             finish()
             return
         }
         MaterialAlertDialogBuilder(this)
             .setTitle("Bateria")
-            .setMessage("Para abrir ou fechar o ponto com o app fechado, a bateria do Ponto IFES precisa estar em Sem restrições.")
+            .setMessage("Para as ações automáticas funcionarem com o app fechado, a bateria do Ponto IFES precisa estar em Sem restrições.")
             .setPositiveButton("Liberar agora") { _, _ -> Wifi.liberarBateria(this) }
             .setNegativeButton("Não avisar mais") { _, _ ->
                 Dados.salvarPreferencias(this, Dados.preferencias(this).copy(avisoBateria = false))
