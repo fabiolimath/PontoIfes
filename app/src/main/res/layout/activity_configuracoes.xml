@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Seções na ordem: Notificações, Credenciais, uma por ação (na ordem dos botões), Apps externos e Atualizações.
+<!-- Seções na ordem: Notificações, Credenciais, uma por ação (na ordem dos botões), Atalhos e apps externos e Atualizações.
      Os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; os do fechamento
      automático, conforme a opção escolhida. Cancelar e Salvar ficam fixos embaixo; o resto rola. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -395,7 +395,7 @@
 
         <View style="@style/Ponto.Divisoria" />
 
-        <!-- ================= Apps externos ================= -->
+        <!-- ================= Atalhos e apps externos ================= -->
         <TextView
             style="@style/Ponto.Secao"
             android:text="@string/secao_apps_externos" />
@@ -403,6 +403,13 @@
         <TextView
             style="@style/Ponto.Explicacao"
             android:text="@string/apps_externos_expl" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/adicionar_atalho"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/atalho_adicionar" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/apps_externos"

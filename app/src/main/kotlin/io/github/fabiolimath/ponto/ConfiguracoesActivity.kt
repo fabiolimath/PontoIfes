@@ -157,6 +157,7 @@ class ConfiguracoesActivity : AppCompatActivity() {
             text = getString(R.string.verificar_agora)
             setOnClickListener { Atualizador.verificar(this@ConfiguracoesActivity, avisarSemNovidade = true) }
         }
+        findViewById<View>(R.id.adicionar_atalho).setOnClickListener { Atalhos.escolher(this) }
         findViewById<View>(R.id.apps_externos).setOnClickListener {
             Atualizador.abrirUrl(this, Atualizacao.URL_APPS_EXTERNOS)
         }
