@@ -49,7 +49,9 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    reagenda o pendente ao reiniciar o celular e ao atualizar o app (se a hora já passou, esquece).
 5. **Configurações** (`configuracoes.json`), em seções (2.1.0), nesta ordem: Notificações;
    Credenciais; Abrir ponto (Wi-Fi); Fechar ponto (fechamento automático, lembrete; ligar o lembrete com o fechamento automático escolhido pede confirmação); Registrar PIT (Observação, PIT
-   automático e o seu horário); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
+   automático e o seu horário); Atalhos e apps externos (2.5.0: **Adicionar atalho à tela inicial**, lista
+   das três ações com `requestPinShortcut` em `Atalhos.kt`; texto e botão **Como configurar (site)**,
+   que abre a âncora `#apps-externos` do site); Atualizações (verificar ao abrir + Verificar agora). Cada opção tem uma linha de
    explicação; os detalhes da Wi-Fi e do lembrete só aparecem com o interruptor ligado; o horário do
    PIT automático, com ele ligado; os do fechamento automático, conforme a opção escolhida.
    **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
