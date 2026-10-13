@@ -20,6 +20,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.core.app.ActivityCompat
+import io.github.fabiolimath.ponto.nucleo.Atualizacao
 import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.FechamentoAutomatico
 import io.github.fabiolimath.ponto.nucleo.Mascara
@@ -155,6 +156,9 @@ class ConfiguracoesActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.verificar_agora).apply {
             text = getString(R.string.verificar_agora)
             setOnClickListener { Atualizador.verificar(this@ConfiguracoesActivity, avisarSemNovidade = true) }
+        }
+        findViewById<View>(R.id.apps_externos).setOnClickListener {
+            Atualizador.abrirUrl(this, Atualizacao.URL_APPS_EXTERNOS)
         }
     }
 

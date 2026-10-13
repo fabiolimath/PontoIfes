@@ -56,6 +56,9 @@
     <string name="secao_notificacoes">Notificações</string>
     <string name="secao_credenciais">Credenciais</string>
     <string name="secao_atualizacoes">Atualizações</string>
+    <string name="secao_apps_externos">Apps externos</string>
+    <string name="apps_externos_expl">Abrir ponto, Fechar ponto e Registrar PIT também podem ser acionados por apps de automação, como o Tasker e os Modos e Rotinas da Samsung. Assim dá para criar automações que este app não oferece, por exemplo com Bluetooth ou localização.</string>
+    <string name="apps_externos_como">Como configurar (site)</string>
     <string name="entrar_sigrh">Entrar no SIGRH</string>
     <string name="entrar_sigrh_texto">Informe seu usuário e senha do SIGRH. Eles ficam guardados só neste aparelho e podem ser mudados depois em Configurações.</string>
     <string name="versao_instalada">Versão instalada: %1$s</string>

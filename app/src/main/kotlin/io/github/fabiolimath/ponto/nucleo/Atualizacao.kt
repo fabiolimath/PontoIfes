@@ -7,6 +7,7 @@ object Atualizacao {
     const val REPO = "fabiolimath/PontoIfes"
     const val API_ULTIMA = "https://api.github.com/repos/$REPO/releases/latest"
     const val URL_SITE = "https://fabiolimath.github.io/PontoIfes/"
+    const val URL_APPS_EXTERNOS = "${URL_SITE}#apps-externos"
     const val URL_DOWNLOAD = "https://github.com/$REPO/releases/latest/download/ponto-ifes.apk"
 
     /** "v1.0.10" -> [1, 0, 10]; partes não numéricas são ignoradas. */
