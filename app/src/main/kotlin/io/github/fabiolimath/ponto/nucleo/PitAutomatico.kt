@@ -1,7 +1,9 @@
 package io.github.fabiolimath.ponto.nucleo
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 /**
  * Registrar o PIT do dia sozinho, de segunda a sexta, no horário das Configurações (`pit_horario`),
@@ -20,6 +22,15 @@ object PitAutomatico {
         val hora = FechamentoAutomatico.lerHorario(preferencias.pitHorario) ?: return null
         return FechamentoAutomatico.proximo(agora) { dia -> if (Notificacoes.diaUtil(dia)) listOf(hora) else emptyList() }
     }
+
+    /**
+     * O último horário do fechamento automático (de segunda a sexta), se o do PIT ([horarioDoPit])
+     * não vem depois dele; null se está certo ou se o fechamento automático está desligado.
+     * As Configurações não salvam com o PIT antes de um fechamento.
+     */
+    fun fechamentoDepoisDoPit(preferencias: Preferencias, horarioDoPit: LocalTime): LocalTime? =
+        DayOfWeek.entries.flatMap { FechamentoAutomatico.horarios(preferencias, it) }
+            .maxOrNull()?.takeIf { it >= horarioDoPit }
 
     /**
      * O dia do PIT previsto para [previsto]: null (o do dia) se é hoje; se o sistema só rodou o

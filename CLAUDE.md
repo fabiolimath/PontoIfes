@@ -119,6 +119,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
     (até a 2.2.x, `pit_automatico` 1 ou 2, que agora vira ligado no horário padrão).
     Configurações: interruptor (`pit_diario`, padrão desligado) e **Horário** (`pit_horario`, hh:mm,
     padrão 18:30, depois do 2º fechamento automático padrão; o SIGRH pede o ponto do dia fechado).
+    Com o fechamento automático ligado, o Salvar recusa um horário do PIT que não venha depois de
+    todos os horários dele (`PitAutomatico.fechamentoDepoisDoPit`; no Avançado, o maior da semana).
     - Alarme (`RegistrarPitAutomatico.agendar`, `nucleo/PitAutomatico.proximo`): como o do
       fechamento automático (exato, agendado nos mesmos momentos), com o `PitAutomaticoReceiver`.
     - Execução: `PitAutomaticoWorker` (WorkManager expedito) chama `Execucao.pitAutomatico`:

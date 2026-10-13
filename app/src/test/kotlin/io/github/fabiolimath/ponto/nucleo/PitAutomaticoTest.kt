@@ -2,6 +2,7 @@ package io.github.fabiolimath.ponto.nucleo
 
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -28,6 +29,23 @@ class PitAutomaticoTest {
         assertEquals(em(12, 17), PitAutomatico.proximo(em(9, 17, 30), ligado))
         assertEquals(em(12, 17), PitAutomatico.proximo(em(10, 9), ligado))
         assertEquals(em(12, 8, 30), PitAutomatico.proximo(em(11, 9), ligado.copy(pitHorario = "8:30")))
+    }
+
+    @Test
+    fun pit_depois_de_todos_os_fechamentos_automaticos() {
+        val fixos = Preferencias(fecharModo = Preferencias.FECHAR_FIXOS, fecharHorario1 = "12:00", fecharHorario2 = "18:00")
+        assertNull(PitAutomatico.fechamentoDepoisDoPit(fixos, LocalTime.of(18, 30)))
+        assertEquals(LocalTime.of(18, 0), PitAutomatico.fechamentoDepoisDoPit(fixos, LocalTime.of(18, 0)))
+        assertEquals(LocalTime.of(18, 0), PitAutomatico.fechamentoDepoisDoPit(fixos, LocalTime.of(17, 0)))
+        // Desligado, qualquer horário serve.
+        assertNull(PitAutomatico.fechamentoDepoisDoPit(Preferencias(), LocalTime.of(8, 0)))
+        // Avançado: vale o maior de todos os dias.
+        val avancado = Preferencias(
+            fecharModo = Preferencias.FECHAR_AVANCADO,
+            fecharDias = listOf(listOf("12:00", ""), listOf("", ""), listOf("", "21:00"), listOf("", ""), listOf("", "")),
+        )
+        assertEquals(LocalTime.of(21, 0), PitAutomatico.fechamentoDepoisDoPit(avancado, LocalTime.of(18, 30)))
+        assertNull(PitAutomatico.fechamentoDepoisDoPit(avancado, LocalTime.of(21, 30)))
     }
 
     @Test

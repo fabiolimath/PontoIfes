@@ -23,6 +23,7 @@ import androidx.core.app.ActivityCompat
 import io.github.fabiolimath.ponto.nucleo.Credenciais
 import io.github.fabiolimath.ponto.nucleo.FechamentoAutomatico
 import io.github.fabiolimath.ponto.nucleo.Mascara
+import io.github.fabiolimath.ponto.nucleo.PitAutomatico
 import io.github.fabiolimath.ponto.nucleo.Preferencias
 
 /**
@@ -395,6 +396,19 @@ class ConfiguracoesActivity : AppCompatActivity() {
             fecharHorario2 = horarios[1].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
             fecharDias = dias,
         )
+        // Com o fechamento automático ligado, o PIT vem depois de todos os seus horários.
+        val horaDoPit = FechamentoAutomatico.lerHorario(preferencias.pitHorario)
+        val fechamento = if (preferencias.pitAutomatico && horaDoPit != null) {
+            PitAutomatico.fechamentoDepoisDoPit(preferencias, horaDoPit)
+        } else null
+        if (fechamento != null) {
+            erro(
+                "Horário do PIT",
+                "O PIT automático precisa ser depois de todos os horários do fechamento automático. " +
+                    "Escolha um horário depois das $fechamento.",
+            )
+            return
+        }
         Dados.salvarCredenciais(this, novas)
         Dados.salvarPreferencias(this, preferencias)
         if (!preferencias.lembreteFechar) Lembretes.cancelar(this)
