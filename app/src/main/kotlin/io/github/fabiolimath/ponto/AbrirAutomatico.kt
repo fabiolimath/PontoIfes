@@ -206,6 +206,23 @@ object Wifi {
         }
     }
 
+    /**
+     * Roda [bloco], o trabalho de uma ação automática, com o processador acordado. Com o processo do
+     * app vivo (o app aberto, mesmo com a tela desligada), o WorkManager pode rodar o trabalho ali
+     * mesmo, sem a trava que o sistema dá aos trabalhos: o celular dormia no meio e a ação só seguia
+     * ao mexer nele. No máximo 10 min, para a trava nunca ficar presa.
+     */
+    suspend fun <T> acordado(contexto: Context, bloco: suspend () -> T): T {
+        val energia = contexto.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val trava = energia.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PontoIfes:acao_automatica")
+        trava.acquire(10 * 60 * 1000L)
+        try {
+            return bloco()
+        } finally {
+            if (trava.isHeld) trava.release()
+        }
+    }
+
     /** O que o app sabe do ponto: últimas abertura, fechamento e tentativa automática. */
     fun estado(contexto: Context) = EstadoDoPonto(
         ultimaAbertura = GatilhoWifi.ultimaAbertura(Dados.arquivo(contexto, "ultima_abertura.txt")),
@@ -253,7 +270,9 @@ class RedeReceiver : BroadcastReceiver() {
  * mesmas tentativas e o timeout menor. Se o sistema o parar, o WorkManager o refaz depois.
  */
 class AbrirAutomaticoWorker(contexto: Context, parametros: WorkerParameters) : CoroutineWorker(contexto, parametros) {
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = Wifi.acordado(applicationContext) { executar() }
+
+    private suspend fun executar(): Result {
         val app = applicationContext
         // Pode ser uma repetição depois de o sistema parar o trabalho: confere de novo o essencial.
         if (!Dados.preferencias(app).wifiAbrir) return Result.success()

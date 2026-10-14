@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- As ações automáticas mantêm o processador acordado enquanto rodam (Wifi.acordado). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- Fechar o ponto nos horários escolhidos: o alarme exato (dado na instalação; o Android 12
          usa o SCHEDULE_EXACT_ALARM, o 13+ o USE_EXACT_ALARM). Sem ele, o alarme comum. -->
     <uses-permission
