@@ -96,9 +96,7 @@ class PitAutomaticoReceiver : BroadcastReceiver() {
  * em andamento (o fechamento automático no mesmo horário, por exemplo), tenta de novo em seguida.
  */
 class PitAutomaticoWorker(contexto: Context, parametros: WorkerParameters) : CoroutineWorker(contexto, parametros) {
-    override suspend fun doWork(): Result = Wifi.acordado(applicationContext) { executar() }
-
-    private suspend fun executar(): Result {
+    override suspend fun doWork(): Result {
         val app = applicationContext
         if (!Dados.preferencias(app).pitAutomatico) return Result.success()
         val agora = LocalDateTime.now()

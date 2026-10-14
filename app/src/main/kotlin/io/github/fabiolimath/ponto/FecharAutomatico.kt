@@ -110,9 +110,7 @@ class FecharAutomaticoReceiver : BroadcastReceiver() {
  * sistema o parar, o WorkManager o refaz depois, mas não muito depois do horário.
  */
 class FecharAutomaticoWorker(contexto: Context, parametros: WorkerParameters) : CoroutineWorker(contexto, parametros) {
-    override suspend fun doWork(): Result = Wifi.acordado(applicationContext) { executar() }
-
-    private suspend fun executar(): Result {
+    override suspend fun doWork(): Result {
         val app = applicationContext
         if (!Dados.preferencias(app).fecharAutomatico) return Result.success()
         val agora = LocalDateTime.now()
