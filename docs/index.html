@@ -58,7 +58,7 @@
   section a { color: var(--verde-escuro); }
   .acoes {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 12px; margin: 8px 0 8px;
+    gap: 12px; margin: 20px 0 0;
   }
   .acao {
     background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px;
@@ -110,26 +110,25 @@
   <header>
     <img src="icone.png" alt="Ícone do Ponto IFES">
     <h1>Ponto IFES</h1>
-    <p class="lema">Abra e feche o ponto e registre o PIT no SIGRH com um toque, direto do celular.</p>
+    <p class="lema">Abra e feche o ponto e registre o PIT no SIGRH com um toque, direto do celular. As três ações também podem ser automáticas: o ponto abre sozinho ao conectar na Wi-Fi do campus, e o fechamento do ponto e o PIT podem ser programados para horários escolhidos. Elas também podem ser acionadas por rotinas do sistema ou por apps de automação, como o Tasker.</p>
     <a class="baixar" href="https://github.com/fabiolimath/PontoIfes/releases/latest/download/ponto-ifes.apk">Baixar o app (APK)</a>
     <p class="nota">Para Android 12 ou mais novo. <a href="https://github.com/fabiolimath/PontoIfes/releases">Ver todas as versões</a></p>
   </header>
+
+  <section>
+    <h2>Instalar</h2>
+    <ol>
+      <li>Ao abrir o arquivo baixado, se o sistema pedir, permita que o navegador (ou o gerenciador de arquivos) instale apps.</li>
+      <li>Se aparecer um aviso do Play Protect dizendo que o app é desconhecido, toque em <strong>Mais detalhes</strong> e depois em <strong>Instalar mesmo assim</strong>. O aviso aparece porque o app não vem da Play Store.</li>
+    </ol>
+    <p>Para atualizar, baixe e instale a versão nova por cima. Suas credenciais, configurações e atalhos continuam salvos. Isso vale também para quem passa de uma versão 1.0 para a 2.0, que é bem menor e abre mais rápido.</p>
+  </section>
 
   <div class="acoes">
     <div class="acao"><strong>Abrir ponto</strong><span>Registra a entrada no SIGRH.</span></div>
     <div class="acao"><strong>Fechar ponto</strong><span>Registra a saída no SIGRH.</span></div>
     <div class="acao"><strong>Registrar PIT</strong><span>Registra o PIT de hoje ou de outro dia.</span></div>
   </div>
-
-  <section>
-    <h2>Instalar</h2>
-    <ol>
-      <li>No celular, toque em <strong>Baixar o app</strong> acima.</li>
-      <li>Abra o arquivo baixado. Se o Android pedir, permita que o navegador (ou o gerenciador de arquivos) instale apps.</li>
-      <li>Se aparecer um aviso do Play Protect dizendo que o app é desconhecido, toque em <strong>Mais detalhes</strong> e depois em <strong>Instalar mesmo assim</strong>. O aviso aparece porque o app não vem da Play Store.</li>
-    </ol>
-    <p>Para atualizar, baixe e instale a versão nova por cima. Suas credenciais, configurações e atalhos continuam salvos. Isso vale também para quem passa de uma versão 1.0 para a 2.0, que é bem menor e abre mais rápido.</p>
-  </section>
 
   <section>
     <h2>Primeiro uso</h2>
