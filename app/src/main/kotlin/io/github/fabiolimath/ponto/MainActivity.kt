@@ -69,23 +69,8 @@ class MainActivity : AppCompatActivity() {
         // com elas, pede a permissão de notificar (no Android 13+) e verifica atualizações.
         if (savedInstanceState == null) {
             Legado.apagarPython(this)
-            // O gatilho da Wi-Fi some com o "Forçar parada": abrir o app o refaz.
-            try {
-                Wifi.registrar(this, forcar = false)
-            } catch (e: Exception) {
-                android.util.Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
-            }
-            // Os alarmes do fechamento e do PIT automáticos também somem com o "Forçar parada".
-            try {
-                FecharAutomatico.agendar(this)
-            } catch (e: Exception) {
-                android.util.Log.w("Ponto", "Erro ao agendar o fechamento automático", e)
-            }
-            try {
-                RegistrarPitAutomatico.agendar(this)
-            } catch (e: Exception) {
-                android.util.Log.w("Ponto", "Erro ao agendar o PIT automático", e)
-            }
+            // Os gatilhos somem com o "Forçar parada": abrir o app os refaz (também no PontoApp).
+            PontoApp.refazerGatilhos(this)
             val acao = acaoDoIntent()
             if (acao != null) {
                 // Aberto por um botão de notificação, atalho ou Tasker: executa já.
