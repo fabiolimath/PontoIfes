@@ -17,9 +17,6 @@ object Notificacoes {
     /** O ident do lembrete de fechar o ponto (o `LembreteReceiver`). */
     const val IDENT_LEMBRETE = 4
 
-    /** A da abertura automática em andamento (só no Android 11 ou anterior, que a exige). */
-    const val IDENT_EM_ANDAMENTO = 5
-
     /**
      * Uma notificação de sucesso por ação (1 a 3; o 4 é o do lembrete): a nova substitui a anterior.
      */
