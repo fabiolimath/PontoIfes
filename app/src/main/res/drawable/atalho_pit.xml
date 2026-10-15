@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ícone do atalho no Android 7 (sem ícone adaptativo): círculo branco com o símbolo. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp" android:height="48dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M54,0 a54,54 0 1 0 0.01,0 Z" />
-    <path android:strokeColor="#008577" android:strokeWidth="5" android:pathData="M54,33 a21,21 0 1 0 0.01,0 Z" />
-    <path android:strokeColor="#008577" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M54,41 L54,54 L63,60" />
-</vector>
+<!-- Ícone do atalho: fundo branco, como o do app, e o símbolo verde. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@android:color/white" />
+    <foreground android:drawable="@drawable/atalho_pit_simbolo" />
+</adaptive-icon>

@@ -85,13 +85,12 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
      aberto hoje (`ultima_abertura.txt` depois do último fechamento); a espera configurada após fechar; 5 min entre
      tentativas (`abertura_automatica.txt`). Ignorados relevantes (não os de rede diferente) vão ao log como
      "abrir_ponto (automático)".
-   - Execução: `AbrirAutomaticoWorker` (WorkManager, expedito, trabalho único KEEP; no Android 11 ou
-     anterior, serviço em primeiro plano com notificação mínima) chama `Execucao.abrirAutomatico`:
+   - Execução: `AbrirAutomaticoWorker` (WorkManager, expedito, trabalho único KEEP) chama `Execucao.abrirAutomatico`:
      aparece na tela como "Abrir ponto (automático)" com Cancelar; timeout de 15 s por requisição.
    - Resultado (`nucleo/AberturaAutomatica`): entrada registrada notifica e agenda o lembrete; já
      aberto fica em silêncio e agenda o lembrete pela hora de entrada; erros de rede em silêncio;
      recusa ou envio incerto notifica só com o nome da rede confirmado, uma vez por dia.
-   - Pop-ups nas Configurações: localização ao ligar (Android 11+: segundo aviso e a tela do "tempo
+   - Pop-ups nas Configurações: localização ao ligar (segundo aviso e a tela do "tempo
      todo"); bateria ao salvar, se não está em Sem restrições (Liberar agora, Não avisar mais).
 
 10. **Fechar o ponto automaticamente** (2.2.0) nos horários escolhidos, se estiver aberto.
@@ -133,8 +132,8 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
 
 ## Estrutura
 
-Projeto Gradle (Kotlin DSL, Gradle Wrapper 8.14.3, AGP 8.13.0, Kotlin 2.2.21, JVM 17; minSdk 24,
-compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
+Projeto Gradle (Kotlin DSL, Gradle Wrapper 8.14.3, AGP 8.13.0, Kotlin 2.2.21, JVM 17; minSdk 31,
+ou seja, Android 12 ou mais novo desde a 2.6.0 (até a 2.5.x, o 7); compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 
 - `sigrh/` — cliente do SIGRH em Kotlin puro (JVM): `Sigrh` (`abrirPonto()`, `fecharPonto()`,
   `registrarPit(dia, observacao)`, todas `suspend`, devolvem `Resultado`), `AbrirPonto`,
@@ -145,7 +144,7 @@ compileSdk 36, targetSdk 35, porque com 36 o Android 16 força o edge-to-edge).
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/nucleo/` — regras sem Android, testadas na JVM
   (JUnit 4, `app/src/test`): `Acao`, `Executor` (roda a ação e grava o log), `Registro` (log),
   `Credenciais`, `Preferencias` (`configuracoes.json`), `Mascara`, `Fechamentos`, `Lembrete`,
-  `Notificacoes` (idents: sucesso 1 a 3, lembrete 4, abertura automática em andamento 5, falha
+  `Notificacoes` (idents: sucesso 1 a 3, lembrete 4, falha
   1000+ pelo relógio; textos e botões), `Atualizacao`, `GatilhoWifi`, `AberturaAutomatica`,
   `FechamentoAutomatico`, `PitAutomatico`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/` — Android: `MainActivity`, `LogActivity`,

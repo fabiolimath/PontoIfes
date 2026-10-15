@@ -2,7 +2,6 @@ package io.github.fabiolimath.ponto
 
 import android.Manifest
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -288,16 +287,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
             .show()
     }
 
-    /**
-     * Primeiro a localização precisa; no Android 10 o próprio diálogo oferece "Permitir o tempo
-     * todo". Do Android 11 em diante, o "tempo todo" fica numa tela à parte ([pedirSegundoPlano]).
-     */
+    /** Primeiro a localização precisa; depois o "tempo todo", numa tela à parte ([pedirSegundoPlano]). */
     private fun pedirLocalizacao() {
         val precisa = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
         when {
-            !Wifi.temLocalizacaoPrecisa(this) && Build.VERSION.SDK_INT == 29 -> ActivityCompat.requestPermissions(
-                this, precisa + Manifest.permission.ACCESS_BACKGROUND_LOCATION, CODIGO_LOCALIZACAO,
-            )
             !Wifi.temLocalizacaoPrecisa(this) -> ActivityCompat.requestPermissions(this, precisa, CODIGO_LOCALIZACAO)
             !Wifi.temLocalizacaoEmSegundoPlano(this) -> pedirSegundoPlano()
             else -> depoisDaLocalizacao()

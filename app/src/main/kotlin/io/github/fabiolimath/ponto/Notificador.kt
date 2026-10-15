@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import io.github.fabiolimath.ponto.nucleo.Acao
 import io.github.fabiolimath.ponto.nucleo.Aviso
@@ -18,11 +17,9 @@ object Notificador {
         contexto.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     private fun construtor(contexto: Context, titulo: String, texto: String): NotificationCompat.Builder {
-        if (Build.VERSION.SDK_INT >= 26) {
-            gerenciador(contexto).createNotificationChannel(
-                NotificationChannel(Notificacoes.CANAL, Notificacoes.NOME_DO_CANAL, NotificationManager.IMPORTANCE_DEFAULT)
-            )
-        }
+        gerenciador(contexto).createNotificationChannel(
+            NotificationChannel(Notificacoes.CANAL, Notificacoes.NOME_DO_CANAL, NotificationManager.IMPORTANCE_DEFAULT)
+        )
         // Tocar na notificação abre o app (o ícone monocromático próprio: o do app, adaptativo,
         // pode derrubar a barra de status em alguns Androids).
         val abrir = contexto.packageManager.getLaunchIntentForPackage(contexto.packageName)

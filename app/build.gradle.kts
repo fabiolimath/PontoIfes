@@ -6,7 +6,7 @@ plugins {
 // Versão do app: aumentar a cada PR que muda o app (o release sai no merge).
 // O versionCode segue a fórmula do Briefcase, para continuar acima da 1.0.x:
 // X.Y.Z -> X*1000000 + Y*10000 + Z*100 (1.0.15 -> 1001500, 2.0.0 -> 2000000).
-val versao = "2.5.0"
+val versao = "2.6.0"
 val codigoDaVersao = versao.split(".").map(String::toInt).let { (x, y, z) ->
     x * 1_000_000 + y * 10_000 + z * 100
 }
@@ -25,7 +25,8 @@ android {
 
     defaultConfig {
         applicationId = "io.github.fabiolimath.ponto"
-        minSdk = 24
+        // Android 12 ou mais novo (2.6.0; até a 2.5.x, o 7).
+        minSdk = 31
         // 35, e não 36: no Android 16 o app 36 é obrigado a desenhar sob a barra de
         // status (edge-to-edge); com 35 o tema ainda pode recusar (values-v35).
         targetSdk = 35
@@ -60,7 +61,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // java.time (usado pelo módulo sigrh) no Android 7 (API 24 e 25).
+        // APIs do Java que o Android 12 não tem (até a 2.5.x, o java.time no Android 7).
         isCoreLibraryDesugaringEnabled = true
     }
 

@@ -7,14 +7,12 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Abrir o ponto ao conectar na Wi-Fi: o gatilho, o nome da rede (só com a localização, pedida
-         ao ligar a opção), o trabalho em primeiro plano do Android 11 ou anterior e a bateria. -->
+         ao ligar a opção) e a bateria. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Fechar o ponto nos horários escolhidos: o alarme exato (dado na instalação; o Android 12
@@ -101,12 +99,5 @@
         <receiver
             android:name=".PitAutomaticoReceiver"
             android:exported="false" />
-
-        <!-- O serviço do WorkManager que roda a abertura, o fechamento e o PIT automáticos em primeiro
-             plano no Android 11 ou anterior; o tipo é exigido a partir do Android 14. -->
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            tools:node="merge" />
     </application>
 </manifest>

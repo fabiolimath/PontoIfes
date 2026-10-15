@@ -5,11 +5,9 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
-import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
@@ -57,7 +55,7 @@ object FecharAutomatico {
         }
         val instante = quando.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val intencao = alarme(app, quando)
-        val exato = Build.VERSION.SDK_INT < 31 || alarmes.canScheduleExactAlarms()
+        val exato = alarmes.canScheduleExactAlarms()
         try {
             if (exato) {
                 alarmes.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, instante, intencao)
@@ -130,6 +128,4 @@ class FecharAutomaticoWorker(contexto: Context, parametros: WorkerParameters) : 
         }
         return Result.success()
     }
-
-    override suspend fun getForegroundInfo(): ForegroundInfo = Wifi.emAndamento(applicationContext, "Fechando o ponto…")
 }
