@@ -11,10 +11,10 @@
         <!-- O símbolo, sem o canto do emblema. -->
         <clip-path android:pathData="M-2,-2H26V26H-2zM15.400,10.900a4.5,4.5 0,0 0,-4.5,4.5v5.400a4.5,4.5 0,0 0,4.5,4.5h5.400a4.5,4.5 0,0 0,4.5,-4.5v-5.400a4.5,4.5 0,0 0,-4.5,-4.5z" />
         <group
-            android:scaleX="0.4"
-            android:scaleY="0.4"
-            android:translateX="-11.60"
-            android:translateY="-11.60">
+            android:scaleX="0.38"
+            android:scaleY="0.38"
+            android:translateX="-14.72"
+            android:translateY="-11.28">
             <path android:fillColor="#FFFFFFFF" android:pathData="M44,35 L44,73 Q44,77 47.5,75 L75,57.5 Q78,55.5 75,53.5 L47.5,33 Q44,31 44,35 Z" />
         </group>
     </group>
