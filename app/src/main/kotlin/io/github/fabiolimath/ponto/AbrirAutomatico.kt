@@ -62,7 +62,11 @@ object Wifi {
             desfazer(app)
             return
         }
-        if (!forcar && pedido(app, PendingIntent.FLAG_NO_CREATE) != null) return
+        if (!forcar) {
+            if (pedido(app, PendingIntent.FLAG_NO_CREATE) != null) return
+            // Pista para o gatilho que não dispara: ele tinha sumido do sistema.
+            anotar(app, "Gatilho da Wi-Fi refeito: não estava registrado no sistema.")
+        }
         val intencao = pedido(app, PendingIntent.FLAG_UPDATE_CURRENT)!!
         val rede = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)

@@ -83,7 +83,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    - Filtro (`nucleo/GatilhoWifi`, sem rede): seg a sex; nome legível e diferente do configurado
      ignora (sem localização "o tempo todo" o nome é ilegível e o app tenta assim mesmo); ponto já
      aberto hoje (`ultima_abertura.txt` depois do último fechamento); a espera configurada após fechar; 5 min entre
-     tentativas (`abertura_automatica.txt`). Ignorados relevantes (não os de rede diferente) vão ao log como
+     tentativas (`abertura_automatica.txt`). Ignorados (menos com a opção desligada) vão ao log como
      "abrir_ponto (automático)".
    - Execução: `AbrirAutomaticoWorker` (WorkManager, expedito, trabalho único KEEP) chama `Execucao.abrirAutomatico`:
      aparece na tela como "Abrir ponto (automático)" com Cancelar; timeout de 15 s por requisição.
