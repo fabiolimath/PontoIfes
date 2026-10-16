@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ícone das notificações (relógio, Material "schedule"); o Android o pinta de branco. -->
+<!-- Ícone das notificações: o logo do IFES do ícone do app, monocromático (o Android o pinta de
+     branco; o círculo em volta, no One UI e no Android 12+, tem a cor do setColor, o verde do app).
+     Coordenadas em pixels de icons/ponto-square-1280.png; a bolinha tem o tamanho dos quadrados
+     para não encostar no vizinho. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8zM12.5,7H11v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z" />
+    android:viewportWidth="686"
+    android:viewportHeight="686">
+    <group
+        android:translateX="-300"
+        android:translateY="-298">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M598,360h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM742,360h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM453,504h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM598,504h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM453,648h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM598,648h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM742,648h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM453,793h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM598,793h91a20,20 0,0 1,20,20v91a20,20 0,0 1,-20,20h-91a20,20 0,0 1,-20,-20v-91a20,20 0,0 1,20,-20zM433.0,425.5a65.5,65.5 0,1 1,131.0,0a65.5,65.5 0,1 1,-131.0,0z" />
+    </group>
 </vector>

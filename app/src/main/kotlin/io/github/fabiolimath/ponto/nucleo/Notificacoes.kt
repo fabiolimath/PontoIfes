@@ -6,8 +6,18 @@ import java.time.LocalDate
 /** O botão de uma notificação: abre o app e executa [acao] (com a [data] do PIT, se houver). */
 data class BotaoDeAviso(val rotulo: String, val acao: Acao, val data: String? = null)
 
-/** Uma notificação do resultado de uma execução. */
-data class Aviso(val titulo: String, val texto: String, val ident: Int, val botao: BotaoDeAviso?)
+/**
+ * Uma notificação do resultado de uma execução de [acao] (o ícone é o do atalho dela, num círculo
+ * verde, ou vermelho se [falhou]).
+ */
+data class Aviso(
+    val acao: Acao,
+    val titulo: String,
+    val texto: String,
+    val ident: Int,
+    val botao: BotaoDeAviso?,
+    val falhou: Boolean = false,
+)
 
 /** As regras das notificações de resultado, sem Android. */
 object Notificacoes {
@@ -66,6 +76,6 @@ object Notificacoes {
             else -> null
         }
         val texto = Executor.mensagemFinal(saida).ifEmpty { titulo }
-        return Aviso(titulo, texto, if (codigo != 0) identDeFalha(agoraMs) else ident(acao), botao)
+        return Aviso(acao, titulo, texto, if (codigo != 0) identDeFalha(agoraMs) else ident(acao), botao, codigo != 0)
     }
 }

@@ -158,7 +158,10 @@ ou seja, Android 12 ou mais novo desde a 2.6.0 (até a 2.5.x, o 7); compileSdk 3
   `PermissaoDeNotificacao`, `MascaraDeTexto`, `Dados.kt` (arquivos em `filesDir/data/`) e
   `Legado` (apaga as pastas `chaquopy` da versão Python).
 - `app/src/main/res/` — layouts, ícone do app (`mipmap-*`), atalhos (`xml/shortcuts.xml`, ícones
-  `drawable*/atalho_*.xml`) e ícone das notificações (`drawable/ic_notificacao.xml`).
+  `drawable*/atalho_*.xml`) e ícones das notificações (`drawable/ic_notificacao_*.xml`, o símbolo
+  do atalho de cada ação com um emblema do IFES no canto, o logo vazado num quadrado;
+  `ic_notificacao.xml`, o logo do IFES monocromático, no lembrete; o círculo em volta fica verde
+  pelo `setColor` do `Notificador`, vermelho #C62828 nas falhas).
   - O launcher não resolve `@string` no `targetPackage` dos atalhos, então o pacote vai por
     extenso em duas cópias de `shortcuts.xml`: `app/src/main/res/xml` e `app/src/debug/res/xml`
     (pacote `.debug`). Mudou uma, mude a outra.

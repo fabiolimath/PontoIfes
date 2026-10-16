@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import io.github.fabiolimath.ponto.nucleo.Acao
 import io.github.fabiolimath.ponto.nucleo.Aviso
 import io.github.fabiolimath.ponto.nucleo.Lembrete
@@ -16,16 +17,29 @@ object Notificador {
     private fun gerenciador(contexto: Context) =
         contexto.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    private fun construtor(contexto: Context, titulo: String, texto: String): NotificationCompat.Builder {
+    /** O ícone das notificações de [acao]: o símbolo do atalho dela (play, stop, relógio). */
+    private fun icone(acao: Acao) = when (acao) {
+        Acao.ABRIR_PONTO -> R.drawable.ic_notificacao_abrir
+        Acao.FECHAR_PONTO -> R.drawable.ic_notificacao_fechar
+        Acao.REGISTRAR_PIT -> R.drawable.ic_notificacao_pit
+    }
+
+    private fun construtor(
+        contexto: Context, titulo: String, texto: String,
+        icone: Int = R.drawable.ic_notificacao, cor: Int = R.color.verde,
+    ): NotificationCompat.Builder {
         gerenciador(contexto).createNotificationChannel(
             NotificationChannel(Notificacoes.CANAL, Notificacoes.NOME_DO_CANAL, NotificationManager.IMPORTANCE_DEFAULT)
         )
-        // Tocar na notificação abre o app (o ícone monocromático próprio: o do app, adaptativo,
-        // pode derrubar a barra de status em alguns Androids).
+        // Tocar na notificação abre o app (ícones monocromáticos próprios: o do app, adaptativo,
+        // pode derrubar a barra de status em alguns Androids; o lembrete usa o logo do IFES). O verde
+        // do app (o vermelho, na falha) pinta o círculo em volta do ícone (One UI, Android 12+) e o
+        // nome do app.
         val abrir = contexto.packageManager.getLaunchIntentForPackage(contexto.packageName)
         val toque = PendingIntent.getActivity(contexto, 0, abrir, PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(contexto, Notificacoes.CANAL)
-            .setSmallIcon(R.drawable.ic_notificacao)
+            .setSmallIcon(icone)
+            .setColor(ContextCompat.getColor(contexto, cor))
             .setContentTitle(titulo)
             .setContentText(texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
@@ -50,7 +64,10 @@ object Notificador {
 
     /** Mostra o resultado de uma execução; um [Aviso] com o mesmo ident substitui o anterior. */
     fun mostrar(contexto: Context, aviso: Aviso) {
-        val notificacao = construtor(contexto, aviso.titulo, aviso.texto)
+        val notificacao = construtor(
+            contexto, aviso.titulo, aviso.texto, icone(aviso.acao),
+            if (aviso.falhou) R.color.vermelho else R.color.verde,
+        )
         aviso.botao?.let {
             notificacao.addAction(botao(contexto, 100 + aviso.ident, it.rotulo, it.acao, it.data))
         }
