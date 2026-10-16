@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import io.github.fabiolimath.ponto.nucleo.Acao
 import io.github.fabiolimath.ponto.nucleo.Aviso
 import io.github.fabiolimath.ponto.nucleo.Lembrete
@@ -20,12 +21,14 @@ object Notificador {
         gerenciador(contexto).createNotificationChannel(
             NotificationChannel(Notificacoes.CANAL, Notificacoes.NOME_DO_CANAL, NotificationManager.IMPORTANCE_DEFAULT)
         )
-        // Tocar na notificação abre o app (o ícone monocromático próprio: o do app, adaptativo,
-        // pode derrubar a barra de status em alguns Androids).
+        // Tocar na notificação abre o app (o ícone monocromático próprio, o logo do IFES: o do app,
+        // adaptativo, pode derrubar a barra de status em alguns Androids). O verde do app pinta o
+        // círculo em volta do ícone (One UI, Android 12+) e o nome do app.
         val abrir = contexto.packageManager.getLaunchIntentForPackage(contexto.packageName)
         val toque = PendingIntent.getActivity(contexto, 0, abrir, PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(contexto, Notificacoes.CANAL)
             .setSmallIcon(R.drawable.ic_notificacao)
+            .setColor(ContextCompat.getColor(contexto, R.color.verde))
             .setContentTitle(titulo)
             .setContentText(texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
