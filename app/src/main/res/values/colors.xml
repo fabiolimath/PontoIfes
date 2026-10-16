@@ -2,6 +2,8 @@
 <resources>
     <!-- Barra do topo e botões disponíveis (o verde do app Python). -->
     <color name="verde">#008577</color>
+    <!-- Círculo do ícone das notificações de falha. -->
+    <color name="vermelho">#C62828</color>
     <color name="verde_escuro">#00574B</color>
     <!-- Destaque: interruptores ligados, cursor. -->
     <color name="destaque">#2E7D32</color>

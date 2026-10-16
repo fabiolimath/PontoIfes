@@ -59,6 +59,7 @@ class NotificacoesTest {
         assertEquals(Notificacoes.identDeFalha(70_000), Notificacoes.aviso(
             Acao.REGISTRAR_PIT, "t", "falhou", 1, dia, Preferencias(), terca, 70_000)!!.ident)
         assertTrue(aviso.ident >= 1000)
+        assertTrue(aviso.falhou)
         assertEquals(BotaoDeAviso("Tentar de novo", Acao.REGISTRAR_PIT, "02/10/2026"), aviso.botao)
         // Sem data (PIT do dia) e em outras ações, o botão não leva data.
         assertNull(Notificacoes.aviso(Acao.REGISTRAR_PIT, "t", "x", 1, null, Preferencias(), terca)!!.botao!!.data)

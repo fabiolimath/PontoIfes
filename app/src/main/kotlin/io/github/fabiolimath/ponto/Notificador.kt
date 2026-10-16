@@ -25,19 +25,21 @@ object Notificador {
     }
 
     private fun construtor(
-        contexto: Context, titulo: String, texto: String, icone: Int = R.drawable.ic_notificacao,
+        contexto: Context, titulo: String, texto: String,
+        icone: Int = R.drawable.ic_notificacao, cor: Int = R.color.verde,
     ): NotificationCompat.Builder {
         gerenciador(contexto).createNotificationChannel(
             NotificationChannel(Notificacoes.CANAL, Notificacoes.NOME_DO_CANAL, NotificationManager.IMPORTANCE_DEFAULT)
         )
         // Tocar na notificação abre o app (ícones monocromáticos próprios: o do app, adaptativo,
         // pode derrubar a barra de status em alguns Androids; o lembrete usa o logo do IFES). O verde
-        // do app pinta o círculo em volta do ícone (One UI, Android 12+) e o nome do app.
+        // do app (o vermelho, na falha) pinta o círculo em volta do ícone (One UI, Android 12+) e o
+        // nome do app.
         val abrir = contexto.packageManager.getLaunchIntentForPackage(contexto.packageName)
         val toque = PendingIntent.getActivity(contexto, 0, abrir, PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(contexto, Notificacoes.CANAL)
             .setSmallIcon(icone)
-            .setColor(ContextCompat.getColor(contexto, R.color.verde))
+            .setColor(ContextCompat.getColor(contexto, cor))
             .setContentTitle(titulo)
             .setContentText(texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
@@ -62,7 +64,10 @@ object Notificador {
 
     /** Mostra o resultado de uma execução; um [Aviso] com o mesmo ident substitui o anterior. */
     fun mostrar(contexto: Context, aviso: Aviso) {
-        val notificacao = construtor(contexto, aviso.titulo, aviso.texto, icone(aviso.acao))
+        val notificacao = construtor(
+            contexto, aviso.titulo, aviso.texto, icone(aviso.acao),
+            if (aviso.falhou) R.color.vermelho else R.color.verde,
+        )
         aviso.botao?.let {
             notificacao.addAction(botao(contexto, 100 + aviso.ident, it.rotulo, it.acao, it.data))
         }
