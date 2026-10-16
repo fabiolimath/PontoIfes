@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone das notificações de Abrir ponto: o play do atalho (atalho_abrir_simbolo.xml), recortado para 24dp;
+     o Android o pinta de branco. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <group
+        android:translateX="-26"
+        android:translateY="-26">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M44,35 L44,73 Q44,77 47.5,75 L75,57.5 Q78,55.5 75,53.5 L47.5,33 Q44,31 44,35 Z" />
+    </group>
+</vector>

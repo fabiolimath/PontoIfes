@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone das notificações de Fechar ponto: o stop do atalho (atalho_fechar_simbolo.xml), recortado para 24dp;
+     o Android o pinta de branco. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <group
+        android:translateX="-26"
+        android:translateY="-26">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M40,36 h28 a4,4 0 0 1 4,4 v28 a4,4 0 0 1 -4,4 h-28 a4,4 0 0 1 -4,-4 v-28 a4,4 0 0 1 4,-4 z" />
+    </group>
+</vector>

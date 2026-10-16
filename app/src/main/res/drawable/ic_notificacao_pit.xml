@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone das notificações de Registrar PIT: o relógio do atalho (atalho_pit_simbolo.xml), recortado para 24dp;
+     o Android o pinta de branco. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <group
+        android:translateX="-26"
+        android:translateY="-26">
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:pathData="M54,33 a21,21 0 1 0 0.01,0 Z" />
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M54,41 L54,54 L63,60" />
+    </group>
+</vector>

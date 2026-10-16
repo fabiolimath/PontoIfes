@@ -17,17 +17,26 @@ object Notificador {
     private fun gerenciador(contexto: Context) =
         contexto.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    private fun construtor(contexto: Context, titulo: String, texto: String): NotificationCompat.Builder {
+    /** O ícone das notificações de [acao]: o símbolo do atalho dela (play, stop, relógio). */
+    private fun icone(acao: Acao) = when (acao) {
+        Acao.ABRIR_PONTO -> R.drawable.ic_notificacao_abrir
+        Acao.FECHAR_PONTO -> R.drawable.ic_notificacao_fechar
+        Acao.REGISTRAR_PIT -> R.drawable.ic_notificacao_pit
+    }
+
+    private fun construtor(
+        contexto: Context, titulo: String, texto: String, icone: Int = R.drawable.ic_notificacao,
+    ): NotificationCompat.Builder {
         gerenciador(contexto).createNotificationChannel(
             NotificationChannel(Notificacoes.CANAL, Notificacoes.NOME_DO_CANAL, NotificationManager.IMPORTANCE_DEFAULT)
         )
-        // Tocar na notificação abre o app (o ícone monocromático próprio, o logo do IFES: o do app,
-        // adaptativo, pode derrubar a barra de status em alguns Androids). O verde do app pinta o
-        // círculo em volta do ícone (One UI, Android 12+) e o nome do app.
+        // Tocar na notificação abre o app (ícones monocromáticos próprios: o do app, adaptativo,
+        // pode derrubar a barra de status em alguns Androids; o lembrete usa o logo do IFES). O verde
+        // do app pinta o círculo em volta do ícone (One UI, Android 12+) e o nome do app.
         val abrir = contexto.packageManager.getLaunchIntentForPackage(contexto.packageName)
         val toque = PendingIntent.getActivity(contexto, 0, abrir, PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(contexto, Notificacoes.CANAL)
-            .setSmallIcon(R.drawable.ic_notificacao)
+            .setSmallIcon(icone)
             .setColor(ContextCompat.getColor(contexto, R.color.verde))
             .setContentTitle(titulo)
             .setContentText(texto)
@@ -53,7 +62,7 @@ object Notificador {
 
     /** Mostra o resultado de uma execução; um [Aviso] com o mesmo ident substitui o anterior. */
     fun mostrar(contexto: Context, aviso: Aviso) {
-        val notificacao = construtor(contexto, aviso.titulo, aviso.texto)
+        val notificacao = construtor(contexto, aviso.titulo, aviso.texto, icone(aviso.acao))
         aviso.botao?.let {
             notificacao.addAction(botao(contexto, 100 + aviso.ident, it.rotulo, it.acao, it.data))
         }

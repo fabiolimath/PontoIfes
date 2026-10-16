@@ -27,7 +27,7 @@ class NotificacoesTest {
         )
         assertEquals(
             Aviso(
-                "Fechar ponto: concluído.", "✅🔐📌 SIGRH: saída registrada às 17:00", 2,
+                Acao.FECHAR_PONTO, "Fechar ponto: concluído.", "✅🔐📌 SIGRH: saída registrada às 17:00", 2,
                 BotaoDeAviso("Registrar PIT", Acao.REGISTRAR_PIT),
             ),
             aviso,
