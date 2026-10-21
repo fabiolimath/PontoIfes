@@ -10,7 +10,6 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.PowerManager
@@ -18,11 +17,16 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import io.github.fabiolimath.ponto.nucleo.AberturaAutomatica
@@ -31,14 +35,17 @@ import io.github.fabiolimath.ponto.nucleo.EstadoDoPonto
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
 import io.github.fabiolimath.ponto.nucleo.GatilhoWifi
 import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 
 /**
- * Abrir o ponto ao conectar na Wi-Fi do campus, com o app fechado: o gatilho guardado pelo sistema
- * (como o alarme do lembrete), a leitura do nome da rede e a bateria.
+ * Abrir o ponto ao conectar na Wi-Fi do campus, com o app fechado: a verificação periódica da
+ * Wi-Fi (WorkManager), a leitura do nome da rede e a bateria.
  */
 object Wifi {
     private const val TAG = "Ponto"
     private const val TRABALHO = "abrir_automatico"
+    private const val VERIFICACAO = "verificar_wifi"
+    private const val VERIFICACAO_AGORA = "verificar_wifi_agora"
     const val EXTRA_REDE_CONFIRMADA = "rede_confirmada"
 
     /** Mutável: o sistema põe no intent a rede que conectou. */
@@ -49,51 +56,77 @@ object Wifi {
         contexto.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     /**
-     * Pede ao sistema que chame o [RedeReceiver] a cada Wi-Fi que fica disponível, mesmo com o app
-     * fechado; ele chama na hora se já houver uma conectada. Com a opção desligada, desfaz o pedido.
+     * Liga a verificação da Wi-Fi (com a opção desligada, a desliga): um trabalho periódico do
+     * WorkManager, a cada 15 min com Wi-Fi, que vale com o app fechado e depois de reiniciar. Até a
+     * 2.6.1 era um pedido de rede ao sistema (registerNetworkCallback), que sumia sempre que o
+     * sistema fechava o app (visto no log do APK de teste da 2.6.2).
      *
-     * [forcar]: refaz o pedido mesmo que já exista (ao ligar a opção, ao reiniciar o celular e ao
-     * atualizar o app). Sem [forcar] (ao abrir o app), só o refaz se ele sumiu (Forçar parada), para
-     * abrir o app não disparar uma tentativa a cada vez.
+     * [verificarAgora]: também verifica já (ao abrir o app, ao ligar a opção ou trocar a rede, ao
+     * reiniciar o celular e ao atualizar o app).
      */
-    fun registrar(contexto: Context, forcar: Boolean) {
+    fun registrar(contexto: Context, verificarAgora: Boolean) {
         val app = contexto.applicationContext
+        desfazerPedidoAntigo(app)
+        val trabalhos = WorkManager.getInstance(app)
         if (!Dados.preferencias(app).wifiAbrir) {
-            desfazer(app)
+            trabalhos.cancelUniqueWork(VERIFICACAO)
             return
         }
-        if (!forcar) {
-            if (pedido(app, PendingIntent.FLAG_NO_CREATE) != null) return
-            // Pista para o gatilho que não dispara: ele tinha sumido do sistema.
-            anotar(app, "Gatilho da Wi-Fi refeito: não estava registrado no sistema.")
-        }
-        val intencao = pedido(app, PendingIntent.FLAG_UPDATE_CURRENT)!!
-        val rede = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        val periodico = PeriodicWorkRequestBuilder<VerificarWifiWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build())
             .build()
-        try {
-            try {
-                conectividade(app).unregisterNetworkCallback(intencao)
-            } catch (e: IllegalArgumentException) {
-                // Ainda não havia pedido.
-            }
-            conectividade(app).registerNetworkCallback(rede, intencao)
-        } catch (e: RuntimeException) {
-            // Sem o pedido no sistema, o PendingIntent também sai, para a próxima abertura tentar de novo.
-            intencao.cancel()
-            throw e
+        trabalhos.enqueueUniquePeriodicWork(VERIFICACAO, ExistingPeriodicWorkPolicy.KEEP, periodico)
+        if (verificarAgora) {
+            trabalhos.enqueueUniqueWork(
+                VERIFICACAO_AGORA, ExistingWorkPolicy.REPLACE, OneTimeWorkRequestBuilder<VerificarWifiWorker>().build(),
+            )
         }
     }
 
     fun desfazer(contexto: Context) {
-        val intencao = pedido(contexto.applicationContext, PendingIntent.FLAG_NO_CREATE) ?: return
+        val app = contexto.applicationContext
+        desfazerPedidoAntigo(app)
+        WorkManager.getInstance(app).cancelUniqueWork(VERIFICACAO)
+    }
+
+    /** O pedido de rede da 2.6.2 ou anterior, se ainda está no sistema. */
+    private fun desfazerPedidoAntigo(contexto: Context) {
+        val intencao = pedido(contexto, PendingIntent.FLAG_NO_CREATE) ?: return
         try {
             conectividade(contexto).unregisterNetworkCallback(intencao)
         } catch (e: IllegalArgumentException) {
             // Já não havia pedido.
         }
         intencao.cancel()
+    }
+
+    /** Se a rede em uso agora é uma Wi-Fi. */
+    fun conectadoNaWifi(contexto: Context): Boolean {
+        val conectividade = conectividade(contexto)
+        val rede = conectividade.activeNetwork ?: return false
+        return conectividade.getNetworkCapabilities(rede)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+    }
+
+    /**
+     * Decide, sem rede, se vale abrir o ponto pela Wi-Fi conectada e põe o trabalho na fila.
+     * [anotarIgnorados]: os ignorados relevantes vão ao log (não na verificação periódica, que os
+     * repetiria a cada 15 min).
+     */
+    fun verificar(contexto: Context, anotarIgnorados: Boolean) {
+        val app = contexto.applicationContext
+        val preferencias = Dados.preferencias(app)
+        val agora = LocalDateTime.now()
+        val decisao = GatilhoWifi.deveExecutar(
+            agora, nomeDaRede(app), estado(app), preferencias.wifiAbrir, preferencias.wifiRede,
+            preferencias.duracaoDaEsperaWifi,
+        )
+        when (decisao) {
+            is Decisao.Ignorar -> if (anotarIgnorados && decisao.anotar) anotar(app, "Ignorado: ${decisao.motivo}.", agora)
+            is Decisao.Executar -> {
+                GatilhoWifi.registrarTentativa(Dados.arquivo(app, "abertura_automatica.txt"), agora)
+                agendar(app, decisao.redeConfirmada)
+            }
+        }
     }
 
     // ---------------- nome da rede ----------------
@@ -186,33 +219,34 @@ object Wifi {
 }
 
 /**
- * Chamado pelo sistema a cada Wi-Fi que fica disponível (pedido feito por [Wifi.registrar]).
- * Decide em milissegundos, sem rede, se vale abrir o ponto, e põe o trabalho na fila.
+ * Chamado pelo sistema a cada Wi-Fi que fica disponível, pelo pedido de rede da 2.6.2 ou anterior
+ * que ainda estiver no sistema: verifica essa conexão e troca o pedido pela verificação periódica.
  */
 class RedeReceiver : BroadcastReceiver() {
     override fun onReceive(contexto: Context, intent: Intent) {
-        val app = contexto.applicationContext
         try {
-            val preferencias = Dados.preferencias(app)
-            if (!preferencias.wifiAbrir) {
-                Wifi.desfazer(app)
-                return
-            }
-            val agora = LocalDateTime.now()
-            val decisao = GatilhoWifi.deveExecutar(
-                agora, Wifi.nomeDaRede(app), Wifi.estado(app), preferencias.wifiAbrir, preferencias.wifiRede,
-                preferencias.duracaoDaEsperaWifi,
-            )
-            when (decisao) {
-                is Decisao.Ignorar -> if (decisao.anotar) Wifi.anotar(app, "Ignorado: ${decisao.motivo}.", agora)
-                is Decisao.Executar -> {
-                    GatilhoWifi.registrarTentativa(Dados.arquivo(app, "abertura_automatica.txt"), agora)
-                    Wifi.agendar(app, decisao.redeConfirmada)
-                }
-            }
+            if (Dados.preferencias(contexto).wifiAbrir) Wifi.verificar(contexto, anotarIgnorados = true)
+            // O pedido antigo some; daqui em diante vale a verificação periódica.
+            Wifi.registrar(contexto, verificarAgora = false)
         } catch (e: Exception) {
             Log.w("Ponto", "Erro no gatilho da Wi-Fi", e)
         }
+    }
+}
+
+/**
+ * A verificação da Wi-Fi (trabalho do WorkManager, periódico ou na hora): com a opção ligada e
+ * uma Wi-Fi em uso, decide como o gatilho antigo e põe a abertura na fila. Ignorados ficam fora do log.
+ */
+class VerificarWifiWorker(contexto: Context, parametros: WorkerParameters) : Worker(contexto, parametros) {
+    override fun doWork(): Result {
+        try {
+            val app = applicationContext
+            if (Dados.preferencias(app).wifiAbrir && Wifi.conectadoNaWifi(app)) Wifi.verificar(app, anotarIgnorados = false)
+        } catch (e: Exception) {
+            Log.w("Ponto", "Erro na verificação da Wi-Fi", e)
+        }
+        return Result.success()
     }
 }
 

@@ -48,7 +48,7 @@ class GatilhoWifiTest {
         assertIs<Decisao.Executar>(decidir(quando = LocalDateTime.of(2026, 10, 16, 7, 40))) // sexta
         val sabado = decidir(quando = LocalDateTime.of(2026, 10, 17, 7, 40))
         assertIs<Decisao.Ignorar>(sabado)
-        assertTrue(sabado.anotar)
+        assertFalse(sabado.anotar)
         assertIs<Decisao.Ignorar>(decidir(quando = LocalDateTime.of(2026, 10, 18, 7, 40))) // domingo
     }
 
@@ -59,10 +59,10 @@ class GatilhoWifiTest {
     }
 
     @Test
-    fun nome_diferente_e_ignorado_e_anotado() {
+    fun nome_diferente_e_ignorado_sem_anotar() {
         val d = decidir(nome = "Casa")
         assertIs<Decisao.Ignorar>(d)
-        assertTrue(d.anotar)
+        assertFalse(d.anotar)
         assertEquals("rede diferente (Casa)", d.motivo)
     }
 
@@ -119,7 +119,7 @@ class GatilhoWifiTest {
     fun trava_de_5_min_entre_tentativas() {
         val d = decidir(estado = EstadoDoPonto(ultimaTentativa = agora.minusMinutes(4)))
         assertIs<Decisao.Ignorar>(d)
-        assertTrue(d.anotar)
+        assertFalse(d.anotar)
         assertEquals(Decisao.Executar(true), decidir(estado = EstadoDoPonto(ultimaTentativa = agora.minusMinutes(5))))
         // Uma hora no futuro (relógio mudou) não trava.
         assertEquals(Decisao.Executar(true), decidir(estado = EstadoDoPonto(ultimaTentativa = agora.plusHours(1))))

@@ -89,7 +89,7 @@ class InicioReceiver : BroadcastReceiver() {
                 android.util.Log.w("Ponto", "Erro ao agendar o PIT automático", e)
             }
             try {
-                Wifi.registrar(contexto, forcar = true)
+                Wifi.registrar(contexto, verificarAgora = true)
             } catch (e: Exception) {
                 android.util.Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
             }

@@ -87,17 +87,17 @@ object GatilhoWifi {
         espera: Duration = ESPERA_PADRAO,
     ): Decisao {
         if (!ligado) return Decisao.Ignorar("opção desligada", anotar = false)
-        if (!Notificacoes.diaUtil(agora.toLocalDate())) return Decisao.Ignorar("fim de semana", anotar = true)
+        if (!Notificacoes.diaUtil(agora.toLocalDate())) return Decisao.Ignorar("fim de semana", anotar = false)
         val confirmada = nomeDaRede != null
         if (confirmada && !nomeDaRede.equals(redeConfigurada.trim(), ignoreCase = true)) {
-            return Decisao.Ignorar("rede diferente ($nomeDaRede)", anotar = true)
+            return Decisao.Ignorar("rede diferente ($nomeDaRede)", anotar = false)
         }
         if (pontoAberto(agora, estado)) return Decisao.Ignorar("o ponto já está aberto", anotar = true)
         if (dentroDe(estado.ultimoFechamento, agora, espera)) {
             return Decisao.Ignorar("o ponto foi fechado há menos de ${escrever(espera)}", anotar = true)
         }
         if (dentroDe(estado.ultimaTentativa, agora, TRAVA)) {
-            return Decisao.Ignorar("houve uma tentativa há menos de 5 min", anotar = true)
+            return Decisao.Ignorar("houve uma tentativa há menos de 5 min", anotar = false)
         }
         return Decisao.Executar(confirmada)
     }

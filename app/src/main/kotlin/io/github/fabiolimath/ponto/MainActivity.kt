@@ -69,8 +69,9 @@ class MainActivity : AppCompatActivity() {
         // com elas, pede a permissão de notificar (no Android 13+) e verifica atualizações.
         if (savedInstanceState == null) {
             Legado.apagarPython(this)
-            // Os gatilhos somem com o "Forçar parada": abrir o app os refaz (também no PontoApp).
-            PontoApp.refazerGatilhos(this)
+            // Os gatilhos somem com o "Forçar parada": abrir o app os refaz (também no PontoApp) e,
+            // dentro do campus, abre o ponto pela Wi-Fi sem esperar a próxima verificação.
+            PontoApp.refazerGatilhos(this, verificarWifi = true)
             val acao = acaoDoIntent()
             if (acao != null) {
                 // Aberto por um botão de notificação, atalho ou Tasker: executa já.
