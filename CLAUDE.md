@@ -80,6 +80,11 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
      (guardado pelo sistema, vale com o app fechado; o sistema chama na hora se já há Wi-Fi). Feito
      ao salvar (forçado ao ligar ou trocar a rede), ao abrir o app (só se o PendingIntent sumiu, por
      exemplo com Forçar parada), ao reiniciar e ao atualizar (`InicioReceiver`).
+     O pedido vale uma vez: o sistema o desfaz 5 s depois de chamar o receiver (`onSendFinished` do
+     ConnectivityService; REGISTER/RELEASE no `dumpsys connectivity`). Desde a 2.6.2, o
+     `VerificarWifiWorker` (WorkManager periódico, 15 min) e o `PontoApp`, a cada subida do processo,
+     o refazem se sumiu, só fora da Wi-Fi (senão dispararia na hora a cada vez); ao abrir o app,
+     mesmo na Wi-Fi.
    - Filtro (`nucleo/GatilhoWifi`, sem rede): seg a sex; nome legível e diferente do configurado
      ignora (sem localização "o tempo todo" o nome é ilegível e o app tenta assim mesmo); ponto já
      aberto hoje (`ultima_abertura.txt` depois do último fechamento); a espera configurada após fechar; 5 min entre

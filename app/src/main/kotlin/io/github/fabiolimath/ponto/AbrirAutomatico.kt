@@ -19,10 +19,13 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import io.github.fabiolimath.ponto.nucleo.AberturaAutomatica
@@ -31,6 +34,7 @@ import io.github.fabiolimath.ponto.nucleo.EstadoDoPonto
 import io.github.fabiolimath.ponto.nucleo.Fechamentos
 import io.github.fabiolimath.ponto.nucleo.GatilhoWifi
 import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 
 /**
  * Abrir o ponto ao conectar na Wi-Fi do campus, com o app fechado: o gatilho guardado pelo sistema
@@ -39,6 +43,7 @@ import java.time.LocalDateTime
 object Wifi {
     private const val TAG = "Ponto"
     private const val TRABALHO = "abrir_automatico"
+    private const val VERIFICACAO = "verificar_wifi"
     const val EXTRA_REDE_CONFIRMADA = "rede_confirmada"
 
     /** Mutável: o sistema põe no intent a rede que conectou. */
@@ -55,14 +60,25 @@ object Wifi {
      * [forcar]: refaz o pedido mesmo que já exista (ao ligar a opção, ao reiniciar o celular e ao
      * atualizar o app). Sem [forcar] (ao abrir o app), só o refaz se ele sumiu (Forçar parada), para
      * abrir o app não disparar uma tentativa a cada vez.
+     *
+     * O pedido vale uma vez só: o sistema o desfaz 5 s depois de chamar o [RedeReceiver]
+     * (ConnectivityService.onSendFinished, "releasePendingNetworkRequestWithDelay"; visto no
+     * `dumpsys connectivity` do celular do Nick, REGISTER e RELEASE com 5 s de diferença). Por isso
+     * o [VerificarWifiWorker] o refaz a cada 15 min, e o app a cada vez que sobe.
+     *
+     * [soSemWifi]: só refaz fora da Wi-Fi, para o pedido novo esperar a próxima conexão em vez de
+     * disparar na hora pela Wi-Fi atual (que já foi tratada) a cada 15 min.
      */
-    fun registrar(contexto: Context, forcar: Boolean) {
+    fun registrar(contexto: Context, forcar: Boolean, soSemWifi: Boolean = false) {
         val app = contexto.applicationContext
         if (!Dados.preferencias(app).wifiAbrir) {
             desfazer(app)
             return
         }
+        val periodico = PeriodicWorkRequestBuilder<VerificarWifiWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(app).enqueueUniquePeriodicWork(VERIFICACAO, ExistingPeriodicWorkPolicy.KEEP, periodico)
         if (!forcar && pedido(app, PendingIntent.FLAG_NO_CREATE) != null) return
+        if (soSemWifi && conectadoNaWifi(app)) return
         val intencao = pedido(app, PendingIntent.FLAG_UPDATE_CURRENT)!!
         val rede = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -82,7 +98,24 @@ object Wifi {
         }
     }
 
+    /**
+     * Chamado pelo [RedeReceiver]: o sistema desfaz o pedido em 5 s, mas o PendingIntent pode
+     * continuar existindo, e [registrar] acharia que o pedido ainda vale. Cancelado, a próxima
+     * conferência o refaz.
+     */
+    fun marcarUsado(contexto: Context) {
+        pedido(contexto.applicationContext, PendingIntent.FLAG_NO_CREATE)?.cancel()
+    }
+
+    /** Se a rede em uso agora é uma Wi-Fi. */
+    private fun conectadoNaWifi(contexto: Context): Boolean {
+        val conectividade = conectividade(contexto)
+        val rede = conectividade.activeNetwork ?: return false
+        return conectividade.getNetworkCapabilities(rede)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+    }
+
     fun desfazer(contexto: Context) {
+        WorkManager.getInstance(contexto.applicationContext).cancelUniqueWork(VERIFICACAO)
         val intencao = pedido(contexto.applicationContext, PendingIntent.FLAG_NO_CREATE) ?: return
         try {
             conectividade(contexto).unregisterNetworkCallback(intencao)
@@ -194,6 +227,7 @@ class RedeReceiver : BroadcastReceiver() {
                 Wifi.desfazer(app)
                 return
             }
+            Wifi.marcarUsado(app)
             val agora = LocalDateTime.now()
             val decisao = GatilhoWifi.deveExecutar(
                 agora, Wifi.nomeDaRede(app), Wifi.estado(app), preferencias.wifiAbrir, preferencias.wifiRede,
@@ -230,6 +264,18 @@ class AbrirAutomaticoWorker(contexto: Context, parametros: WorkerParameters) : C
         val redeConfirmada = inputData.getBoolean(Wifi.EXTRA_REDE_CONFIRMADA, false)
         if (!Execucao.abrirAutomatico(app, credenciais, redeConfirmada)) {
             Wifi.anotar(app, "Ignorado: outra ação em andamento.")
+        }
+        return Result.success()
+    }
+}
+
+/** A cada 15 min, refaz o pedido da Wi-Fi ([Wifi.registrar]) se ele foi usado e o celular está fora da Wi-Fi. */
+class VerificarWifiWorker(contexto: Context, parametros: WorkerParameters) : Worker(contexto, parametros) {
+    override fun doWork(): Result {
+        try {
+            Wifi.registrar(applicationContext, forcar = false, soSemWifi = true)
+        } catch (e: Exception) {
+            Log.w("Ponto", "Erro ao conferir o gatilho da Wi-Fi", e)
         }
         return Result.success()
     }
