@@ -421,10 +421,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
         Dados.salvarCredenciais(this, novas)
         Dados.salvarPreferencias(this, preferencias)
         if (!preferencias.lembreteFechar) Lembretes.cancelar(this)
-        // Ao ligar a opção (ou trocar a rede), verifica na hora: dentro do campus, abre o ponto em seguida.
+        // Ao ligar a opção (ou trocar a rede), o pedido é refeito: dentro do campus, abre o ponto em seguida.
         val wifiMudou = preferencias.wifiAbrir && (!anteriores.wifiAbrir || anteriores.wifiRede != preferencias.wifiRede)
         try {
-            Wifi.registrar(this, verificarAgora = wifiMudou)
+            Wifi.registrar(this, forcar = wifiMudou)
         } catch (e: Exception) {
             Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
         }

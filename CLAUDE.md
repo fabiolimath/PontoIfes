@@ -76,12 +76,13 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    padrão `ws_wlan`; botão **Definir rede atual como padrão** preenche com a Wi-Fi conectada, pedindo a
    localização "o tempo todo" se falta; com o app aberto basta a precisa), espera depois de fechar (`wifi_espera`, hh:mm, padrão 01:00, de 00:01 a 06:00),
    linha de estado (nome reconhecido ou não) e `aviso_bateria`.
-   - Gatilho (2.6.2): `VerificarWifiWorker`, trabalho periódico do WorkManager a cada 15 min com
-     rede sem cobrança (`Wifi.registrar`, KEEP), que confere se a rede em uso é Wi-Fi e decide sem
-     anotar os ignorados; também na hora ao abrir o app, ao ligar a opção ou trocar a rede, ao
-     reiniciar e ao atualizar. Até a 2.6.1 era `registerNetworkCallback` com PendingIntent para o
-     `RedeReceiver`, que sumia sempre que o sistema fechava o app (visto no log da 2.6.2); o
-     `RedeReceiver` ficou só para trocar um pedido antigo ainda registrado.
+   - Gatilho: `ConnectivityManager.registerNetworkCallback` com PendingIntent para o `RedeReceiver`
+     (guardado pelo sistema, vale com o app fechado; o sistema chama na hora se já há Wi-Fi). Feito
+     ao salvar (forçado ao ligar ou trocar a rede), ao abrir o app (só se o PendingIntent sumiu, por
+     exemplo com Forçar parada), ao reiniciar e ao atualizar (`InicioReceiver`).
+     O pedido some quando o sistema fecha o app (visto no log do teste da 2.6.2; os alarmes ficam):
+     desde a 2.6.2, o `VerificarWifiWorker` (WorkManager periódico, 15 min) e o `PontoApp`, a cada
+     subida do processo, conferem e o refazem, com "Gatilho da Wi-Fi refeito" no log.
    - Filtro (`nucleo/GatilhoWifi`, sem rede): seg a sex; nome legível e diferente do configurado
      ignora (sem localização "o tempo todo" o nome é ilegível e o app tenta assim mesmo); ponto já
      aberto hoje (`ultima_abertura.txt` depois do último fechamento); a espera configurada após fechar; 5 min entre
