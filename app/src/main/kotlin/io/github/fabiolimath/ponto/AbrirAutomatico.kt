@@ -98,6 +98,15 @@ object Wifi {
         }
     }
 
+    /**
+     * Chamado pelo [RedeReceiver]: o sistema desfaz o pedido em 5 s, mas o PendingIntent pode
+     * continuar existindo, e [registrar] acharia que o pedido ainda vale. Cancelado, a próxima
+     * conferência o refaz.
+     */
+    fun marcarUsado(contexto: Context) {
+        pedido(contexto.applicationContext, PendingIntent.FLAG_NO_CREATE)?.cancel()
+    }
+
     /** Se a rede em uso agora é uma Wi-Fi. */
     private fun conectadoNaWifi(contexto: Context): Boolean {
         val conectividade = conectividade(contexto)
@@ -218,6 +227,7 @@ class RedeReceiver : BroadcastReceiver() {
                 Wifi.desfazer(app)
                 return
             }
+            Wifi.marcarUsado(app)
             val agora = LocalDateTime.now()
             val decisao = GatilhoWifi.deveExecutar(
                 agora, Wifi.nomeDaRede(app), Wifi.estado(app), preferencias.wifiAbrir, preferencias.wifiRede,
