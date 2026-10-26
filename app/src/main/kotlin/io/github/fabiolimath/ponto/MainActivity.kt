@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             Legado.apagarPython(this)
             // Os gatilhos somem com o "Forçar parada": abrir o app os refaz (também no PontoApp).
-            PontoApp.refazerGatilhos(this)
+            PontoApp.refazerGatilhos(this, abrindoApp = true)
             val acao = acaoDoIntent()
             if (acao != null) {
                 // Aberto por um botão de notificação, atalho ou Tasker: executa já.

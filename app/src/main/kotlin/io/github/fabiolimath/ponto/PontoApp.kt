@@ -17,12 +17,13 @@ class PontoApp : Application() {
 
     companion object {
         /**
-         * O gatilho da Wi-Fi (só se sumiu, por exemplo com o "Forçar parada") e os alarmes do
+         * O gatilho da Wi-Fi (só se sumiu: ele vale uma vez, ver [Wifi.registrar]) e os alarmes do
          * fechamento e do PIT automáticos (refazer o mesmo alarme não muda nada).
          */
-        fun refazerGatilhos(contexto: Context) {
+        fun refazerGatilhos(contexto: Context, abrindoApp: Boolean = false) {
             try {
-                Wifi.registrar(contexto, forcar = false)
+                // Ao abrir o app, refaz mesmo na Wi-Fi: dentro do campus, abre o ponto em seguida.
+                Wifi.registrar(contexto, forcar = false, soSemWifi = !abrindoApp)
             } catch (e: Exception) {
                 Log.w("Ponto", "Erro ao registrar o gatilho da Wi-Fi", e)
             }
