@@ -110,6 +110,7 @@ class Sigrh(
                     cancelamento.conferir()
                     erro = e
                     saida("Tentativa $tentativa falhou: ${resumir(e)}")
+                    detalhe(e)?.let { saida("Detalhe: $it") }
                     if (tentativa < tentativas) {
                         val espera = esperas[tentativa - 1]
                         saida("Tentando de novo em ${espera}s...")
@@ -144,6 +145,17 @@ internal fun resumir(e: Throwable): String = when (e) {
     is InterruptedIOException -> "o SIGRH não respondeu a tempo" // inclui SocketTimeoutException
     is IOException -> "sem conexão. $DICA_WIFI"
     else -> e.message ?: e.toString()
+}
+
+/**
+ * O erro de rede por extenso, para o log: "sem conexão" junta casos bem diferentes (sem Wi-Fi,
+ * DNS, certificado recusado...). Null quando o [resumir] já diz tudo.
+ */
+internal fun detalhe(e: Throwable): String? {
+    if (e !is IOException || e is InterruptedIOException) return null
+    val causas = generateSequence<Throwable>(e) { it.cause }.take(4)
+        .map { "${it.javaClass.simpleName}: ${it.message ?: ""}".trim().removeSuffix(":") }
+    return causas.distinct().joinToString(" <- ").take(300)
 }
 
 /** Como o `repr` do Python para um texto: entre aspas simples, ou duplas se tiver aspas simples. */
