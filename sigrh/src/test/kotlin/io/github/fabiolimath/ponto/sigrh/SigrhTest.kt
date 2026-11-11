@@ -120,6 +120,17 @@ class SigrhTest {
     }
 
     @Test
+    fun `pit sem conexao pede internet e nao a wifi do campus`() = runBlocking<Unit> {
+        servidor.shutdown()
+
+        val r = sigrh().registrarPit(LocalDate.of(2026, 10, 13))
+
+        assertIs<Resultado.FalhaDeConexao>(r)
+        assertEquals("📋❌ SIGRH: PIT de 13/10/2026 não registrado: sem conexão. $DICA_INTERNET", r.mensagem)
+        assertTrue(linhas.none { "Wi-Fi" in it })
+    }
+
+    @Test
     fun `login recusado nao repete`() = runBlocking<Unit> {
         paginas = mapOf("GET $LOGIN" to login,
             "POST $LOGIN" to """<ul class="erros"><li>Usuário e/ou senha inválidos</li></ul>""" + login)

@@ -36,7 +36,10 @@ private val FORM_URLENCODED = "application/x-www-form-urlencoded".toMediaType()
 
 /** Cliente HTTP compartilhado (o pool de conexões); cada sessão ganha os próprios cookies. */
 internal val clienteBase: OkHttpClient by lazy {
+    // Completa a cadeia do certificado quando o SIGRH não manda o intermediário (ver ConfiancaComAia).
+    val confianca = ConfiancaComAia.doSistema()
     OkHttpClient.Builder()
+        .sslSocketFactory(ConfiancaComAia.contexto(confianca).socketFactory, confianca)
         .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
         .readTimeout(TIMEOUT, TimeUnit.SECONDS)
         .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
