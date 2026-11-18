@@ -8,6 +8,10 @@ package io.github.fabiolimath.ponto.sigrh
  * mostrar o botão "Registrar Saída"). Fora da rede do campus o SIGRH já mostra, na tela do ponto,
  * "O Endereço IP de seu computador não tem autorização para registrar o Ponto Eletrônico": aí
  * nada é enviado e a tentativa se repete (a Wi-Fi pode estar conectando).
+ *
+ * Com o ponto já aberto, o login leva ao portal do servidor (o RH), e não à tela do ponto. Aí a
+ * tela do ponto é aberta pelo link do portal, como o navegador e o fechamento fazem, para ler a
+ * hora de entrada; se ela não abrir, o portal já basta para dizer que o ponto estava aberto.
  */
 internal object AbrirPonto {
     const val FORM = "idFormDadosEntradaSaida"
@@ -28,8 +32,32 @@ internal object AbrirPonto {
         "rede", " ip", "endereço", "local", "computador", "máquina", "permitid", "autorizad")
 
     suspend fun abrir(sessao: Sessao, usuario: String, senha: String, cancelamento: Cancelamento): String {
-        val pagina = telaDoPonto(sessao, entrar(sessao, usuario, senha, ::erros))
+        val depoisDoLogin = entrar(sessao, usuario, senha, ::erros)
+        if (depoisDoLogin.form(FORM) == null && FecharPonto.linkDoPonto(depoisDoLogin) != null) {
+            return peloPortal(sessao, depoisDoLogin, cancelamento)
+        }
+        val pagina = telaDoPonto(sessao, depoisDoLogin)
         return registrarEntrada(sessao, pagina, cancelamento)
+    }
+
+    /**
+     * O login caiu no portal: o SIGRH faz isso quando há entrada aberta. Abre a tela do ponto pelo
+     * link do portal; com ela, segue como sempre (o "Registrar Saída" diz a hora de entrada). Sem
+     * ela, inclusive com o IP recusado, o ponto já estava aberto e não há o que registrar.
+     * Erros de rede seguem para o laço de tentativas.
+     */
+    private suspend fun peloPortal(sessao: Sessao, portal: Pagina, cancelamento: Cancelamento): String {
+        val (form, link) = FecharPonto.linkDoPonto(portal)!!
+        val pagina = sessao.post(PORTAL, formulario(linkedMapOf(
+            form to form,
+            "javax.faces.ViewState" to viewstate(portal, form),
+            link to link,
+        ))).pagina
+        val semIp = erros(pagina).any { ERRO_DE_IP.containsMatchIn(it) }
+        if (pagina.form(FORM) != null && !semIp && (temBotao(pagina, BTN_SAIDA) || temBotao(pagina, BTN_ENTRADA))) {
+            return registrarEntrada(sessao, pagina, cancelamento)
+        }
+        return "🔓ℹ️ SIGRH: o ponto já estava aberto"
     }
 
     fun erros(pagina: Pagina) = mensagens(pagina, "erros") + mensagens(pagina, "warning")

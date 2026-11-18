@@ -21,6 +21,9 @@ val ESPERAS: List<Long> = listOf(10, 20, 30, 60)
 
 internal const val DICA_WIFI = "Confira se está conectado à Wi-Fi do campus."
 
+/** O PIT não depende da rede do campus: basta a internet. */
+internal const val DICA_INTERNET = "Confira se está conectado à internet."
+
 /**
  * Cliente do SIGRH: abre e fecha o ponto e registra o PIT, como os scripts Python
  * (`abrir_ponto.py`, `fechar_ponto.py`, `registrar_pit.py`).
@@ -73,7 +76,11 @@ class Sigrh(
         if (usuario.isEmpty() || senha.isEmpty()) return semCredenciais()
         val obs = observacao.trim().ifEmpty { RegistrarPit.OBSERVACAO_PADRAO }
         saida("Registrando o PIT de $data ($semana), observação: ${repr(obs)}")
-        return executar(falha = { "📋❌ SIGRH: PIT de $data não registrado: $it" }, conferirCredenciais = false) {
+        return executar(
+            falha = { "📋❌ SIGRH: PIT de $data não registrado: $it" },
+            conferirCredenciais = false,
+            dica = DICA_INTERNET,
+        ) {
             RegistrarPit.registrar(it, data, obs, usuario, senha, cancelamento, saida)
         }
     }
@@ -86,6 +93,7 @@ class Sigrh(
     private suspend fun executar(
         falha: (String) -> String,
         conferirCredenciais: Boolean = true,
+        dica: String = DICA_WIFI,
         acao: suspend (Sessao) -> String,
     ): Resultado {
         if (conferirCredenciais && (usuario.isEmpty() || senha.isEmpty())) return semCredenciais()
@@ -109,7 +117,8 @@ class Sigrh(
                     // Uma requisição interrompida pelo Cancelar chega aqui como erro de rede.
                     cancelamento.conferir()
                     erro = e
-                    saida("Tentativa $tentativa falhou: ${resumir(e)}")
+                    saida("Tentativa $tentativa falhou: ${resumir(e, dica)}")
+                    detalhe(e)?.let { saida("Detalhe: $it") }
                     if (tentativa < tentativas) {
                         val espera = esperas[tentativa - 1]
                         saida("Tentando de novo em ${espera}s...")
@@ -120,7 +129,7 @@ class Sigrh(
         } catch (e: Cancelado) {
             return fim(Resultado.Cancelado)
         }
-        val mensagem = falha(resumir(erro!!))
+        val mensagem = falha(resumir(erro!!, dica))
         return fim(when (val e = erro) {
             is Recusa -> if (e.foraDaRede) Resultado.ForaDaRede(mensagem) else Resultado.Recusado(mensagem)
             is Incerto -> Resultado.EnvioIncerto(mensagem)
@@ -140,10 +149,21 @@ class Sigrh(
 }
 
 /** Texto curto do erro: sem rede, não mostra a exceção inteira. */
-internal fun resumir(e: Throwable): String = when (e) {
+internal fun resumir(e: Throwable, dica: String = DICA_WIFI): String = when (e) {
     is InterruptedIOException -> "o SIGRH não respondeu a tempo" // inclui SocketTimeoutException
-    is IOException -> "sem conexão. $DICA_WIFI"
+    is IOException -> "sem conexão. $dica"
     else -> e.message ?: e.toString()
+}
+
+/**
+ * O erro de rede por extenso, para o log: "sem conexão" junta casos bem diferentes (sem Wi-Fi,
+ * DNS, certificado recusado...). Null quando o [resumir] já diz tudo.
+ */
+internal fun detalhe(e: Throwable): String? {
+    if (e !is IOException || e is InterruptedIOException) return null
+    val causas = generateSequence<Throwable>(e) { it.cause }.take(4)
+        .map { "${it.javaClass.simpleName}: ${it.message ?: ""}".trim().removeSuffix(":") }
+    return causas.distinct().joinToString(" <- ").take(300)
 }
 
 /** Como o `repr` do Python para um texto: entre aspas simples, ou duplas se tiver aspas simples. */
@@ -215,11 +235,15 @@ internal suspend fun entrar(
  * O envio final; um erro de rede ou HTTP aqui vira [Incerto] ("[oQue] (motivo); confira no
  * SIGRH"), porque o registro pode ter ficado feito.
  */
-internal suspend fun enviarFinal(oQue: String, envio: suspend () -> Resposta): Resposta =
+internal suspend fun enviarFinal(
+    oQue: String,
+    dica: String = DICA_WIFI,
+    envio: suspend () -> Resposta,
+): Resposta =
     try {
         envio().conferir()
     } catch (e: IOException) {
-        throw Incerto("$oQue (${resumir(e)}); confira no SIGRH")
+        throw Incerto("$oQue (${resumir(e, dica)}); confira no SIGRH")
     } catch (e: ErroHttp) {
-        throw Incerto("$oQue (${resumir(e)}); confira no SIGRH")
+        throw Incerto("$oQue (${resumir(e, dica)}); confira no SIGRH")
     }
