@@ -33,6 +33,12 @@
     <string name="fechar_modo_0">Não</string>
     <string name="fechar_modo_1">Em horários fixos</string>
     <string name="fechar_modo_2">Avançado</string>
+    <string name="refeicao">Saída refeição</string>
+    <string name="refeicao_expl">Resposta do campo Saída Refeição, que o SIGRH pede em algumas saídas.</string>
+    <string name="refeicao_modo_0">Sim até um horário definido</string>
+    <string name="refeicao_horario">Sim antes deste horário, Não depois</string>
+    <string name="refeicao_modo_1">Sempre Não</string>
+    <string name="refeicao_modo_2">Sempre Sim</string>
     <string name="fechar_expl_0">O ponto só fecha manualmente pelo botão, ou por automação por app externo.</string>
     <string name="fechar_expl_1">Se o ponto estiver aberto nestes horários, fecha automaticamente. De segunda a sexta, com o app fechado. Um dos horários pode ficar em branco.</string>
     <string name="fechar_expl_2">Defina no botão abaixo os horários em que o ponto deve fechar automaticamente.</string>

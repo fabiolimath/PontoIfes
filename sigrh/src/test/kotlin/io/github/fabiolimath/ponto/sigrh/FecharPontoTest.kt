@@ -8,6 +8,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
+import java.time.LocalTime
 import kotlin.test.assertTrue
 
 /** Porte do `test_fechar_ponto.py`: fechar o ponto contra um SIGRH falso (páginas mínimas no formato do real). */
@@ -27,6 +29,12 @@ class FecharPontoTest {
         const val FECHADO = """<form id="idFormDadosEntradaSaida">
 <input name="idFormDadosEntradaSaida:idBtnRegistrarEntrada" type="submit" value="Registrar Entrada"/>
 <input name="javax.faces.ViewState" value="j_id4"/></form>"""
+        // Como o h:selectOneRadio do JSF desenha um par Sim/Não.
+        // "Saída Refeição: (•) Sim ( ) Não" no print de 25/11, com Sim marcado.
+        const val RADIO_ALMOCO = """<table id="idFormDadosEntradaSaida:saidaAlmoco"><tr>
+<td><input type="radio" name="idFormDadosEntradaSaida:saidaAlmoco" id="idFormDadosEntradaSaida:saidaAlmoco:0" value="true" checked="checked"/><label for="idFormDadosEntradaSaida:saidaAlmoco:0"> Sim</label></td>
+<td><input type="radio" name="idFormDadosEntradaSaida:saidaAlmoco" id="idFormDadosEntradaSaida:saidaAlmoco:1" value="false"/><label for="idFormDadosEntradaSaida:saidaAlmoco:1"> Não</label></td>
+</tr></table>"""
         const val SUCESSO = """<ul class="info"><li>Operação realizada com sucesso!</li></ul>""" + FECHADO
         const val BLOQUEADO = """<ul class="erros"><li>O Endereço IP de seu computador não tem autorização para registrar
 o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração do Sistema.</li></ul>""" + PORTAL_PAGINA
@@ -89,6 +97,45 @@ o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração
         assertTrue("Hora de entrada: 17:52:55" in falso.saida)
         assertTrue("Operação realizada com sucesso!" in falso.saida)
         assertTrue("saída registrada" in falso.saida)
+    }
+
+    @Test
+    fun `saida para almoco obrigatoria envia nao depois das 14h`() {
+        paginas["ponto"] = ABERTO.replace("<textarea", RADIO_ALMOCO + "<textarea")
+
+        assertIs<Resultado.Sucesso>(fechar())
+        val campos = falso.pedidos.last().campos(Charsets.ISO_8859_1)
+        assertEquals("false", campos["idFormDadosEntradaSaida:saidaAlmoco"])
+        assertTrue("Saída refeição: Não" in falso.saida)
+    }
+
+    @Test
+    fun `almoco escolhe sim antes das 14h e nao depois`() {
+        val radio = Pagina.ler(ABERTO.replace("<textarea", RADIO_ALMOCO + "<textarea"))
+        assertEquals("true", FecharPonto.almoco(radio, LocalTime.of(12, 0))!!.valor)
+        assertEquals("false", FecharPonto.almoco(radio, LocalTime.of(15, 50))!!.valor)
+        val select = Pagina.ler(ABERTO.replace("<textarea", """<select name="idFormDadosEntradaSaida:saidaAlmoco">
+<option value="">Selecione</option><option value="S">Sim</option><option value="N">Não</option></select><textarea"""))
+        assertEquals("S", FecharPonto.almoco(select, LocalTime.of(11, 59))!!.valor)
+        assertEquals("N", FecharPonto.almoco(select, LocalTime.of(18, 0))!!.valor)
+        assertNull(FecharPonto.almoco(Pagina.ler(ABERTO), LocalTime.of(12, 0)))
+        assertEquals("false", FecharPonto.almoco(radio, LocalTime.of(12, 0), SaidaRefeicao.SEMPRE_NAO)!!.valor)
+        assertEquals("true", FecharPonto.almoco(radio, LocalTime.of(17, 0), SaidaRefeicao.SEMPRE_SIM)!!.valor)
+        val as13 = LocalTime.of(13, 0)
+        assertEquals("true", FecharPonto.almoco(radio, LocalTime.of(12, 59), SaidaRefeicao.PELO_HORARIO, as13)!!.valor)
+        assertEquals("false", FecharPonto.almoco(radio, LocalTime.of(13, 0), SaidaRefeicao.PELO_HORARIO, as13)!!.valor)
+    }
+
+    @Test
+    fun `almoco com opcoes desconhecidas recusa sem enviar`() {
+        paginas["ponto"] = ABERTO.replace("<textarea", """<select name="idFormDadosEntradaSaida:saidaAlmoco">
+<option value="1">Intervalo</option></select><textarea""")
+
+        val r = fechar()
+
+        assertIs<Resultado.Recusado>(r)
+        assertTrue("Intervalo (1)" in r.mensagem)
+        assertTrue(envios().isEmpty())
     }
 
     @Test

@@ -48,6 +48,9 @@ class ConfiguracoesActivity : AppCompatActivity() {
     private lateinit var wifiDetalhes: View
     private lateinit var lembreteDetalhes: View
     private lateinit var fecharModo: Spinner
+    private lateinit var refeicaoModo: Spinner
+    private lateinit var refeicaoDetalhes: View
+    private lateinit var refeicaoHorario: EditText
     private lateinit var fecharExplicacao: TextView
     private lateinit var fecharHorario1: EditText
     private lateinit var fecharHorario2: EditText
@@ -88,6 +91,10 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiDetalhes = findViewById(R.id.wifi_detalhes)
         lembreteDetalhes = findViewById(R.id.lembrete_detalhes)
         fecharModo = findViewById(R.id.fechar_modo)
+        refeicaoModo = findViewById(R.id.refeicao_modo)
+        refeicaoDetalhes = findViewById(R.id.refeicao_detalhes)
+        refeicaoHorario = findViewById(R.id.refeicao_horario)
+        refeicaoHorario.addTextChangedListener(MascaraDeTexto(refeicaoHorario, Mascara::formatarHora))
         fecharExplicacao = findViewById(R.id.fechar_explicacao)
         fecharHorario1 = findViewById(R.id.fechar_horario1)
         fecharHorario2 = findViewById(R.id.fechar_horario2)
@@ -109,6 +116,18 @@ class ConfiguracoesActivity : AppCompatActivity() {
             this, android.R.layout.simple_spinner_dropdown_item,
             listOf(R.string.fechar_modo_0, R.string.fechar_modo_1, R.string.fechar_modo_2).map { getString(it) },
         )
+        refeicaoModo.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item,
+            listOf(R.string.refeicao_modo_0, R.string.refeicao_modo_1, R.string.refeicao_modo_2).map { getString(it) },
+        )
+        // O horário só aparece na opção "Sim até um horário definido".
+        refeicaoModo.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(pai: AdapterView<*>?, visao: View?, posicao: Int, id: Long) {
+                refeicaoDetalhes.visibility =
+                    if (posicao == Preferencias.REFEICAO_PELO_HORARIO) View.VISIBLE else View.GONE
+            }
+            override fun onNothingSelected(pai: AdapterView<*>?) = Unit
+        }
         fecharModo.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(pai: AdapterView<*>?, visao: View?, posicao: Int, id: Long) = mostrarFechamento()
             override fun onNothingSelected(pai: AdapterView<*>?) = Unit
@@ -178,6 +197,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
         wifiRede.setText(preferencias.wifiRede)
         wifiEspera.setText(preferencias.wifiEspera)
         fecharModo.setSelection(preferencias.fecharModo)
+        refeicaoModo.setSelection(preferencias.refeicaoModo.coerceIn(0, 2))
+        refeicaoHorario.setText(preferencias.refeicaoHorario)
         dias = preferencias.fecharDias
         fecharHorario1.setText(preferencias.fecharHorario1)
         fecharHorario2.setText(preferencias.fecharHorario2)
@@ -376,6 +397,16 @@ class ConfiguracoesActivity : AppCompatActivity() {
             erro("Sem horário", "Preencha ao menos um horário em Horários de cada dia.")
             return
         }
+        val modoRefeicao = refeicaoModo.selectedItemPosition.coerceIn(0, 2)
+        val horarioRefeicao = refeicaoHorario.text.toString().trim()
+        val horarioRefeicaoValido = FechamentoAutomatico.lerHorario(horarioRefeicao) != null
+        if (modoRefeicao == Preferencias.REFEICAO_PELO_HORARIO && !horarioRefeicaoValido) {
+            erro(
+                "Horário inválido",
+                "'$horarioRefeicao' não é um horário no formato hh:mm (ex.: 14:00), entre 00:00 e 23:59.",
+            )
+            return
+        }
         val horarioDoPit = pitHorario.text.toString().trim()
         val horarioDoPitValido = FechamentoAutomatico.lerHorario(horarioDoPit) != null
         if (pitAutomatico.isChecked && !horarioDoPitValido) {
@@ -404,6 +435,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
             fecharHorario1 = horarios[0].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
             fecharHorario2 = horarios[1].takeIf { FechamentoAutomatico.lerHorario(it) != null } ?: "",
             fecharDias = dias,
+            refeicaoModo = modoRefeicao,
+            refeicaoHorario = if (horarioRefeicaoValido) horarioRefeicao else padrao.refeicaoHorario,
         )
         // Com o fechamento automático ligado, o PIT vem depois de todos os seus horários.
         val horaDoPit = FechamentoAutomatico.lerHorario(preferencias.pitHorario)
