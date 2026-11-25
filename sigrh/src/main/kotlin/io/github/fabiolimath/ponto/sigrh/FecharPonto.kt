@@ -26,6 +26,56 @@ internal object FecharPonto {
 
     private val HORA = DateTimeFormatter.ofPattern("HH:mm")
 
+    /** Campo "saída para almoço", obrigatório em parte das saídas (visto em 25/11, numa 1ª saída do dia). */
+    const val ALMOCO = "$FORM_PONTO:saidaAlmoco"
+
+    /** Até esta hora a saída conta como almoço; depois, não. */
+    val LIMITE_ALMOCO: LocalTime = LocalTime.of(14, 0)
+
+    /** Uma opção do campo do almoço: o valor enviado e o texto mostrado. */
+    data class Opcao(val valor: String, val texto: String)
+
+    /** As opções do campo do almoço na tela (radio, select ou checkbox), vazio se ele não está lá. */
+    fun opcoesDoAlmoco(pagina: Pagina): List<Opcao> {
+        val form = pagina.form(FORM_PONTO) ?: return emptyList()
+        return form.getElementsByAttributeValue("name", ALMOCO).flatMap { campo ->
+            when (campo.tagName()) {
+                "select" -> campo.select("option").map { Opcao(it.attr("value").ifEmpty { it.text() }, it.text().trim()) }
+                "input" -> {
+                    val rotulo = campo.id().takeIf { it.isNotEmpty() }
+                        ?.let { id -> form.select("label").firstOrNull { it.attr("for") == id }?.text() }
+                        ?: campo.nextSibling()?.toString()?.let { org.jsoup.parser.Parser.unescapeEntities(it, false) }
+                        ?: ""
+                    listOf(Opcao(campo.attr("value"), compactar(rotulo.replace(Regex("<[^>]*>"), " "))))
+                }
+                else -> emptyList()
+            }
+        }
+    }
+
+    private fun ehSim(o: Opcao): Boolean {
+        val t = (o.texto + " " + o.valor).lowercase()
+        return Regex("\\b(sim|true|s)\\b").containsMatchIn(t)
+    }
+
+    private fun ehNao(o: Opcao): Boolean {
+        val t = (o.texto + " " + o.valor).lowercase()
+        return Regex("\\b(não|nao|false|n)\\b").containsMatchIn(t)
+    }
+
+    /**
+     * A resposta do campo do almoço: sim até [LIMITE_ALMOCO], não depois. Null se o campo não está
+     * na tela. Sem uma opção reconhecível, [Recusa] com as opções vistas (para ajustar o app).
+     */
+    fun almoco(pagina: Pagina, agora: LocalTime): Opcao? {
+        val opcoes = opcoesDoAlmoco(pagina)
+        if (opcoes.isEmpty()) return null
+        val sim = agora.isBefore(LIMITE_ALMOCO)
+        return opcoes.firstOrNull { if (sim) ehSim(it) && !ehNao(it) else ehNao(it) && !ehSim(it) }
+            ?: throw Recusa("o SIGRH pede \"saída para almoço\" com opções que o app não reconhece: " +
+                opcoes.joinToString(", ") { "${it.texto} (${it.valor})" })
+    }
+
     suspend fun fechar(
         sessao: Sessao,
         usuario: String,
@@ -36,7 +86,7 @@ internal object FecharPonto {
     ): String {
         var pagina = entrar(sessao, usuario, senha)
         pagina = abrirPontoEletronico(sessao, pagina)
-        registrarSaida(sessao, pagina, cancelamento, saida).forEach(saida)
+        registrarSaida(sessao, pagina, cancelamento, saida, LocalTime.now(relogio)).forEach(saida)
         return "✅🔐📌 SIGRH: saída registrada às ${LocalTime.now(relogio).format(HORA)}"
     }
 
@@ -104,6 +154,7 @@ internal object FecharPonto {
         pagina: Pagina,
         cancelamento: Cancelamento,
         saida: (String) -> Unit,
+        agora: LocalTime,
     ): List<String> {
         if (!botao(pagina, BTN_SAIDA)) {
             if (botao(pagina, BTN_ENTRADA)) {
@@ -116,13 +167,18 @@ internal object FecharPonto {
         val entrada = horaDeEntrada(pagina)
         if (entrada.isNotEmpty()) saida("Hora de entrada: $entrada")
 
+        val almoco = almoco(pagina, agora)
+        if (almoco != null) saida("Saída para almoço: ${almoco.texto.ifEmpty { almoco.valor }}")
+
         // O formulário declara accept-charset ISO-8859-1 ("Registrar Sa%EDda" na captura).
-        val corpo = formulario(linkedMapOf(
+        val campos = linkedMapOf(
             FORM_PONTO to FORM_PONTO,
             "$FORM_PONTO:observacoes" to "",
-            BTN_SAIDA to "Registrar Saída",
-            "javax.faces.ViewState" to viewstate(pagina, FORM_PONTO),
-        ), Charsets.ISO_8859_1)
+        )
+        if (almoco != null) campos[ALMOCO] = almoco.valor
+        campos[BTN_SAIDA] = "Registrar Saída"
+        campos["javax.faces.ViewState"] = viewstate(pagina, FORM_PONTO)
+        val corpo = formulario(campos, Charsets.ISO_8859_1)
         // Última chance de cancelar: depois do envio final, o registro segue até o fim.
         cancelamento.conferir()
         val resposta = enviarFinal("falha ao registrar a saída") {
