@@ -147,7 +147,9 @@ ou seja, Android 12 ou mais novo desde a 2.6.0 (até a 2.5.x, o 7); compileSdk 3
   certificado intermediário, baixa-o pelo endereço AIA do certificado, como o Chrome; tenta https
   antes do http, que o Android bloqueia). Erros de rede vão ao log com uma linha "Detalhe:".
   No abrir, login que cai no portal (é o que o SIGRH faz com entrada aberta) abre a tela do ponto
-  pelo link do portal; sem ela (ou com o IP recusado), responde "o ponto já estava aberto" (2.6.3). `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
+  pelo link do portal; sem ela (ou com o IP recusado), responde "o ponto já estava aberto" (2.6.3).
+  No fechar, o campo obrigatório "saída para almoço" (`saidaAlmoco`, visto em 25/11 numa 1ª saída
+  do dia) vai como Sim até as 14:00 e Não depois (`FecharPonto.almoco`, lê as opções da tela; 2.6.4). `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
   Recusado, EnvioIncerto, Cancelado. Tentativas com esperas de 10/20/30/60 s.
   Testes (JUnit 5) contra o `SigrhFalso` (MockWebServer) em `sigrh/src/test`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/nucleo/` — regras sem Android, testadas na JVM
