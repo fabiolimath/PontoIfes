@@ -60,9 +60,19 @@ object Atualizador {
         val texto = "$nome ${BuildConfig.VERSION_NAME}\nAutor: Fabio Lima\n\n" +
             "${tela.getString(R.string.descricao)}\n\n${tela.getString(R.string.nao_oficial)}\n\n" +
             "Site: ${Atualizacao.URL_SITE}"
+        // QR code do site, abaixo do texto do link (para abrir o site em outro celular).
+        val densidade = tela.resources.displayMetrics.density
+        val qr = android.widget.ImageView(tela).apply {
+            setImageResource(R.drawable.qr_site)
+            contentDescription = "QR code do site"
+            adjustViewBounds = true
+            val margem = (16 * densidade).toInt()
+            setPadding(margem, margem / 2, margem, 0)
+        }
         MaterialAlertDialogBuilder(tela)
             .setTitle(tela.getString(R.string.sobre))
             .setMessage(texto)
+            .setView(qr)
             .setPositiveButton("Abrir o site") { _, _ -> abrirUrl(tela, Atualizacao.URL_SITE) }
             .setNegativeButton("Fechar", null)
             .show()

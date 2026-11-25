@@ -56,7 +56,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    PIT automático, com ele ligado; os do fechamento automático, conforme a opção escolhida.
    **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, aviso de que não é app oficial do
-   IFES, botão para o site).
+   IFES, link e QR code do site, `drawable/qr_site.xml`, gerado com o `qrcode` do Python; botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
 7. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis; ícone de
