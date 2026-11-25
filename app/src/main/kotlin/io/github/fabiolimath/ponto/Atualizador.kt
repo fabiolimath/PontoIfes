@@ -26,38 +26,68 @@ object Atualizador {
     }
 
     /**
-     * Consulta o último release e oferece baixá-lo se for mais novo. Na checagem automática (ao abrir
-     * o app), falhas e "sem novidade" ficam em silêncio; com [avisarSemNovidade], tudo é dito.
+     * Consulta o último release e oferece baixá-lo se for mais novo. Na versão de teste (APK do CI de
+     * um PR, com BuildConfig.COMMIT_TESTE), consulta também o pré-release "teste" e oferece um APK de
+     * teste mais novo (outro commit). Na checagem automática (ao abrir o app), falhas e "sem
+     * novidade" ficam em silêncio; com [avisarSemNovidade], tudo é dito.
      */
     fun verificar(tela: AppCompatActivity, avisarSemNovidade: Boolean) {
         val instalada = BuildConfig.VERSION_NAME
+        val commit = BuildConfig.COMMIT_TESTE
         thread {
-            val resultado = runCatching { Atualizacao.versaoDaResposta(baixar(Atualizacao.API_ULTIMA)) }
+            val oficial = runCatching { Atualizacao.versaoDaResposta(baixar(Atualizacao.API_ULTIMA)) }
+            val teste = if (commit.isEmpty()) null
+            else runCatching { Atualizacao.testeDaResposta(baixar(Atualizacao.API_TESTE)) }
             principal.post {
                 if (tela.isFinishing || tela.isDestroyed) return@post
-                resultado.onFailure {
+                val falha = oficial.exceptionOrNull()
+                    ?.takeIf { teste == null || teste.isFailure }
+                if (falha != null) {
                     if (avisarSemNovidade) {
-                        aviso(tela, "Atualizações", "Não foi possível verificar: ${it.message ?: it}")
+                        aviso(tela, "Atualizações", "Não foi possível verificar: ${falha.message ?: falha}")
                     }
-                }.onSuccess { publicada ->
-                    if (Atualizacao.maisNova(publicada, instalada)) {
-                        MaterialAlertDialogBuilder(tela)
-                            .setTitle("Nova versão disponível")
-                            .setMessage("A versão $publicada está disponível (instalada: $instalada).")
-                            .setPositiveButton("Baixar") { _, _ -> abrirUrl(tela, Atualizacao.URL_DOWNLOAD) }
-                            .setNegativeButton("Agora não", null)
-                            .show()
-                    } else if (avisarSemNovidade) {
-                        aviso(tela, "Atualizações", "Você já tem a versão mais recente ($instalada).")
+                    return@post
+                }
+                val apkTeste = teste?.getOrNull()
+                when (Atualizacao.oferta(instalada, commit, oficial.getOrNull(), apkTeste)) {
+                    Atualizacao.Oferta.OFICIAL -> oferecer(
+                        tela, "Nova versão disponível",
+                        "A versão ${oficial.getOrNull()} está disponível (instalada: ${descricao()}).",
+                        Atualizacao.URL_DOWNLOAD,
+                    )
+                    Atualizacao.Oferta.TESTE -> oferecer(
+                        tela, "Nova versão de teste disponível",
+                        "A versão de teste ${apkTeste!!.versao} (commit ${apkTeste.commit.take(7)}) está " +
+                            "disponível (instalada: ${descricao()}).",
+                        Atualizacao.URL_DOWNLOAD_TESTE,
+                    )
+                    Atualizacao.Oferta.NENHUMA -> if (avisarSemNovidade) {
+                        aviso(tela, "Atualizações", "Você já tem a versão mais recente (${descricao()}).")
                     }
                 }
             }
         }
     }
 
+    /** "2.6.5" ou, na versão de teste, "2.6.5, teste do commit abc1234". */
+    private fun descricao(): String {
+        val commit = BuildConfig.COMMIT_TESTE
+        return if (commit.isEmpty()) BuildConfig.VERSION_NAME
+        else "${BuildConfig.VERSION_NAME}, teste do commit ${commit.take(7)}"
+    }
+
+    private fun oferecer(tela: AppCompatActivity, titulo: String, mensagem: String, url: String) {
+        MaterialAlertDialogBuilder(tela)
+            .setTitle(titulo)
+            .setMessage(mensagem)
+            .setPositiveButton("Baixar") { _, _ -> abrirUrl(tela, url) }
+            .setNegativeButton("Agora não", null)
+            .show()
+    }
+
     fun sobre(tela: AppCompatActivity) {
         val nome = tela.getString(R.string.app_name)
-        val texto = "$nome ${BuildConfig.VERSION_NAME}\nAutor: Fabio Lima\n\n" +
+        val texto = "$nome ${descricao()}\nAutor: Fabio Lima\n\n" +
             "${tela.getString(R.string.descricao)}\n\n${tela.getString(R.string.nao_oficial)}\n\n" +
             "Site: ${Atualizacao.URL_SITE}"
         // QR code do site, abaixo do texto do link (para abrir o site em outro celular).

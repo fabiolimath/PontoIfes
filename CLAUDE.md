@@ -225,6 +225,9 @@ ou seja, Android 12 ou mais novo desde a 2.6.0 (até a 2.5.x, o 7); compileSdk 3
 - Para testar um PR, o autor instala no celular o APK de teste (mesma chave, instala por cima):
   `https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk`. O pré-release
   `teste` é sempre o do último PR que rodou e não conta como "latest".
+  Esse APK leva o commit (`BuildConfig.COMMIT_TESTE`, de `PONTO_COMMIT_TESTE` no `pr.yml`; vazio no
+  release) e, nele, o Verificar agora (2.6.5) também oferece o APK de teste de outro commit, se não for
+  versão menor (`Atualizacao.oferta`); o Sobre mostra o commit.
 - A cópia local do autor (fora da pasta do Mega) ainda serve para builds debug via adb
   (`./gradlew installDebug`, pacote `.debug` que instala ao lado do oficial), mas não é mais
   necessária para testar.

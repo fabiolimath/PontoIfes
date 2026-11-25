@@ -3,7 +3,8 @@
 #   https://github.com/fabiolimath/PontoIfes/releases/download/teste/ponto-ifes.apk
 # É o mesmo APK do release (mesmo pacote e chave): instala por cima do app.
 # O pré-release não conta como "latest": o site e o aviso de atualização do app
-# continuam apontando para o último release oficial.
+# continuam apontando para o último release oficial. O APK de teste leva o commit
+# (PONTO_COMMIT_TESTE) e, nele, o "Verificar agora" procura também um teste mais novo.
 name: PR
 
 on:
@@ -95,6 +96,7 @@ jobs:
         env:
           PONTO_KEYSTORE: ${{ runner.temp }}/ponto-release.jks
           PONTO_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PONTO_COMMIT_TESTE: ${{ env.COMMIT }}
         run: |
           ./gradlew --no-daemon assembleRelease
           mkdir -p dist
