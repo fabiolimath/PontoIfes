@@ -121,6 +121,9 @@ o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração
         assertNull(FecharPonto.almoco(Pagina.ler(ABERTO), LocalTime.of(12, 0)))
         assertEquals("false", FecharPonto.almoco(radio, LocalTime.of(12, 0), SaidaRefeicao.SEMPRE_NAO)!!.valor)
         assertEquals("true", FecharPonto.almoco(radio, LocalTime.of(17, 0), SaidaRefeicao.SEMPRE_SIM)!!.valor)
+        val as13 = LocalTime.of(13, 0)
+        assertEquals("true", FecharPonto.almoco(radio, LocalTime.of(12, 59), SaidaRefeicao.PELO_HORARIO, as13)!!.valor)
+        assertEquals("false", FecharPonto.almoco(radio, LocalTime.of(13, 0), SaidaRefeicao.PELO_HORARIO, as13)!!.valor)
     }
 
     @Test

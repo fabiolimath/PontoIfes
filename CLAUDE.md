@@ -150,7 +150,8 @@ ou seja, Android 12 ou mais novo desde a 2.6.0 (até a 2.5.x, o 7); compileSdk 3
   pelo link do portal; sem ela (ou com o IP recusado), responde "o ponto já estava aberto" (2.6.3).
   No fechar, o campo obrigatório "Saída Refeição" (`saidaAlmoco`, radio Sim/Não com Sim marcado,
   visto em 25/11 numa 1ª saída do dia) é respondido conforme as Configurações (`refeicao_modo`:
-  0 Sim até as 14:00 e Não depois, padrão; 1 sempre Não; 2 sempre Sim; `FecharPonto.almoco`, 2.6.4). `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
+  0 Sim até um horário definido, `refeicao_horario`, padrão 14:00, e Não depois, padrão; 1 sempre Não;
+  2 sempre Sim; o campo do horário só aparece na opção 0; `FecharPonto.almoco`, 2.6.4). `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
   Recusado, EnvioIncerto, Cancelado. Tentativas com esperas de 10/20/30/60 s.
   Testes (JUnit 5) contra o `SigrhFalso` (MockWebServer) em `sigrh/src/test`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/nucleo/` — regras sem Android, testadas na JVM
