@@ -12,6 +12,9 @@ import java.time.format.DateTimeFormatter
  * sucesso!" (`<ul class="info">`); sem entrada aberta, a tela só oferece "Registrar Entrada" e
  * não há o que fechar. Fora da rede do campus, o SIGRH nega a tela do ponto pelo IP; aí para.
  */
+/** Como responder "Saída Refeição" ao fechar o ponto (Configurações, `refeicao_modo`). */
+enum class SaidaRefeicao { PELO_HORARIO, SEMPRE_NAO, SEMPRE_SIM }
+
 internal object FecharPonto {
     const val FORM_PONTO = "idFormDadosEntradaSaida"
     const val BTN_SAIDA = "$FORM_PONTO:idBtnRegistrarSaida"
@@ -29,7 +32,7 @@ internal object FecharPonto {
     /** Campo "saída para almoço", obrigatório em parte das saídas (visto em 25/11, numa 1ª saída do dia). */
     const val ALMOCO = "$FORM_PONTO:saidaAlmoco"
 
-    /** Até esta hora a saída conta como almoço; depois, não. */
+    /** No modo [SaidaRefeicao.PELO_HORARIO], até esta hora a saída conta como refeição; depois, não. */
     val LIMITE_ALMOCO: LocalTime = LocalTime.of(14, 0)
 
     /** Uma opção do campo do almoço: o valor enviado e o texto mostrado. */
@@ -64,15 +67,20 @@ internal object FecharPonto {
     }
 
     /**
-     * A resposta do campo do almoço: sim até [LIMITE_ALMOCO], não depois. Null se o campo não está
-     * na tela. Sem uma opção reconhecível, [Recusa] com as opções vistas (para ajustar o app).
+     * A resposta do campo "Saída Refeição" (radio Sim/Não, Sim marcado na tela): conforme [modo]
+     * (padrão: sim até [LIMITE_ALMOCO], não depois). Null se o campo não está na tela. Sem uma
+     * opção reconhecível, [Recusa] com as opções vistas (para ajustar o app).
      */
-    fun almoco(pagina: Pagina, agora: LocalTime): Opcao? {
+    fun almoco(pagina: Pagina, agora: LocalTime, modo: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO): Opcao? {
         val opcoes = opcoesDoAlmoco(pagina)
         if (opcoes.isEmpty()) return null
-        val sim = agora.isBefore(LIMITE_ALMOCO)
+        val sim = when (modo) {
+            SaidaRefeicao.PELO_HORARIO -> agora.isBefore(LIMITE_ALMOCO)
+            SaidaRefeicao.SEMPRE_NAO -> false
+            SaidaRefeicao.SEMPRE_SIM -> true
+        }
         return opcoes.firstOrNull { if (sim) ehSim(it) && !ehNao(it) else ehNao(it) && !ehSim(it) }
-            ?: throw Recusa("o SIGRH pede \"saída para almoço\" com opções que o app não reconhece: " +
+            ?: throw Recusa("o SIGRH pede \"Saída Refeição\" com opções que o app não reconhece: " +
                 opcoes.joinToString(", ") { "${it.texto} (${it.valor})" })
     }
 
@@ -83,10 +91,11 @@ internal object FecharPonto {
         cancelamento: Cancelamento,
         saida: (String) -> Unit,
         relogio: Clock,
+        refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO,
     ): String {
         var pagina = entrar(sessao, usuario, senha)
         pagina = abrirPontoEletronico(sessao, pagina)
-        registrarSaida(sessao, pagina, cancelamento, saida, LocalTime.now(relogio)).forEach(saida)
+        registrarSaida(sessao, pagina, cancelamento, saida, LocalTime.now(relogio), refeicao).forEach(saida)
         return "✅🔐📌 SIGRH: saída registrada às ${LocalTime.now(relogio).format(HORA)}"
     }
 
@@ -155,6 +164,7 @@ internal object FecharPonto {
         cancelamento: Cancelamento,
         saida: (String) -> Unit,
         agora: LocalTime,
+        refeicao: SaidaRefeicao,
     ): List<String> {
         if (!botao(pagina, BTN_SAIDA)) {
             if (botao(pagina, BTN_ENTRADA)) {
@@ -167,8 +177,8 @@ internal object FecharPonto {
         val entrada = horaDeEntrada(pagina)
         if (entrada.isNotEmpty()) saida("Hora de entrada: $entrada")
 
-        val almoco = almoco(pagina, agora)
-        if (almoco != null) saida("Saída para almoço: ${almoco.texto.ifEmpty { almoco.valor }}")
+        val almoco = almoco(pagina, agora, refeicao)
+        if (almoco != null) saida("Saída refeição: ${almoco.texto.ifEmpty { almoco.valor }}")
 
         // O formulário declara accept-charset ISO-8859-1 ("Registrar Sa%EDda" na captura).
         val campos = linkedMapOf(

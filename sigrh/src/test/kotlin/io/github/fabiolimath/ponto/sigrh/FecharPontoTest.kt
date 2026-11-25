@@ -30,8 +30,9 @@ class FecharPontoTest {
 <input name="idFormDadosEntradaSaida:idBtnRegistrarEntrada" type="submit" value="Registrar Entrada"/>
 <input name="javax.faces.ViewState" value="j_id4"/></form>"""
         // Como o h:selectOneRadio do JSF desenha um par Sim/Não.
+        // "Saída Refeição: (•) Sim ( ) Não" no print de 25/11, com Sim marcado.
         const val RADIO_ALMOCO = """<table id="idFormDadosEntradaSaida:saidaAlmoco"><tr>
-<td><input type="radio" name="idFormDadosEntradaSaida:saidaAlmoco" id="idFormDadosEntradaSaida:saidaAlmoco:0" value="true"/><label for="idFormDadosEntradaSaida:saidaAlmoco:0"> Sim</label></td>
+<td><input type="radio" name="idFormDadosEntradaSaida:saidaAlmoco" id="idFormDadosEntradaSaida:saidaAlmoco:0" value="true" checked="checked"/><label for="idFormDadosEntradaSaida:saidaAlmoco:0"> Sim</label></td>
 <td><input type="radio" name="idFormDadosEntradaSaida:saidaAlmoco" id="idFormDadosEntradaSaida:saidaAlmoco:1" value="false"/><label for="idFormDadosEntradaSaida:saidaAlmoco:1"> Não</label></td>
 </tr></table>"""
         const val SUCESSO = """<ul class="info"><li>Operação realizada com sucesso!</li></ul>""" + FECHADO
@@ -105,7 +106,7 @@ o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração
         assertIs<Resultado.Sucesso>(fechar())
         val campos = falso.pedidos.last().campos(Charsets.ISO_8859_1)
         assertEquals("false", campos["idFormDadosEntradaSaida:saidaAlmoco"])
-        assertTrue("Saída para almoço: Não" in falso.saida)
+        assertTrue("Saída refeição: Não" in falso.saida)
     }
 
     @Test
@@ -118,6 +119,8 @@ o Ponto Eletrônico. Em caso de dúvidas entrar em contato com a Administração
         assertEquals("S", FecharPonto.almoco(select, LocalTime.of(11, 59))!!.valor)
         assertEquals("N", FecharPonto.almoco(select, LocalTime.of(18, 0))!!.valor)
         assertNull(FecharPonto.almoco(Pagina.ler(ABERTO), LocalTime.of(12, 0)))
+        assertEquals("false", FecharPonto.almoco(radio, LocalTime.of(12, 0), SaidaRefeicao.SEMPRE_NAO)!!.valor)
+        assertEquals("true", FecharPonto.almoco(radio, LocalTime.of(17, 0), SaidaRefeicao.SEMPRE_SIM)!!.valor)
     }
 
     @Test

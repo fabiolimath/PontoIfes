@@ -53,10 +53,10 @@ class Sigrh(
             AbrirPonto.abrir(sessao, usuario, senha, cancelamento)
         }
 
-    /** Registra a saída. */
-    suspend fun fecharPonto(): Resultado =
+    /** Registra a saída; [refeicao] responde o campo "Saída Refeição", quando a tela o pede. */
+    suspend fun fecharPonto(refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO): Resultado =
         executar(falha = { "🔐❌ SIGRH: saída não registrada: $it" }) { sessao ->
-            FecharPonto.fechar(sessao, usuario, senha, cancelamento, saida, relogio)
+            FecharPonto.fechar(sessao, usuario, senha, cancelamento, saida, relogio, refeicao)
         }
 
     /**

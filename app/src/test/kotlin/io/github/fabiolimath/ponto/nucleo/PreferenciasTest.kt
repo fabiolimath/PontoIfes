@@ -1,5 +1,6 @@
 package io.github.fabiolimath.ponto.nucleo
 
+import io.github.fabiolimath.ponto.sigrh.SaidaRefeicao
 import java.io.File
 import java.nio.file.Files
 import java.time.Duration
@@ -85,6 +86,18 @@ class PreferenciasTest {
             listOf(listOf("12:00", ""), listOf("12:00", "18:00"), listOf("7:30", ""), listOf("12:00", "18:00"), listOf("12:00", "18:00")),
             lidas.fecharDias,
         )
+    }
+
+    @Test
+    fun saida_refeicao() {
+        val arquivo = arquivo()
+        assertEquals(SaidaRefeicao.PELO_HORARIO, Preferencias.carregar(arquivo).refeicao)
+        Preferencias(refeicaoModo = 1).salvar(arquivo)
+        assertEquals(SaidaRefeicao.SEMPRE_NAO, Preferencias.carregar(arquivo).refeicao)
+        arquivo.writeText("""{"refeicao_modo": 2}""")
+        assertEquals(SaidaRefeicao.SEMPRE_SIM, Preferencias.carregar(arquivo).refeicao)
+        arquivo.writeText("""{"refeicao_modo": 7}""")
+        assertEquals(SaidaRefeicao.PELO_HORARIO, Preferencias.carregar(arquivo).refeicao)
     }
 
     @Test

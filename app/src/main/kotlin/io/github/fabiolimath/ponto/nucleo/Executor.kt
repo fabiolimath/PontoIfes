@@ -2,6 +2,7 @@ package io.github.fabiolimath.ponto.nucleo
 
 import io.github.fabiolimath.ponto.sigrh.Cancelamento
 import io.github.fabiolimath.ponto.sigrh.Resultado
+import io.github.fabiolimath.ponto.sigrh.SaidaRefeicao
 import io.github.fabiolimath.ponto.sigrh.Sigrh
 import io.github.fabiolimath.ponto.sigrh.TIMEOUT
 import io.github.fabiolimath.ponto.sigrh.TIMEOUT_AUTOMATICO
@@ -26,6 +27,7 @@ class Executor(
      * [dia] e [observacao] valem só para o PIT (sem [dia], hoje).
      * O "⏹️ Cancelado." já vem na saída do cliente: não é impresso de novo aqui.
      * [automatico]: a abertura pela Wi-Fi (timeout menor, marca "(automático)" no log).
+     * [refeicao]: a resposta de "Saída Refeição" no fechamento (Configurações).
      */
     suspend fun executar(
         acao: Acao,
@@ -36,6 +38,7 @@ class Executor(
         aoEscrever: (String) -> Unit = {},
         cancelamento: Cancelamento = Cancelamento(),
         automatico: Boolean = false,
+        refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO,
     ): Resultado {
         val inicio = agora()
         val saida = StringBuilder()
@@ -46,7 +49,7 @@ class Executor(
         }, cancelamento, automatico)
         val resultado = when (acao) {
             Acao.ABRIR_PONTO -> sigrh.abrirPonto()
-            Acao.FECHAR_PONTO -> sigrh.fecharPonto()
+            Acao.FECHAR_PONTO -> sigrh.fecharPonto(refeicao)
             Acao.REGISTRAR_PIT ->
                 if (dia != null) sigrh.registrarPit(dia, observacao) else sigrh.registrarPit(observacao = observacao)
         }

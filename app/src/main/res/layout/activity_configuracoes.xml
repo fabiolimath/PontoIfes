@@ -281,6 +281,24 @@
             android:layout_marginTop="8dp"
             android:text="@string/horarios_de_cada_dia" />
 
+        <!-- "Saída Refeição", que o SIGRH pede em parte das saídas. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/refeicao"
+            android:textSize="16sp" />
+
+        <Spinner
+            android:id="@+id/refeicao_modo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp" />
+
+        <TextView
+            style="@style/Ponto.Explicacao"
+            android:text="@string/refeicao_expl" />
+
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/lembrete_fechar"
             android:layout_width="match_parent"
