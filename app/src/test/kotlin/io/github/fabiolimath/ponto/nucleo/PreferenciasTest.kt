@@ -98,6 +98,12 @@ class PreferenciasTest {
         assertEquals(SaidaRefeicao.SEMPRE_SIM, Preferencias.carregar(arquivo).refeicao)
         arquivo.writeText("""{"refeicao_modo": 7}""")
         assertEquals(SaidaRefeicao.PELO_HORARIO, Preferencias.carregar(arquivo).refeicao)
+        assertEquals("14:00", Preferencias.carregar(arquivo).refeicaoHorario)
+        assertEquals(java.time.LocalTime.of(14, 0), Preferencias.carregar(arquivo).limiteRefeicao)
+        Preferencias(refeicaoHorario = "13:30").salvar(arquivo)
+        assertEquals(java.time.LocalTime.of(13, 30), Preferencias.carregar(arquivo).limiteRefeicao)
+        arquivo.writeText("""{"refeicao_horario": "25:00"}""")
+        assertEquals("14:00", Preferencias.carregar(arquivo).refeicaoHorario)
     }
 
     @Test

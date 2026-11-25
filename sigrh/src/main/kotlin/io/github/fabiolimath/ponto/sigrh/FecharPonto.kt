@@ -32,7 +32,7 @@ internal object FecharPonto {
     /** Campo "saída para almoço", obrigatório em parte das saídas (visto em 25/11, numa 1ª saída do dia). */
     const val ALMOCO = "$FORM_PONTO:saidaAlmoco"
 
-    /** No modo [SaidaRefeicao.PELO_HORARIO], até esta hora a saída conta como refeição; depois, não. */
+    /** O horário padrão do modo [SaidaRefeicao.PELO_HORARIO]: antes dele, Sim; dele em diante, Não. */
     val LIMITE_ALMOCO: LocalTime = LocalTime.of(14, 0)
 
     /** Uma opção do campo do almoço: o valor enviado e o texto mostrado. */
@@ -68,14 +68,19 @@ internal object FecharPonto {
 
     /**
      * A resposta do campo "Saída Refeição" (radio Sim/Não, Sim marcado na tela): conforme [modo]
-     * (padrão: sim até [LIMITE_ALMOCO], não depois). Null se o campo não está na tela. Sem uma
+     * (padrão: sim até [limite], não depois). Null se o campo não está na tela. Sem uma
      * opção reconhecível, [Recusa] com as opções vistas (para ajustar o app).
      */
-    fun almoco(pagina: Pagina, agora: LocalTime, modo: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO): Opcao? {
+    fun almoco(
+        pagina: Pagina,
+        agora: LocalTime,
+        modo: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO,
+        limite: LocalTime = LIMITE_ALMOCO,
+    ): Opcao? {
         val opcoes = opcoesDoAlmoco(pagina)
         if (opcoes.isEmpty()) return null
         val sim = when (modo) {
-            SaidaRefeicao.PELO_HORARIO -> agora.isBefore(LIMITE_ALMOCO)
+            SaidaRefeicao.PELO_HORARIO -> agora.isBefore(limite)
             SaidaRefeicao.SEMPRE_NAO -> false
             SaidaRefeicao.SEMPRE_SIM -> true
         }
@@ -92,10 +97,11 @@ internal object FecharPonto {
         saida: (String) -> Unit,
         relogio: Clock,
         refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO,
+        limiteRefeicao: LocalTime = LIMITE_ALMOCO,
     ): String {
         var pagina = entrar(sessao, usuario, senha)
         pagina = abrirPontoEletronico(sessao, pagina)
-        registrarSaida(sessao, pagina, cancelamento, saida, LocalTime.now(relogio), refeicao).forEach(saida)
+        registrarSaida(sessao, pagina, cancelamento, saida, LocalTime.now(relogio), refeicao, limiteRefeicao).forEach(saida)
         return "✅🔐📌 SIGRH: saída registrada às ${LocalTime.now(relogio).format(HORA)}"
     }
 
@@ -165,6 +171,7 @@ internal object FecharPonto {
         saida: (String) -> Unit,
         agora: LocalTime,
         refeicao: SaidaRefeicao,
+        limiteRefeicao: LocalTime,
     ): List<String> {
         if (!botao(pagina, BTN_SAIDA)) {
             if (botao(pagina, BTN_ENTRADA)) {
@@ -177,7 +184,7 @@ internal object FecharPonto {
         val entrada = horaDeEntrada(pagina)
         if (entrada.isNotEmpty()) saida("Hora de entrada: $entrada")
 
-        val almoco = almoco(pagina, agora, refeicao)
+        val almoco = almoco(pagina, agora, refeicao, limiteRefeicao)
         if (almoco != null) saida("Saída refeição: ${almoco.texto.ifEmpty { almoco.valor }}")
 
         // O formulário declara accept-charset ISO-8859-1 ("Registrar Sa%EDda" na captura).

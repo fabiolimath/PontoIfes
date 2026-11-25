@@ -299,6 +299,35 @@
             style="@style/Ponto.Explicacao"
             android:text="@string/refeicao_expl" />
 
+        <!-- Só na opção "Sim até um horário definido". -->
+        <LinearLayout
+            android:id="@+id/refeicao_detalhes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="56dp"
+            android:orientation="horizontal"
+            android:paddingTop="4dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/refeicao_horario"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/refeicao_horario"
+                android:layout_width="88dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:hint="@string/hora_dica"
+                android:importantForAutofill="no"
+                android:inputType="time"
+                android:minHeight="48dp" />
+        </LinearLayout>
+
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/lembrete_fechar"
             android:layout_width="match_parent"

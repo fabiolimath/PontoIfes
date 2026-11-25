@@ -53,10 +53,16 @@ class Sigrh(
             AbrirPonto.abrir(sessao, usuario, senha, cancelamento)
         }
 
-    /** Registra a saída; [refeicao] responde o campo "Saída Refeição", quando a tela o pede. */
-    suspend fun fecharPonto(refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO): Resultado =
+    /**
+     * Registra a saída; [refeicao] e [limiteRefeicao] (o horário do modo pelo horário) respondem o
+     * campo "Saída Refeição", quando a tela o pede.
+     */
+    suspend fun fecharPonto(
+        refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO,
+        limiteRefeicao: java.time.LocalTime = FecharPonto.LIMITE_ALMOCO,
+    ): Resultado =
         executar(falha = { "🔐❌ SIGRH: saída não registrada: $it" }) { sessao ->
-            FecharPonto.fechar(sessao, usuario, senha, cancelamento, saida, relogio, refeicao)
+            FecharPonto.fechar(sessao, usuario, senha, cancelamento, saida, relogio, refeicao, limiteRefeicao)
         }
 
     /**

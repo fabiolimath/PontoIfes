@@ -6,6 +6,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.time.Duration
+import java.time.LocalTime
 
 /**
  * As preferências do app (`configuracoes.json`, o mesmo formato da versão Python).
@@ -38,9 +39,14 @@ data class Preferencias(
     val fecharDias: List<List<String>> = DIAS_PADRAO,
     val pitHorario: String = PIT_HORARIO_PADRAO,
     val refeicaoModo: Int = REFEICAO_PELO_HORARIO,
+    val refeicaoHorario: String = REFEICAO_HORARIO_PADRAO,
 ) {
     /** A resposta de "Saída Refeição" ao fechar o ponto. */
     val refeicao: SaidaRefeicao get() = SaidaRefeicao.entries[refeicaoModo.coerceIn(0, 2)]
+
+    /** No modo pelo horário: Sim antes deste horário, Não dele em diante. */
+    val limiteRefeicao: LocalTime
+        get() = FechamentoAutomatico.lerHorario(refeicaoHorario) ?: LocalTime.of(14, 0)
 
     /** Se o fechamento automático está ligado (horários fixos ou avançado). */
     val fecharAutomatico get() = fecharModo != FECHAR_NAO
@@ -69,6 +75,7 @@ data class Preferencias(
             .put("fechar_horario2", fecharHorario2)
             .put("fechar_dias", JSONArray(fecharDias.map { JSONArray(it) }))
             .put("refeicao_modo", refeicaoModo)
+            .put("refeicao_horario", refeicaoHorario)
         arquivo.parentFile?.mkdirs()
         arquivo.writeText(json.toString())
     }
@@ -108,13 +115,19 @@ data class Preferencias(
                 pitHorario = horario(json.optString("pit_horario", padrao.pitHorario)).ifEmpty { padrao.pitHorario },
                 refeicaoModo = json.optInt("refeicao_modo", padrao.refeicaoModo).takeIf { it in 0..2 }
                     ?: padrao.refeicaoModo,
+                refeicaoHorario = horario(json.optString("refeicao_horario", padrao.refeicaoHorario))
+                    .ifEmpty { padrao.refeicaoHorario },
             )
         }
 
         const val PIT_HORARIO_PADRAO = "18:30"
 
-        /** "Saída Refeição" (`refeicao_modo`): 0 = Sim até 14:00, Não depois; 1 = sempre Não; 2 = sempre Sim. */
+        /**
+         * "Saída Refeição" (`refeicao_modo`): 0 = Sim até um horário (`refeicao_horario`, padrão
+         * 14:00), Não depois; 1 = sempre Não; 2 = sempre Sim.
+         */
         const val REFEICAO_PELO_HORARIO = 0
+        const val REFEICAO_HORARIO_PADRAO = "14:00"
 
         /** O PIT automático; o antigo (`pit_automatico`, 1 ou 2, após fechar o ponto) vira ligado. */
         private fun pitAutomatico(json: JSONObject): Boolean =

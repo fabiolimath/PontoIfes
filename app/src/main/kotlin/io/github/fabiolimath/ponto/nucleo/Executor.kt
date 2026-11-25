@@ -9,6 +9,7 @@ import io.github.fabiolimath.ponto.sigrh.TIMEOUT_AUTOMATICO
 import io.github.fabiolimath.ponto.sigrh.codigo
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 /**
  * Roda uma ação no SIGRH e grava a execução no log (o que o `executor.py` fazia com os scripts).
@@ -27,7 +28,7 @@ class Executor(
      * [dia] e [observacao] valem só para o PIT (sem [dia], hoje).
      * O "⏹️ Cancelado." já vem na saída do cliente: não é impresso de novo aqui.
      * [automatico]: a abertura pela Wi-Fi (timeout menor, marca "(automático)" no log).
-     * [refeicao]: a resposta de "Saída Refeição" no fechamento (Configurações).
+     * [refeicao] e [limiteRefeicao]: a resposta de "Saída Refeição" no fechamento (Configurações).
      */
     suspend fun executar(
         acao: Acao,
@@ -39,6 +40,7 @@ class Executor(
         cancelamento: Cancelamento = Cancelamento(),
         automatico: Boolean = false,
         refeicao: SaidaRefeicao = SaidaRefeicao.PELO_HORARIO,
+        limiteRefeicao: LocalTime = LocalTime.of(14, 0),
     ): Resultado {
         val inicio = agora()
         val saida = StringBuilder()
@@ -49,7 +51,7 @@ class Executor(
         }, cancelamento, automatico)
         val resultado = when (acao) {
             Acao.ABRIR_PONTO -> sigrh.abrirPonto()
-            Acao.FECHAR_PONTO -> sigrh.fecharPonto(refeicao)
+            Acao.FECHAR_PONTO -> sigrh.fecharPonto(refeicao, limiteRefeicao)
             Acao.REGISTRAR_PIT ->
                 if (dia != null) sigrh.registrarPit(dia, observacao) else sigrh.registrarPit(observacao = observacao)
         }

@@ -91,6 +91,7 @@ object Execucao {
                         aoEscrever = { texto -> principal.post { saida += texto; avisar() } },
                         cancelamento = pedido,
                         refeicao = Dados.preferencias(app).refeicao,
+                        limiteRefeicao = Dados.preferencias(app).limiteRefeicao,
                     )
                 }
             } catch (e: CancellationException) {
@@ -301,6 +302,7 @@ object Execucao {
                 cancelamento = pedido,
                 automatico = true,
                 refeicao = Dados.preferencias(app).refeicao,
+                limiteRefeicao = Dados.preferencias(app).limiteRefeicao,
             )
         }
     } catch (e: CancellationException) {
