@@ -184,7 +184,7 @@ internal object RegistrarPit {
         }
         // Última chance de cancelar: depois do envio final, o registro segue até o fim.
         cancelamento.conferir()
-        val resposta = enviarFinal("falha ao enviar o formulário") {
+        val resposta = enviarFinal("falha ao enviar o formulário", DICA_INTERNET) {
             sessao.enviar(AUSENCIA, corpo, TIMEOUT_ENVIO)
         }
 

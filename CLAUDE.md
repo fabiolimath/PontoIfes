@@ -56,7 +56,7 @@ repositório e fica no histórico do Git (tag `v1.0.15`).
    PIT automático, com ele ligado; os do fechamento automático, conforme a opção escolhida.
    **Cancelar** e **Salvar** ficam fixos embaixo da tela, com o resto rolando.
    Menu de três pontos: **Sobre o Ponto IFES** (versão, autor, aviso de que não é app oficial do
-   IFES, botão para o site).
+   IFES, link e QR code do site, `drawable/qr_site.xml`, gerado com o `qrcode` do Python; botão para o site).
 6. **Log** das execuções (`ponto.log`: saída de cada ação + data/hora + código de saída 0, 1 ou 130;
    últimas 1000 linhas), com botões **Copiar** e **Limpar**.
 7. **Atalhos de launcher** (segurar o ícone → Abrir ponto, Fechar ponto, Registrar PIT), fixáveis; ícone de
@@ -143,7 +143,11 @@ ou seja, Android 12 ou mais novo desde a 2.6.0 (até a 2.5.x, o 7); compileSdk 3
 - `sigrh/` — cliente do SIGRH em Kotlin puro (JVM): `Sigrh` (`abrirPonto()`, `fecharPonto()`,
   `registrarPit(dia, observacao)`, todas `suspend`, devolvem `Resultado`), `AbrirPonto`,
   `FecharPonto`, `RegistrarPit`, `Sessao` (OkHttp, cookies, ISO-8859-1, `retryOnConnectionFailure`
-  desligado no envio final), `Cancelamento`. `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
+  desligado no envio final), `Cancelamento`, `ConfiancaComAia` (2.6.3: se o servidor não manda o
+  certificado intermediário, baixa-o pelo endereço AIA do certificado, como o Chrome; tenta https
+  antes do http, que o Android bloqueia). Erros de rede vão ao log com uma linha "Detalhe:".
+  No abrir, login que cai no portal (é o que o SIGRH faz com entrada aberta) abre a tela do ponto
+  pelo link do portal; sem ela (ou com o IP recusado), responde "o ponto já estava aberto" (2.6.3). `Resultado`: Sucesso, ForaDaRede, FalhaDeConexao,
   Recusado, EnvioIncerto, Cancelado. Tentativas com esperas de 10/20/30/60 s.
   Testes (JUnit 5) contra o `SigrhFalso` (MockWebServer) em `sigrh/src/test`.
 - `app/src/main/kotlin/io/github/fabiolimath/ponto/nucleo/` — regras sem Android, testadas na JVM

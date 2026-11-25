@@ -33,6 +33,10 @@ class AbrirPontoTest {
 <input name="javax.faces.ViewState" value="j_id2"/></form>"""
         const val SUCESSO = """<ul class="info"><li>Operação realizada com sucesso!</li></ul>""" + PONTO_ABERTO
         const val PORTAL_PAGINA = """<form id="menu:FormMenuServidor"><input name="javax.faces.ViewState" value="j_id2"/></form>"""
+        // O portal de verdade, para onde o login leva com o ponto aberto: tem o link do ponto.
+        const val PORTAL_COM_LINK = """<form id="painelAcessoDadosServidor">
+<a id="painelAcessoDadosServidor:linkPontoEletronicoAntigo" href="#">Ponto Eletrônico</a>
+<input name="javax.faces.ViewState" value="j_id3"/></form>"""
         const val FORA_DA_REDE = """<ul class="erros"><li>Registro de ponto não permitido a partir desta rede.</li></ul>""" + PORTAL_PAGINA
 
         // Como na captura sigrh.loginFora: o erro já vem na tela do ponto, logo após o login.
@@ -48,11 +52,13 @@ class AbrirPontoTest {
     @BeforeTest
     fun ligar() {
         paginas.putAll(mapOf("login" to LOGIN_PAGINA, "apos_login" to PONTO_FECHADO, "ponto" to PONTO_FECHADO,
-            "registro" to SUCESSO))
+            "registro" to SUCESSO, "link" to PONTO_ABERTO))
         falso = SigrhFalso { p ->
             paginas.getValue(when {
                 p.metodo == "GET" -> if (p.caminho == LOGIN) "login" else "ponto"
-                else -> if (p.caminho == LOGIN) "apos_login" else "registro"
+                p.caminho == LOGIN -> "apos_login"
+                p.caminho == PORTAL -> "link"
+                else -> "registro"
             })
         }
     }
@@ -123,6 +129,52 @@ class AbrirPontoTest {
         assertIs<Resultado.Sucesso>(r)
         assertTrue(registros().isEmpty())
         assertTrue("já estava aberto às 07:46:40" in falso.saida)
+    }
+
+    @Test
+    fun `login no portal abre o ponto pelo link e ve que ja estava aberto`() {
+        paginas["apos_login"] = PORTAL_COM_LINK
+
+        val r = abrir()
+
+        assertEquals(Resultado.Sucesso("🔓ℹ️ SIGRH: o ponto já estava aberto às 07:46:40"), r)
+        assertEquals(1, falso.chamadas("POST", PORTAL).size)
+        assertTrue(registros().isEmpty())
+        assertEquals(1, logins())
+    }
+
+    @Test
+    fun `login no portal sem tela do ponto e ponto ja aberto`() {
+        paginas["apos_login"] = PORTAL_COM_LINK
+        paginas["link"] = PORTAL_COM_LINK
+
+        val r = abrir()
+
+        assertEquals(Resultado.Sucesso("🔓ℹ️ SIGRH: o ponto já estava aberto"), r)
+        assertTrue(registros().isEmpty())
+        assertTrue("Wi-Fi" !in falso.saida)
+    }
+
+    @Test
+    fun `login no portal com IP recusado e ponto ja aberto`() {
+        paginas["apos_login"] = PORTAL_COM_LINK
+        paginas["link"] = ERRO_IP + PONTO_ABERTO
+
+        val r = abrir()
+
+        assertEquals(Resultado.Sucesso("🔓ℹ️ SIGRH: o ponto já estava aberto"), r)
+        assertTrue(registros().isEmpty())
+    }
+
+    @Test
+    fun `login no portal com o ponto fechado registra a entrada`() {
+        paginas["apos_login"] = PORTAL_COM_LINK
+        paginas["link"] = PONTO_FECHADO
+
+        val r = abrir()
+
+        assertIs<Resultado.Sucesso>(r)
+        assertEquals(1, registros().size)
     }
 
     @Test

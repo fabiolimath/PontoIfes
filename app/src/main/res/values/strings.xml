@@ -18,6 +18,7 @@
     <string name="usuario_sigrh">Usuário do SIGRH</string>
     <string name="senha_sigrh">Senha do SIGRH</string>
     <string name="observacao_pit">Observação</string>
+    <string name="observacao_pit_expl">Texto para o campo Observação do PIT</string>
     <string name="pit_automatico">Registrar o PIT do dia automaticamente</string>
     <string name="pit_automatico_expl">Todo dia, de segunda a sexta, no horário escolhido, com o app fechado, também nos dias sem ponto. Escolha um horário depois do último fechamento do dia.</string>
     <string name="pit_horario">Horário</string>
